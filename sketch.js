@@ -7,6 +7,7 @@ let fullScreenModelData = null;
 
 let shaderProgram;
 let outlineShaderProgram;
+let shadowShaderProgram;
 
 let photoTexture = null;
 let transparentTexture = null;
@@ -25,6 +26,9 @@ async function setup() {
   
   // Load the outline shader
   outlineShaderProgram = await loadShader('outline.vert', 'outline.frag');
+  
+  // Load the shadow shader
+  shadowShaderProgram = await loadShader('shadow.vert', 'shadow.frag');
 
 
   let newModel = new NYModel('test');
@@ -49,19 +53,29 @@ async function setup() {
   // model(fullScreenModelData);
   
   // Use outline shader
-  shader(outlineShaderProgram);
-  outlineShaderProgram.setUniform('uMainTexture', transparentTexture);
-  outlineShaderProgram.setUniform('uTextureSize', [transparentTexture.width, transparentTexture.height]);
-  outlineShaderProgram.setUniform('uOutlineColor', [1.0, 1.0, 1.0, 1.0]); // Red outline
-  outlineShaderProgram.setUniform('uOutlineThickness', 6.0); // Base thickness in pixels
-  outlineShaderProgram.setUniform('uEdgeThreshold', 0.4); // Edge detection threshold
+  // shader(outlineShaderProgram);
+  // outlineShaderProgram.setUniform('uMainTexture', transparentTexture);
+  // outlineShaderProgram.setUniform('uTextureSize', [transparentTexture.width, transparentTexture.height]);
+  // outlineShaderProgram.setUniform('uOutlineColor', [1.0, 1.0, 1.0, 1.0]); // White outline
+  // outlineShaderProgram.setUniform('uOutlineThickness', 6.0); // Base thickness in pixels
+  // outlineShaderProgram.setUniform('uEdgeThreshold', 0.4); // Edge detection threshold
+  // 
+  // // Noise parameters for varying outline thickness
+  // outlineShaderProgram.setUniform('uNoiseXOffset', 0.0); // X offset for noise
+  // outlineShaderProgram.setUniform('uNoiseYOffset', 0.0); // Y offset for noise
+  // outlineShaderProgram.setUniform('uNoiseScaleX', 10.0); // X scale for noise frequency
+  // outlineShaderProgram.setUniform('uNoiseScaleY', 10.0); // Y scale for noise frequency
+  // outlineShaderProgram.setUniform('uNoiseWeight', 0.5); // Noise weight (0.0 = no noise, 1.0 = full variation)
   
-  // Noise parameters for varying outline thickness
-  outlineShaderProgram.setUniform('uNoiseXOffset', 0.0); // X offset for noise
-  outlineShaderProgram.setUniform('uNoiseYOffset', 0.0); // Y offset for noise
-  outlineShaderProgram.setUniform('uNoiseScaleX', 10.0); // X scale for noise frequency
-  outlineShaderProgram.setUniform('uNoiseScaleY', 10.0); // Y scale for noise frequency
-  outlineShaderProgram.setUniform('uNoiseWeight', 0.5); // Noise weight (0.0 = no noise, 1.0 = full variation)
+  // Use shadow shader
+  shader(shadowShaderProgram);
+  shadowShaderProgram.setUniform('uMainTexture', transparentTexture);
+  shadowShaderProgram.setUniform('uTextureSize', [transparentTexture.width, transparentTexture.height]);
+  shadowShaderProgram.setUniform('uShadowOffset', [-10.0, -10.0]); // Shadow offset in pixels (X, Y)
+  shadowShaderProgram.setUniform('uBlurRadius', 30.0); // Blur radius in pixels
+  shadowShaderProgram.setUniform('uShadowColor', [0.0, 0.0, 0.0, 0.6]); // Shadow color (black)
+  shadowShaderProgram.setUniform('uShadowOpacity', 0.6); // Shadow opacity (0.0 - 1.0)
+  shadowShaderProgram.setUniform('uBlurQuality', 2.0); // Blur quality (1.0 = low, 2.0 = medium, 3.0+ = high)
   
   model(fullScreenModelData);
 
