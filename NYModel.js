@@ -56,6 +56,24 @@ class NYModel {
         }
     }
 
+    addTriangleByPoints(_p1, _p2, _p3)
+    {
+        this.verts.push([_p1.x, _p1.y]);
+        this.verts.push([_p2.x, _p2.y]);
+        this.verts.push([_p3.x, _p3.y]);
+
+        this.vertColors.push([1.0, 1.0, 1.0, 1.0]);
+        this.vertColors.push([1.0, 1.0, 1.0, 1.0]);
+        this.vertColors.push([1.0, 1.0, 1.0, 1.0]);
+
+        this.uvs.push([_p1.uvX, _p1.uvY]);
+        this.uvs.push([_p2.uvX, _p2.uvY]);
+        this.uvs.push([_p3.uvX, _p3.uvY]);
+
+        this.triangles.push([this.vertIndex + 0, this.vertIndex + 1, this.vertIndex + 2]);
+        this.vertIndex += 3;
+    }
+
     addTriangle(_x1, _y1, _x2, _y2, _x3, _y3, _uv1 = [0, 1], _uv2 = [1, 0], _uv3 = [1, 1]) {
         this.verts.push([_x1, _y1]);
         this.verts.push([_x2, _y2]);
@@ -145,5 +163,14 @@ class NYModel {
             }
         }
         return md;
+    }
+}
+
+class NYPoint {
+    constructor(_x, _y, _uvX = 0, _uvY = 0) {
+        this.x = _x;
+        this.y = _y;
+        this.uvX = _uvX;
+        this.uvY = _uvY;
     }
 }
