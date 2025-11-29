@@ -12,72 +12,153 @@ let shadowShaderProgram;
 let photoTexture = null;
 let transparentTexture = null;
 
+
+let collager = null;
+
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
 
-  flex();
-  background(30);
+  // set to orthographic projection
+  colorMode(HSB);
+  rectMode(CENTER);
+  imageMode(CENTER);
 
-  photoTexture = await loadImage('images/test-photo.jpg');
-  transparentTexture = await loadImage('images/test-transparent.png');
+  background(0, 0, 30);
 
-  // Load the shader
-  shaderProgram = await loadShader('shader.vert', 'shader.frag');
-  
-  // Load the outline shader
-  outlineShaderProgram = await loadShader('outline.vert', 'outline.frag');
-  
-  // Load the shadow shader
-  shadowShaderProgram = await loadShader('shadow.vert', 'shadow.frag');
+  collager = new Collager();
+  await collager.initShaders();
+  await collager.addImage('images/test-photo-1.jpg', 0.1, 0.2);
+  await collager.addImage('images/test-photo-2.jpg', 0.1, 0.2);
+  await collager.addImage('images/test-photo-3.jpg', 0.1, 0.2);
+
+  for(let i=0; i< 100; i++)
+  {
+    let posX = random(-width/2 - 100, width/2 + 100);
+    let posY = random(-height/2 - 100, height/2 + 100);
+    let sizeW = 100;
+    let sizeH = 100;
+    let rotateDeg = random(-60, 60);
+
+    collager.drawImage(posX, posY, sizeW, sizeH, rotateDeg, -1);
+
+    await sleep(16);
+  }
 
 
-  let newModel = new NYModel('test');
-  newModel.addTriangle(0, 0, 300, 0, 0, 300);
-  modelData = newModel.build(_renderer);
+  // clear();
 
-  fullScreenModel = new NYModel('fullscreen');
-  let pLeftTop = new NYPoint(-0.5 * width, -0.5 * height, 0, 0);
-  let pRightTop = new NYPoint(0.5 * width, -0.5 * height, 1, 0);
-  let pLeftBottom = new NYPoint(-0.5 * width, 0.5 * height, 0, 1);
-  let pRightBottom = new NYPoint(0.5 * width, 0.5 * height, 1, 1);
+  // image(collager.maskBuffer, -width/2, -height/2, width, height);
 
-  fullScreenModel.addTriangleByPoints(pLeftTop, pRightTop, pLeftBottom);
-  fullScreenModel.addTriangleByPoints(pRightTop, pRightBottom, pLeftBottom);
-  fullScreenModelData = fullScreenModel.build(_renderer);
+  // rect(0, 0, 400, 300);
 
-  // console.log(modelData);
 
-  // Use regular shader
-  // shader(shaderProgram);
-  // shaderProgram.setUniform('uMainTexture', transparentTexture);
-  // model(fullScreenModelData);
-  
-  // Use outline shader
+  // image(collager.maskBuffer, 0, 0, width, height);
+
+
+  // Create two framebuffers: one for outline pass, one for final AA output
+  // let outlinePass = createFramebuffer();
+  // let finalPass = createFramebuffer();
+
+  // photoTexture = await loadImage('images/test-photo.jpg');
+  // transparentTexture = await loadImage('images/piece-sample.png');
+
+  // // Load the shader
+  // shaderProgram = await loadShader('shader.vert', 'shader.frag');
+
+  // // Load the outline shader
+  // outlineShaderProgram = await loadShader('outline.vert', 'outline.frag');
+
+  // // Load the shadow shader
+  // shadowShaderProgram = await loadShader('shadow.vert', 'shadow.frag');
+
+  // // Load the AA shader
+  // let aaShaderProgram = await loadShader('antialiasing.vert', 'antialiasing.frag');
+
+
+  // let rectX = -400;
+  // let rectY = -400;
+
+  // let rectWidth = 600;
+  // let rectHeight = 600;
+
+  // let pLeftTop = new NYPoint(rectX, rectY, 0, 0);
+  // let pRightTop = new NYPoint(rectX + rectWidth, rectY, 1, 0);
+  // let pLeftBottom = new NYPoint(rectX, rectY + rectHeight, 0, 1);
+  // let pRightBottom = new NYPoint(rectX + rectWidth, rectY + rectHeight, 1, 1);
+
+  // let newModel = new NYModel('test');
+  // newModel.addTriangleByPoints(pLeftTop, pRightTop, pLeftBottom);
+  // newModel.addTriangleByPoints(pRightTop, pRightBottom, pLeftBottom);
+  // modelData = newModel.build();
+
+  // fullScreenModel = new NYModel('fullscreen');
+  // let fLeftTop = new NYPoint(-0.5 * width, -0.5 * height, 0, 0);
+  // let fRightTop = new NYPoint(0.5 * width, -0.5 * height, 1, 0);
+  // let fLeftBottom = new NYPoint(-0.5 * width, 0.5 * height, 0, 1);
+  // let fRightBottom = new NYPoint(0.5 * width, 0.5 * height, 1, 1);
+
+  // fullScreenModel.addTriangleByPoints(fLeftTop, fRightTop, fLeftBottom);
+  // fullScreenModel.addTriangleByPoints(fRightTop, fRightBottom, fLeftBottom);
+  // // build for _renderer (main canvas) to be safe
+  // fullScreenModelData = fullScreenModel.build(_renderer);
+
+  // Use AA shader on the main canvas
+  // outlinePass.begin(); // Don't draw back into the same buffer, use the final buffer or main canvas
+
+  // We need to ping-pong if we want to apply multiple passes, or just draw to main canvas
+  // But wait, the previous step 'outlinePass' contains the result of outline shader?
+  // NO, wait. 
+  // Step 1: outlinePass contains the Image
+  // Step 2: outlinePass.begin() -> Shader(outline) -> draws rect -> outlinePass now contains OUTLINED image.
+  //         Wait, if we draw into outlinePass WHILE reading from outlinePass (uMainTexture), that's undefined behavior in many GL contexts (feedback loop).
+  //         We should use a second buffer for the outline result.
+
+  // Let's fix the pipeline:
+  // 1. Draw original image to 'outlinePass'
+  // 2. Draw 'outlinePass' (texture) -> 'finalPass' (framebuffer) using Outline Shader
+  // 3. Draw 'finalPass' (texture) -> Main Canvas using AA Shader
+
+  // --- STEP 1: DRAW IMAGE ---
+  // outlinePass.begin();
+  // clear();
+  // image(transparentTexture, -300, -300, 600, 600);
+  // outlinePass.end();
+
+  // --- STEP 2: APPLY OUTLINE ---
+  // outlinePass.begin();
   // shader(outlineShaderProgram);
-  // outlineShaderProgram.setUniform('uMainTexture', transparentTexture);
-  // outlineShaderProgram.setUniform('uTextureSize', [transparentTexture.width, transparentTexture.height]);
-  // outlineShaderProgram.setUniform('uOutlineColor', [1.0, 1.0, 1.0, 1.0]); // White outline
-  // outlineShaderProgram.setUniform('uOutlineThickness', 6.0); // Base thickness in pixels
-  // outlineShaderProgram.setUniform('uEdgeThreshold', 0.4); // Edge detection threshold
-  // 
-  // // Noise parameters for varying outline thickness
-  // outlineShaderProgram.setUniform('uNoiseXOffset', 0.0); // X offset for noise
-  // outlineShaderProgram.setUniform('uNoiseYOffset', 0.0); // Y offset for noise
-  // outlineShaderProgram.setUniform('uNoiseScaleX', 10.0); // X scale for noise frequency
-  // outlineShaderProgram.setUniform('uNoiseScaleY', 10.0); // Y scale for noise frequency
-  // outlineShaderProgram.setUniform('uNoiseWeight', 0.5); // Noise weight (0.0 = no noise, 1.0 = full variation)
-  
-  // Use shadow shader
-  shader(shadowShaderProgram);
-  shadowShaderProgram.setUniform('uMainTexture', transparentTexture);
-  shadowShaderProgram.setUniform('uTextureSize', [transparentTexture.width, transparentTexture.height]);
-  shadowShaderProgram.setUniform('uShadowOffset', [-10.0, -10.0]); // Shadow offset in pixels (X, Y)
-  shadowShaderProgram.setUniform('uBlurRadius', 30.0); // Blur radius in pixels
-  shadowShaderProgram.setUniform('uShadowColor', [0.0, 0.0, 0.0, 0.6]); // Shadow color (black)
-  shadowShaderProgram.setUniform('uShadowOpacity', 0.6); // Shadow opacity (0.0 - 1.0)
-  shadowShaderProgram.setUniform('uBlurQuality', 2.0); // Blur quality (1.0 = low, 2.0 = medium, 3.0+ = high)
-  
-  model(fullScreenModelData);
+  // outlineShaderProgram.setUniform('uMainTexture', outlinePass);
+  // outlineShaderProgram.setUniform('uTextureSize', [width, height]);
+  // outlineShaderProgram.setUniform('uMeshSize', [width, height]);
+  // outlineShaderProgram.setUniform('uOutlineColor', [1.0, 1.0, 1.0, 1.0]);
+  // outlineShaderProgram.setUniform('uOutlineThickness', 24.0);
+  // outlineShaderProgram.setUniform('uEdgeThreshold', 0.4);
+  // outlineShaderProgram.setUniform('uNoiseXOffset', 0.0);
+  // outlineShaderProgram.setUniform('uNoiseYOffset', 0.0);
+  // outlineShaderProgram.setUniform('uNoiseScaleX', 10.0);
+  // outlineShaderProgram.setUniform('uNoiseScaleY', 10.0);
+  // outlineShaderProgram.setUniform('uNoiseWeight', 0.0);
+
+  // noStroke();
+  // rect(-width/2, -height/2, width, height);
+  // outlinePass.end();
+
+  // // --- STEP 3: APPLY AA ---
+  // finalPass.begin();
+  // clear();
+  // shader(aaShaderProgram);
+  // aaShaderProgram.setUniform('uMainTexture', outlinePass);
+  // aaShaderProgram.setUniform('uTextureSize', [width, height]);
+  // aaShaderProgram.setUniform('uStrength', 0.5); // 0.0 - 1.0 mix
+  // aaShaderProgram.setUniform('uStepSize', 2.0); // Blur radius
+
+  // noStroke();
+  // rect(-width/2, -height/2, width, height);
+  // finalPass.end();
+
+  // // Finally, draw the final result to the main canvas
+  // clear();
+  // image(finalPass, -width/2, -height/2, width, height);
 
 }
 
@@ -86,7 +167,7 @@ function draw() {
   // Apply the shader
   // shader(shaderProgram);
   // shaderProgram.setUniform('uMainTexture', photoTexture);
-  
+
   // model(modelData);
   // // Draw the geometry
   // if (modelData) {

@@ -106,6 +106,10 @@ class NYModel {
     }
 
     build(_renderer = null) {
+
+        if(_renderer == null)
+            _renderer = p5.instance._renderer;
+        
         let md = new p5.Geometry();
         md.gid = this.modelName;
 
