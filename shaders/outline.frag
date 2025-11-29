@@ -39,5 +39,13 @@ void main() {
     // Determine outline: if neighbor is opaque but center is not
     float outlineMask = clamp(maxNeighbor - centerColor.a, 0.0, 1.0);
 
-    gl_FragColor = vec4(uOutlineColor, outlineMask);
+    if(maxNeighbor > 0.0) {
+        vec3 finalColor = mix(uOutlineColor, centerColor.rgb, centerColor.a);
+        gl_FragColor = vec4(finalColor, 1.0);
+    }
+    else {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0);
+    }
+
+    // gl_FragColor = vec4(uOutlineColor, outlineMask);
 }

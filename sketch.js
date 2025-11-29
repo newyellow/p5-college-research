@@ -27,22 +27,51 @@ async function setup() {
 
   collager = new Collager();
   await collager.initShaders();
-  await collager.addImage('images/test-photo-1.jpg', 0.1, 0.2);
-  await collager.addImage('images/test-photo-2.jpg', 0.1, 0.2);
-  await collager.addImage('images/test-photo-3.jpg', 0.1, 0.2);
 
-  for(let i=0; i< 100; i++)
-  {
-    let posX = random(-width/2 - 100, width/2 + 100);
-    let posY = random(-height/2 - 100, height/2 + 100);
-    let sizeW = 100;
-    let sizeH = 100;
+  // can add images, and set the random scale (how much croped from the original image)
+  await collager.addImage('images/test-photo-4.jpg', 0.1, 0.3);
+  await collager.addImage('images/test-photo-5.jpg', 0.1, 0.4);
+  await collager.addImage('images/test-photo-6.jpg', 0.1, 0.3);
+
+  // set outline thickness
+  collager.outlineThickness = 3.0;
+
+  for (let i = 0; i < 600; i++) {
+    let posX = random(-width / 2 - 100, width / 2 + 100);
+    let posY = random(-height / 2 - 100, height / 2 + 100);
+    let sizeW = random(30, 240);
+    let sizeH = random(30, 240);
     let rotateDeg = random(-60, 60);
 
-    collager.drawImage(posX, posY, sizeW, sizeH, rotateDeg, -1);
+    collager.drawImage(posX, posY, sizeW, sizeH, rotateDeg);
 
     await sleep(16);
   }
+
+  
+
+  // change image set
+  collager.clearImages();
+
+  await collager.addImage('images/test-photo-1.jpg', 0.3, 0.4);
+  await collager.addImage('images/test-photo-2.jpg', 0.2, 0.6);
+  await collager.addImage('images/test-photo-3.jpg', 0.2, 0.6);
+
+  collager.outlineThickness = 12.0;
+
+  // then just use drawImage to draw at position, size, rotation
+  for (let i = 0; i < 36; i++) {
+    let posX = random(-width / 2 - 100, width / 2 + 100);
+    let posY = random(-height / 2 - 100, height / 2 + 100);
+    let sizeW = random(100, 600);
+    let sizeH = random(100, 600);
+    let rotateDeg = random(-60, 60);
+
+    collager.drawImage(posX, posY, sizeW, sizeH, rotateDeg);
+
+    await sleep(16);
+  }
+  
 
 
   // clear();

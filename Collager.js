@@ -13,6 +13,10 @@ class Collager {
 
         this.sourceBuffer = this.frameBufferA;
         this.targetBuffer = this.frameBufferB;
+
+
+        // settings
+        this.outlineThickness = 10;
     }
 
     async initShaders() {
@@ -20,6 +24,7 @@ class Collager {
         this.maskShader = await loadShader('shaders/mask.vert', 'shaders/mask.frag');
         this.blurShader = await loadShader('shaders/blur.vert', 'shaders/blur.frag');
         this.thresholdShader = await loadShader('shaders/threshold.vert', 'shaders/threshold.frag');
+        this.shadowShader = await loadShader('shaders/shadow.vert', 'shaders/shadow.frag');
 
         this.noiseImageShape = await loadImage('textures/T_Noise_18.PNG');
         this.noiseImage = await loadImage('textures/TilingNoise05.PNG');
@@ -35,7 +40,7 @@ class Collager {
         this.collageProfiles.push(new CollageProfile(minRatio, maxRatio));
     }
 
-    getSwapBuffer() {
+    FboSwap() {
         this.swapState = !this.swapState;
 
         if (this.swapState) {
@@ -88,10 +93,15 @@ class Collager {
         this.sourceBuffer.end();
 
         // apply outline
-        this.circleOutlinePass(this.sourceBuffer, this.targetBuffer, 8.0, [1.0, 1.0, 1.0, 1.0]);
+        this.circleOutlinePass(this.sourceBuffer, this.targetBuffer, this.outlineThickness, [1.0, 1.0, 1.0, 1.0]);
+        this.FboSwap();
+        
+        // apply shadow
+        this.shadowPass(this.sourceBuffer, this.targetBuffer, [-10.0, -10.0], 6.0, [0.0, 0.0, 0.0, 0.6]);
+        this.FboSwap();
 
         // image(this.sourceBuffer, 0, 0, width, height);
-        image(this.targetBuffer, 0, 0, width, height);
+        image(this.sourceBuffer, 0, 0, width, height);
         this.clearBuffers();
     }
 
@@ -240,6 +250,21 @@ class Collager {
         fill(60, 60, 100);
         rect(0, 0, imgWidth, imgHeight);
 
+        _targetBuffer.end();
+    }
+    shadowPass(_sourceBuffer, _targetBuffer, _offset = [10.0, 10.0], _radius = 20.0, _color = [0.0, 0.0, 0.0, 0.5]) {
+        _targetBuffer.begin();
+        clear();
+        shader(this.shadowShader);
+        this.shadowShader.setUniform('uMainTexture', _sourceBuffer);
+        this.shadowShader.setUniform('uTextureSize', [_targetBuffer.width, _targetBuffer.height]);
+        this.shadowShader.setUniform('uShadowOffset', _offset);
+        this.shadowShader.setUniform('uBlurRadius', _radius);
+        this.shadowShader.setUniform('uShadowColor', _color);
+        this.shadowShader.setUniform('uShadowOpacity', _color[3]);
+        this.shadowShader.setUniform('uBlurQuality', 2.0); // Medium quality
+        noStroke();
+        rect(0, 0, _targetBuffer.width, _targetBuffer.height);
         _targetBuffer.end();
     }
 }
