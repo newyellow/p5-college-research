@@ -28,10 +28,8 @@ class Collager {
 
         this.noiseImageShape = await loadImage('textures/T_Noise_18.PNG');
         this.noiseImage = await loadImage('textures/TilingNoise05.PNG');
+        
         // this.noiseImage = await loadImage('textures/T_Noise_18.PNG');
-
-        // Set texture wrapping to REPEAT
-        textureWrap(REPEAT);
     }
 
     async addImage(imageUrl, minRatio, maxRatio) {
@@ -93,7 +91,7 @@ class Collager {
         this.sourceBuffer.end();
 
         // apply outline
-        this.circleOutlinePass(this.sourceBuffer, this.targetBuffer, this.outlineThickness, [1.0, 1.0, 1.0, 1.0]);
+        this.blurOutlinePass(this.sourceBuffer, this.targetBuffer, this.outlineThickness, [1.0, 1.0, 1.0, 1.0]);
         this.FboSwap();
         
         // apply shadow
@@ -125,35 +123,35 @@ class Collager {
         // We need an intermediate buffer for the blur passes
         if (!this.blurBuffer) this.blurBuffer = createFramebuffer();
         
-        this.blurBuffer.resize(_targetBuffer.width, _targetBuffer.height);
-        _targetBuffer.resize(_targetBuffer.width, _targetBuffer.height);
+        this.blurBuffer.resize(ceil(_targetBuffer.width * 0.5), ceil(_targetBuffer.height * 0.5));
         
         // Blur Pass 1 (Horizontal) -> source to blurBuffer
         this.blurBuffer.begin();
         clear();
         shader(this.blurShader);
         this.blurShader.setUniform('uMainTexture', _sourceBuffer);
-        this.blurShader.setUniform('uResolution', [_targetBuffer.width, _targetBuffer.height]);
+        this.blurShader.setUniform('uResolution', [this.blurBuffer.width, this.blurBuffer.height]);
         this.blurShader.setUniform('uDirection', [1.0, 0.0]);
-        this.blurShader.setUniform('uBlurSize', _outlineThickness * 0.5); // Blur size proportional to thickness
+        // Scale blur size down since buffer is smaller
+        this.blurShader.setUniform('uBlurSize', _outlineThickness * 0.5 * 0.5); 
         noStroke();
-        rect(0, 0, _targetBuffer.width, _targetBuffer.height);
+        rect(0, 0, this.blurBuffer.width, this.blurBuffer.height);
         this.blurBuffer.end();
 
         
         // Blur Pass 2 (Vertical) -> blurBuffer to blurBuffer2 (temp)
         if (!this.blurBuffer2) this.blurBuffer2 = createFramebuffer();
-        this.blurBuffer2.resize(_targetBuffer.width, _targetBuffer.height);
+        this.blurBuffer2.resize(this.blurBuffer.width, this.blurBuffer.height);
         
         this.blurBuffer2.begin();
         clear();
         shader(this.blurShader);
         this.blurShader.setUniform('uMainTexture', this.blurBuffer);
-        this.blurShader.setUniform('uResolution', [_targetBuffer.width, _targetBuffer.height]);
+        this.blurShader.setUniform('uResolution', [this.blurBuffer2.width, this.blurBuffer2.height]);
         this.blurShader.setUniform('uDirection', [0.0, 1.0]);
-        this.blurShader.setUniform('uBlurSize', _outlineThickness * 0.5);
+        this.blurShader.setUniform('uBlurSize', _outlineThickness * 0.5 * 0.5);
         noStroke();
-        rect(0, 0, _targetBuffer.width, _targetBuffer.height);
+        rect(0, 0, this.blurBuffer2.width, this.blurBuffer2.height);
         this.blurBuffer2.end();
         
         // Threshold Pass -> Combine Original (_sourceBuffer) and Blurred (blurBuffer2) into _targetBuffer
@@ -223,12 +221,15 @@ class Collager {
         noStroke();
 
         shader(this.maskShader);
+        this.setTextureWrap(targetImg, CLAMP);
         this.maskShader.setUniform('uMainTexture', targetImg);
 
         // Pass main texture transform
         this.maskShader.setUniform('uMainTextureOffset', [cropOffsetX, cropOffsetY]);
         this.maskShader.setUniform('uMainTextureScale', [cropScaleX, cropScaleY]); // Uniform scaling for now
 
+        this.setTextureWrap(this.noiseImageShape, REPEAT);
+        this.setTextureWrap(this.noiseImage, REPEAT);
         this.maskShader.setUniform('uNoiseTexture', this.noiseImageShape); // Shape noise
         this.maskShader.setUniform('uDetailNoiseTexture', this.noiseImage); // Detail noise
         this.maskShader.setUniform('uUseDetailNoise', _useDetailNoise ? 1.0 : 0.0); // Enable/Disable detail noise
@@ -252,6 +253,7 @@ class Collager {
 
         _targetBuffer.end();
     }
+
     shadowPass(_sourceBuffer, _targetBuffer, _offset = [10.0, 10.0], _radius = 20.0, _color = [0.0, 0.0, 0.0, 0.5]) {
         _targetBuffer.begin();
         clear();
@@ -266,6 +268,18 @@ class Collager {
         noStroke();
         rect(0, 0, _targetBuffer.width, _targetBuffer.height);
         _targetBuffer.end();
+    }
+
+    setTextureWrap (_texture, _wrapS = CLAMP, _wrapT = null) {
+        if(_wrapT == null)
+            _wrapT = _wrapS;
+
+        let renderer = p5.instance._renderer;
+        let p5Tex = renderer.getTexture(_texture);
+        
+        if(p5Tex) {
+            p5Tex.setWrapMode(_wrapS, _wrapT);
+        }
     }
 }
 

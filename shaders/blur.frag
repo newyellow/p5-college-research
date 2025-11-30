@@ -7,32 +7,40 @@ uniform float uBlurSize;
 
 varying vec2 vUV;
 
-// Function to calculate Gaussian weight
-float gaussian(float x, float sigma) {
-    return exp(-(x * x) / (2.0 * sigma * sigma)) / (2.50662827463 * sigma);
-}
-
 void main() {
     vec2 texelSize = 1.0 / uResolution;
+
+    // Radius 3 Gaussian-ish weights (7 taps)
+    // Weights: 0.06, 0.12, 0.20, 0.24, 0.20, 0.12, 0.06 (approx sum 1.0)
+    // Normalized exactly:
+    // Center: 0.227027 (weight 4)
+    // 1: 0.1945946 (weight 3)
+    // 2: 0.1216216 (weight 2)
+    // 3: 0.054054 (weight 1) -- slightly higher than standard for smoother falloff
+    // Let's use pre-calculated weights for speed and "ish" feel
+
+    float weights[7];
+    weights[0] = 0.05;
+    weights[1] = 0.11;
+    weights[2] = 0.21;
+    weights[3] = 0.26; // Center
+    weights[4] = 0.21;
+    weights[5] = 0.11;
+    weights[6] = 0.05;
 
     vec4 colorSum = vec4(0.0);
     float weightSum = 0.0;
 
-    // 17-tap Gaussian blur (Radius 8, 1 center, total 17 samples)
-    // Loop from -8 to +8
-    // Sigma should be roughly radius / 2 or radius / 3
-    // For radius 8, sigma = 3.0 or 4.0 is good for smoothness
-    float sigma = 4.0;
-
-    for(int i = -8; i <= 8; i++) {
-        float weight = gaussian(float(i), sigma);
-        float offset = float(i) * uBlurSize;
+    for(int i = 0; i < 7; i++) {
+        float offset = float(i - 3) * uBlurSize;
         vec2 coords = vUV + uDirection * offset * texelSize;
 
-        colorSum += texture2D(uMainTexture, coords) * weight;
-        weightSum += weight;
+        // Manual weights array access
+        float w = weights[i];
+
+        colorSum += texture2D(uMainTexture, coords) * w;
+        weightSum += w;
     }
 
-    // Normalize
     gl_FragColor = colorSum / weightSum;
 }
