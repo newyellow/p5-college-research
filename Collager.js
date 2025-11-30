@@ -28,9 +28,12 @@ class Collager {
         this.blurShader = await loadShader('shaders/blur.vert', 'shaders/blur.frag');
         this.thresholdShader = await loadShader('shaders/threshold.vert', 'shaders/threshold.frag');
         this.shadowShader = await loadShader('shaders/shadow.vert', 'shaders/shadow.frag');
+        this.lutShader = await loadShader('shaders/lut.vert', 'shaders/lut.frag');
 
         this.noiseImageShape = await loadImage('textures/T_Noise_18.PNG');
         this.noiseImage = await loadImage('textures/TilingNoise05.PNG');
+
+        this.lutTexture = await loadImage('lut_textures/800T Night 03.png');
         
         // this.noiseImage = await loadImage('textures/T_Noise_18.PNG');
     }
@@ -99,6 +102,10 @@ class Collager {
         
         // apply shadow
         this.shadowPass(this.sourceBuffer, this.targetBuffer, [-10.0, -10.0], 6.0, [0.0, 0.0, 0.0, 0.6]);
+        this.FboSwap();
+
+        // apply lut
+        this.lutPass(this.sourceBuffer, this.targetBuffer, this.lutTexture, 1.0);
         this.FboSwap();
 
         // image(this.sourceBuffer, 0, 0, width, height);
@@ -282,6 +289,18 @@ class Collager {
         this.shadowShader.setUniform('uShadowColor', _color);
         this.shadowShader.setUniform('uShadowOpacity', _color[3]);
         this.shadowShader.setUniform('uBlurQuality', 2.0); // Medium quality
+        noStroke();
+        rect(0, 0, _targetBuffer.width, _targetBuffer.height);
+        _targetBuffer.end();
+    }
+
+    lutPass(_sourceBuffer, _targetBuffer, _lutTexture, _intensity = 1.0) {
+        _targetBuffer.begin();
+        clear();
+        shader(this.lutShader);
+        this.lutShader.setUniform('uMainTexture', _sourceBuffer);
+        this.lutShader.setUniform('uLutTexture', _lutTexture);
+        this.lutShader.setUniform('uIntensity', _intensity);
         noStroke();
         rect(0, 0, _targetBuffer.width, _targetBuffer.height);
         _targetBuffer.end();

@@ -37,17 +37,37 @@ async function setup() {
   collager.outlineWeight(2);
   collager.outlineNoiseScale(1.0);
 
-  for (let i = 0; i < 600; i++) {
-    let posX = random(-width / 2 - 100, width / 2 + 100);
-    let posY = random(-height / 2 - 100, height / 2 + 100);
-    let sizeW = random(30, 240);
-    let sizeH = random(30, 240);
-    let rotateDeg = random(-60, 60);
+  let gridX = 36;
+  let gridY = 4;
 
-    collager.drawImage(posX, posY, sizeW, sizeH, rotateDeg);
+  let rectWidth = width / gridX;
+  let rectHeight = height / gridY;
 
-    await sleep(16);
+  for(let y = 0; y < gridY; y++) {
+    // Create randomized x indices
+    let xIndices = [];
+    for(let i=0; i<gridX + 20; i++) xIndices.push(i - 10);
+    shuffle(xIndices, true);
+
+    for(let i = 0; i < xIndices.length; i++) {
+      let x = xIndices[i];
+
+      let sizeW = rectWidth * random(1.2, 2.4);
+      let sizeH = rectHeight * random(1.2, 2.4);
+      
+      let posX = -width / 2 + rectWidth * (x + 0.5) + random(-rectWidth * 0.1, rectWidth * 0.1);
+      let posY = -height / 2 + rectHeight * (y + 0.5) + random(-rectHeight * 0.1, rectHeight * 0.1) - 360;
+
+      let rotateNoiseValue = noise(posX * 0.01, posY * 0.01);
+      let rotateDeg = map(rotateNoiseValue, 0, 1, -12, 12);
+
+      collager.drawImage(posX, posY, sizeW, sizeH, rotateDeg);
+
+      await sleep(16);
+    }
   }
+
+  
 
   
 
