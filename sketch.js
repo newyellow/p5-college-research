@@ -34,7 +34,8 @@ async function setup() {
   await collager.addImage('images/test-photo-6.jpg', 0.1, 0.3);
 
   // set outline thickness
-  collager.outlineThickness = 3.0;
+  collager.outlineWeight(2);
+  collager.outlineNoiseScale(1.0);
 
   for (let i = 0; i < 600; i++) {
     let posX = random(-width / 2 - 100, width / 2 + 100);
@@ -57,7 +58,8 @@ async function setup() {
   await collager.addImage('images/test-photo-2.jpg', 0.2, 0.6);
   await collager.addImage('images/test-photo-3.jpg', 0.2, 0.6);
 
-  collager.outlineThickness = 12.0;
+  collager.outlineWeight(6);
+  collager.outlineNoiseScale(3.0);
 
   // then just use drawImage to draw at position, size, rotation
   for (let i = 0; i < 36; i++) {

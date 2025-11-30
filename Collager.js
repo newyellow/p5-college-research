@@ -16,7 +16,10 @@ class Collager {
 
 
         // settings
-        this.outlineThickness = 10;
+        this._outlineThickness = 10;
+        this._doOutline = true;
+        this._outlineQualityLevel = 1;
+        this._outlineNoiseScale = 1.2;
     }
 
     async initShaders() {
@@ -91,7 +94,7 @@ class Collager {
         this.sourceBuffer.end();
 
         // apply outline
-        this.blurOutlinePass(this.sourceBuffer, this.targetBuffer, this.outlineThickness, [1.0, 1.0, 1.0, 1.0]);
+        this.blurOutlinePass(this.sourceBuffer, this.targetBuffer, [1.0, 1.0, 1.0, 1.0]);
         this.FboSwap();
         
         // apply shadow
@@ -104,13 +107,13 @@ class Collager {
     }
 
     // outline pass using simple circle sampling
-    circleOutlinePass(_sourceBuffer, _targetBuffer, _outlineThickness = 24.0, _outlineColor = [1.0, 1.0, 1.0, 1.0]) {
+    circleOutlinePass(_sourceBuffer, _targetBuffer, _outlineColor = [1.0, 1.0, 1.0, 1.0]) {
         _targetBuffer.begin();
         clear();
         shader(this.outlineShaderProgram);
         this.outlineShaderProgram.setUniform('uMainTexture', _sourceBuffer);
         this.outlineShaderProgram.setUniform('uResolution', [_targetBuffer.width, _targetBuffer.height]);
-        this.outlineShaderProgram.setUniform('uThickness', _outlineThickness);
+        this.outlineShaderProgram.setUniform('uThickness', this._outlineThickness);
         this.outlineShaderProgram.setUniform('uOutlineColor', _outlineColor.slice(0, 3)); // rgb only
         noStroke();
         rect(0, 0, _targetBuffer.width, _targetBuffer.height);
@@ -118,7 +121,7 @@ class Collager {
     }
 
     // outline pass using separable gaussian blur + threshold
-    blurOutlinePass(_sourceBuffer, _targetBuffer, _outlineThickness = 24.0, _outlineColor = [1.0, 1.0, 1.0, 1.0]) {
+    blurOutlinePass(_sourceBuffer, _targetBuffer, _outlineColor = [1.0, 1.0, 1.0, 1.0]) {
         // Pass 1: Blur Horizontal
         // We need an intermediate buffer for the blur passes
         if (!this.blurBuffer) this.blurBuffer = createFramebuffer();
@@ -133,7 +136,9 @@ class Collager {
         this.blurShader.setUniform('uResolution', [this.blurBuffer.width, this.blurBuffer.height]);
         this.blurShader.setUniform('uDirection', [1.0, 0.0]);
         // Scale blur size down since buffer is smaller
-        this.blurShader.setUniform('uBlurSize', _outlineThickness * 0.5 * 0.5); 
+        this.blurShader.setUniform('uBlurSize', this._outlineThickness * 0.5 * 0.5); 
+        this.blurShader.setUniform('uBlurQuality', this._outlineQualityLevel);
+
         noStroke();
         rect(0, 0, this.blurBuffer.width, this.blurBuffer.height);
         this.blurBuffer.end();
@@ -149,7 +154,8 @@ class Collager {
         this.blurShader.setUniform('uMainTexture', this.blurBuffer);
         this.blurShader.setUniform('uResolution', [this.blurBuffer2.width, this.blurBuffer2.height]);
         this.blurShader.setUniform('uDirection', [0.0, 1.0]);
-        this.blurShader.setUniform('uBlurSize', _outlineThickness * 0.5 * 0.5);
+        this.blurShader.setUniform('uBlurSize', this._outlineThickness * 0.5 * 0.5);
+        this.blurShader.setUniform('uBlurQuality', this._outlineQualityLevel);
         noStroke();
         rect(0, 0, this.blurBuffer2.width, this.blurBuffer2.height);
         this.blurBuffer2.end();
@@ -160,8 +166,19 @@ class Collager {
         shader(this.thresholdShader);
         this.thresholdShader.setUniform('uMainTexture', _sourceBuffer); // Original sharp image
         this.thresholdShader.setUniform('uBlurTexture', this.blurBuffer2); // Blurred mask
+        this.thresholdShader.setUniform('uNoiseTexture', this.noiseImage); // Noise texture
+        
+        this.thresholdShader.setUniform('uResolution', [_targetBuffer.width, _targetBuffer.height]);
         this.thresholdShader.setUniform('uOutlineColor', _outlineColor.slice(0, 3)); // rgb only
-        this.thresholdShader.setUniform('uThreshold', 0.1); // Cutoff value
+        
+        this.thresholdShader.setUniform('uBaseThreshold', 0.1); 
+        this.thresholdShader.setUniform('uNoiseThreshold', 0.6); 
+        this.thresholdShader.setUniform('uEdgeSharpness', 0.96); 
+        
+        // Random noise offset for variety
+        this.thresholdShader.setUniform('uNoiseOffset', [random(-100.0, 100.0), random(-100.0, 100.0)]);
+        this.thresholdShader.setUniform('uNoiseScale', [this._outlineNoiseScale, this._outlineNoiseScale]);
+
         noStroke();
         rect(0, 0, _targetBuffer.width, _targetBuffer.height);
         _targetBuffer.end();
@@ -281,6 +298,25 @@ class Collager {
             p5Tex.setWrapMode(_wrapS, _wrapT);
         }
     }
+
+    outlineWeight (_thickness) {
+        this._outlineThickness = _thickness;
+        this._doOutline = true;
+    }
+
+    outlineQuality (_qualityLevel) {
+        this._outlineQualityLevel = _qualityLevel;
+    }
+
+    outlineNoiseScale (_scale) {
+        this._outlineNoiseScale = _scale;
+    }
+
+    noOutline () {
+        this._doOutline = false;
+    }
+
+
 }
 
 class CollageProfile {
