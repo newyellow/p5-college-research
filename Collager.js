@@ -4,16 +4,21 @@ class Collager {
         this.images = [];
         this.collageProfiles = [];
 
-        this.imgPieceBuffer = createFramebuffer();
+        // buffers
+        this.shapeBufferSize = 1024;
+        this._baseShapeBuffer = createFramebuffer();
+        this._outlineGradientBuffer = createFramebuffer();
+        this._finalShapeBuffer = createFramebuffer();
+        this._baseShapeBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
+        this._outlineGradientBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
+        this._finalShapeBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
 
-        // input output fbo
-        this.swapState = true;
-        this.frameBufferA = createFramebuffer();
-        this.frameBufferB = createFramebuffer();
 
-        this.sourceBuffer = this.frameBufferA;
-        this.targetBuffer = this.frameBufferB;
+        this._resultBuffer = new FrameBufferSet();
 
+        // shape stuff
+        this.shapeModel = new NYModel('shape');
+        this.outlineModel = null;
 
         // settings
         this._outlineThickness = 10;
@@ -23,12 +28,19 @@ class Collager {
     }
 
     async initShaders() {
+        this._outlineGradientShader = await loadShader('shaders/outline_gradient.vert', 'shaders/outline_gradient.frag');
+        this._shapeMaskShader = await loadShader('shaders/shape_mask_outline.vert', 'shaders/shape_mask_outline.frag');
+        this._fillShapeShader = await loadShader('shaders/fill_shape.vert', 'shaders/fill_shape.frag');
+
         this.outlineShaderProgram = await loadShader('shaders/outline.vert', 'shaders/outline.frag');
         this.maskShader = await loadShader('shaders/mask.vert', 'shaders/mask.frag');
         this.blurShader = await loadShader('shaders/blur.vert', 'shaders/blur.frag');
         this.thresholdShader = await loadShader('shaders/threshold.vert', 'shaders/threshold.frag');
+
         this.shadowShader = await loadShader('shaders/shadow.vert', 'shaders/shadow.frag');
         this.lutShader = await loadShader('shaders/lut.vert', 'shaders/lut.frag');
+
+        this.textureShader = await loadShader('shaders/texture.vert', 'shaders/texture.frag');
 
         this.noiseImageShape = await loadImage('textures/T_Noise_18.PNG');
         this.noiseImage = await loadImage('textures/TilingNoise05.PNG');
@@ -42,19 +54,6 @@ class Collager {
         let newImg = await loadImage(imageUrl);
         this.images.push(newImg);
         this.collageProfiles.push(new CollageProfile(minRatio, maxRatio));
-    }
-
-    FboSwap() {
-        this.swapState = !this.swapState;
-
-        if (this.swapState) {
-            this.sourceBuffer = this.frameBufferA;
-            this.targetBuffer = this.frameBufferB;
-        }
-        else {
-            this.sourceBuffer = this.frameBufferB;
-            this.targetBuffer = this.frameBufferA;
-        }
     }
 
     clearBuffers() {
@@ -74,6 +73,81 @@ class Collager {
     clearImages() {
         this.images = [];
         this.collageProfiles = [];
+    }
+
+    setShapeByEdgePoints(_edgePointsArray) {
+        this.shapeModel.clear();
+        this.shapeModel.addTrianglesByEdgePoints(_edgePointsArray);
+        this.shapeModel.normalizeUV();
+    }
+
+    drawShape() {
+        let targetImgIndex = floor(random(0, this.images.length));
+
+        // generate outline model
+        let outlineModel = this.shapeModel.generateOutlineModel(60, this._outlineThickness);
+        let quadModel = NYModel.generateFullScreenQuadModel(this.shapeBufferSize, this.shapeBufferSize);
+
+        // draw outline gradient for use
+        this._outlineGradientBuffer.begin();
+        clear();
+        background(0, 0, 100);
+
+        // fill inside
+        shader(this._fillShapeShader);
+        this._fillShapeShader.setUniform('uFillColor', [0.0, 0.0, 0.0, 1.0]);
+        model(this.shapeModel.build());
+        resetShader();
+
+        shader(this._outlineGradientShader);
+        model(outlineModel.build());
+
+        resetShader();
+        this._outlineGradientBuffer.end();
+        
+
+        // draw the basic image on the result buffer
+        this._baseShapeBuffer.begin();
+        clear();
+
+        shader(this.textureShader);
+        this.textureShader.setUniform('uMainTexture', this.images[targetImgIndex]);
+        model(this.shapeModel.build());
+
+        resetShader();
+        this._baseShapeBuffer.end();
+
+        // final composite the shape
+        this._finalShapeBuffer.begin();
+        clear();
+
+        shader(this._shapeMaskShader);
+        this._shapeMaskShader.setUniform('uMainTexture', this._baseShapeBuffer);
+        this._shapeMaskShader.setUniform('uGradientTexture', this._outlineGradientBuffer);
+
+        this.setTextureWrap(this.noiseImage, REPEAT);
+        this.setTextureWrap(this.noiseImage, REPEAT);
+        this._shapeMaskShader.setUniform('uCutoutNoiseTexture', this.noiseImage);
+        this._shapeMaskShader.setUniform('uOutlineNoiseTexture', this.noiseImage);
+
+        this._shapeMaskShader.setUniform('uCutoutNoiseScale', [0.6, 0.6]);
+        this._shapeMaskShader.setUniform('uOutlineNoiseScale', [0.4, 0.4]);
+
+        this._shapeMaskShader.setUniform('uCutoutNoiseOffset', [random(-1000.0, 1000.0), random(-1000.0, 1000.0)]);
+        this._shapeMaskShader.setUniform('uOutlineNoiseOffset', [random(-1000.0, 1000.0), random(-1000.0, 1000.0)]);
+
+        this._shapeMaskShader.setUniform('uCutoutRatio', 0.2);
+        this._shapeMaskShader.setUniform('uNoiseCutoutRatio', 0.8);
+
+        this._shapeMaskShader.setUniform('uOutlineRatio', 0.1);
+        this._shapeMaskShader.setUniform('uNoiseOutlineRatio', 0.8);
+
+        this._shapeMaskShader.setUniform('uOutlineColor', [1.0, 1.0, 1.0]);
+        this._shapeMaskShader.setUniform('uEdgeSharpness', 0.95);
+
+        model(quadModel.build());
+        resetShader();
+        this._finalShapeBuffer.end();
     }
 
     drawImage(_x, _y, _w, _h, _rotateDegree = 0, _imageIndex = -1) {
