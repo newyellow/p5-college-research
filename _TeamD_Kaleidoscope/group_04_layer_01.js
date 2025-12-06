@@ -66,7 +66,7 @@ new p5((sketch) => {
   sketch.setup = async () => {
     // N 張圖
     for (let i = 0; i < 6; i++) {
-      let imgPath = `../images/group_04/${String(i).padStart(2, "0")}.png`;
+      let imgPath = `images/${String(i).padStart(2, "0")}.png`;
       images[i] = await sketch.loadImage(imgPath);
     }
     console.log("✅ Images loaded:", images.length);

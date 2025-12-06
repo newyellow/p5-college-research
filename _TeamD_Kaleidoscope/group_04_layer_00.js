@@ -19,8 +19,8 @@ new p5((sketch) => {
     testTexture02 = await sketch.loadImage("images/test-photo-3.jpg");
     
     uniformsShader = await sketch.loadShader(
-      "shaders/uniform.vert",
-      "shaders/kaleidoscope.frag"
+      "../shaders/uniform.vert",
+      "../shaders/kaleidoscope.frag"
     );
     
     startTime = sketch.millis();
