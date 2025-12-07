@@ -86,7 +86,25 @@
                 };
 
                 frame.addEventListener('load', onArtworkLoaded);
-                frame.src = artwork.path;
+
+                // --- Construct URL with Parameters ---
+                const params = new URLSearchParams();
+                
+                // Add Iteration Data if available
+                if (artwork.iteration) {
+                    if (artwork.iteration.seed) {
+                        params.append('seed', artwork.iteration.seed);
+                    }
+                    if (artwork.iteration.parameters) {
+                        for (const [key, value] of Object.entries(artwork.iteration.parameters)) {
+                            params.append(key, value);
+                        }
+                    }
+                }
+
+                const url = `${artwork.path}?${params.toString()}`;
+                console.log("Loading URL:", url);
+                frame.src = url;
 
             }, FADE_DURATION);
         });
