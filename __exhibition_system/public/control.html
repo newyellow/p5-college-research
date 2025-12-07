@@ -6,71 +6,281 @@
     <title>Exhibition Control Panel</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f0f0f0;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none; /* Prevent text selection */
+        }
+
+        /* Layout Containers */
+        .panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity ease-in-out;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        button {
-            padding: 20px 40px;
+
+        .panel.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Setting Panel Styles */
+        .sliders-container {
+            width: 80%;
+            max-width: 500px;
+            margin-bottom: 40px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slider-group {
+            margin-bottom: 25px;
+        }
+
+        .slider-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .action-button {
+            padding: 25px 50px;
             font-size: 24px;
             cursor: pointer;
             background-color: #007bff;
             color: white;
             border: none;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.1s, background-color 0.2s;
+            margin-bottom: 40px;
         }
-        button:hover {
+
+        .action-button:active {
+            transform: scale(0.95);
             background-color: #0056b3;
         }
-        #info {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 500px;
+
+        /* Display Panel Styles */
+        #displayPanel {
+            background-color: #ffffff;
+            text-align: center;
+        }
+
+        .info-card {
+            max-width: 600px;
             width: 90%;
             text-align: left;
         }
-        h2 { margin-top: 0; }
-        .label { font-weight: bold; color: #555; }
+
+        h2 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        .meta-info {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        .description {
+            font-size: 1.2em;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        #returnHint {
+            position: absolute;
+            bottom: 50px;
+            font-size: 1.2em;
+            color: #888;
+            opacity: 0;
+            transition: opacity ease-in-out;
+            padding: 15px 30px;
+            background: #f9f9f9;
+            border-radius: 30px;
+        }
+
     </style>
 </head>
 <body>
 
-    <h1>Control Panel</h1>
-    <button id="pickBtn">Pick Random Artwork</button>
+    <!-- Layout 1: Settings and Submitting -->
+    <div id="settingPanel" class="panel active">
+        <h1>Configure Artwork</h1>
+        
+        <div class="sliders-container">
+            <div class="slider-group">
+                <label>Parameter 1</label>
+                <input type="range" id="param1" min="0" max="1000000" value="500000">
+            </div>
+            <div class="slider-group">
+                <label>Parameter 2</label>
+                <input type="range" id="param2" min="0" max="1000000" value="500000">
+            </div>
+            <div class="slider-group">
+                <label>Parameter 3</label>
+                <input type="range" id="param3" min="0" max="1000000" value="500000">
+            </div>
+            <div class="slider-group">
+                <label>Parameter 4</label>
+                <input type="range" id="param4" min="0" max="1000000" value="500000">
+            </div>
+        </div>
 
-    <div id="info" style="display: none;">
-        <h2 id="artTitle"></h2>
-        <p><span class="label">Team Members:</span> <span id="artMembers"></span></p>
-        <p><span class="label">Topic:</span> <span id="artTopic"></span></p>
-        <p><span class="label">Description:</span> <span id="artDesc"></span></p>
+        <button id="generateBtn" class="action-button">Generate Artwork</button>
+    </div>
+
+    <!-- Layout 2: Description Display -->
+    <div id="displayPanel" class="panel">
+        <div class="info-card">
+            <h2 id="artTitle">Loading...</h2>
+            <div class="meta-info">
+                <p><strong>Team:</strong> <span id="artMembers"></span></p>
+                <p><strong>Topic:</strong> <span id="artTopic"></span></p>
+            </div>
+            <p class="description" id="artDesc"></p>
+        </div>
+        
+        <div id="returnHint">Tap the screen to generate next artwork</div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const pickBtn = document.getElementById('pickBtn');
-        const infoDiv = document.getElementById('info');
-        
-        pickBtn.addEventListener('click', () => {
-            socket.emit('pick-random');
-        });
+        // --- CONFIGURATION ---
+        const PANEL_FADE_DURATION = 800; // ms (Transition between panels)
+        const HINT_REVEAL_DELAY = 6000;  // ms (Wait time before showing "Tap to return")
+        const HINT_FADE_DURATION = 1000; // ms (Fade in time for the hint)
+        // ---------------------
 
+        const socket = io();
+        
+        // Elements
+        const settingPanel = document.getElementById('settingPanel');
+        const displayPanel = document.getElementById('displayPanel');
+        const generateBtn = document.getElementById('generateBtn');
+        const returnHint = document.getElementById('returnHint');
+
+        // State
+        let isAnimating = false;
+        let isWaitingForReturn = false;
+
+        // Init Styles
+        settingPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
+        displayPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
+        returnHint.style.transitionDuration = `${HINT_FADE_DURATION}ms`;
+
+        // Socket Listener
         socket.on('artwork-selected', (artwork) => {
+            // Populate Data
             document.getElementById('artTitle').textContent = artwork.title;
             document.getElementById('artMembers').textContent = artwork.members;
             document.getElementById('artTopic').textContent = artwork.topic;
             document.getElementById('artDesc').textContent = artwork.description;
-            infoDiv.style.display = 'block';
+
+            // Perform Transition: Setting -> Display
+            performTransitionToDisplay();
         });
+
+        // Event: Generate Button Click
+        generateBtn.addEventListener('click', () => {
+            if (isAnimating) return;
+            
+            isAnimating = true; // Lock interaction
+
+            // Collect Slider Values (Normalize to 0-1)
+            const params = {
+                p1: document.getElementById('param1').value / 1000000,
+                p2: document.getElementById('param2').value / 1000000,
+                p3: document.getElementById('param3').value / 1000000,
+                p4: document.getElementById('param4').value / 1000000
+            };
+            
+            // 1. Send Request
+            socket.emit('pick-random', params);
+            
+            // The actual transition happens when we get data back (in socket.on)
+            // Let's fade out immediately to give feedback.
+            settingPanel.classList.remove('active');
+        });
+
+        // Event: Screen Tap (Return)
+        // We attach this to document but only act if we are in the right state
+        document.addEventListener('click', (e) => {
+            // Ignore clicks on the generate button itself (handled above)
+            if (e.target === generateBtn || generateBtn.contains(e.target)) return;
+
+            if (isWaitingForReturn && !isAnimating) {
+                performTransitionToSettings();
+            }
+        });
+
+        function performTransitionToDisplay() {
+            // Ensure Setting is hidden (in case we didn't hide it earlier)
+            settingPanel.classList.remove('active');
+
+            setTimeout(() => {
+                // Show Display
+                displayPanel.classList.add('active');
+                
+                // Wait for transition to finish
+                setTimeout(() => {
+                    isAnimating = false; // Unlock for safety, though user can't click much yet
+                    
+                    // Start Timer for Return Hint
+                    setTimeout(() => {
+                        returnHint.style.opacity = '1';
+                        isWaitingForReturn = true;
+                    }, HINT_REVEAL_DELAY);
+
+                }, PANEL_FADE_DURATION);
+            }, PANEL_FADE_DURATION); // Wait for fade out to finish
+        }
+
+        function performTransitionToSettings() {
+            isAnimating = true;
+            isWaitingForReturn = false;
+
+            // Hide Display
+            displayPanel.classList.remove('active');
+            returnHint.style.opacity = '0'; // Reset hint
+
+            setTimeout(() => {
+                // Show Settings
+                settingPanel.classList.add('active');
+                
+                setTimeout(() => {
+                    isAnimating = false; // Unlock
+                }, PANEL_FADE_DURATION);
+
+            }, PANEL_FADE_DURATION);
+        }
+
     </script>
 </body>
 </html>
-

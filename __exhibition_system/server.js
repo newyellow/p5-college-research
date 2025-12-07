@@ -46,17 +46,74 @@ io.on('connection', (socket) => {
     console.log('a user connected');
 
     // Handle pick event from control panel
-    socket.on('pick-random', () => {
+    socket.on('pick-random', (clientParams) => {
         if (artworks.length === 0) {
             console.log("No artworks loaded to pick from.");
             return;
         }
+
         const randomIndex = Math.floor(Math.random() * artworks.length);
         const pickedArtwork = artworks[randomIndex];
+        
+        // --- Generate Iteration Record ---
+        const timestamp = Date.now();
+        
+        // Generate Random Seed (20 random letters + timestamp)
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        let randomString = '';
+        for (let i = 0; i < 20; i++) {
+            randomString += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const seed = randomString + timestamp;
+
+        // Construct Record Data
+        const record = {
+            timestamp: timestamp,
+            date: new Date(timestamp).toISOString(),
+            seed: seed,
+            parameters: clientParams || {}, // params from slider (0~1)
+            pickedTeamId: pickedArtwork.id,
+            pickedArtworkTitle: pickedArtwork.title
+        };
+
+        // Save to file
+        // Move recordsDir one level up from __exhibition_system
+        const recordsDir = path.join(__dirname, '..', '__iteration_records');
+        if (!fs.existsSync(recordsDir)){
+            fs.mkdirSync(recordsDir);
+        }
+
+        // Format Date for Filename: YYYY-MMDD-HHIISS
+        const dateObj = new Date(timestamp);
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+        
+        const dateStr = `${year}-${month}${day}-${hours}${minutes}${seconds}`;
+
+        // Format Team ID: Remove "Team" from "TeamA", "TeamB" -> "A", "B"
+        const shortTeamId = pickedArtwork.id.replace(/^Team/, '');
+
+        const recordFilename = `${dateStr}-${shortTeamId}.json`;
+        const recordPath = path.join(recordsDir, recordFilename);
+        
+        try {
+            fs.writeFileSync(recordPath, JSON.stringify(record, null, 2));
+            console.log('Saved iteration record:', recordPath);
+        } catch (err) {
+            console.error('Error saving iteration record:', err);
+        }
+
         console.log('Picked artwork:', pickedArtwork.title);
         
-        // Broadcast the picked artwork to all connected clients (control and display)
-        io.emit('artwork-selected', pickedArtwork);
+        // Broadcast the picked artwork AND the generated seed/params to all connected clients
+        io.emit('artwork-selected', {
+            ...pickedArtwork,
+            iteration: record 
+        });
     });
 
     socket.on('disconnect', () => {
