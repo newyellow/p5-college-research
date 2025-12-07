@@ -32,34 +32,80 @@ async function launchBrowsers(port) {
         // Close any existing instances? (Optional, skipping for now)
 
         for (const winConfig of config.windows) {
-            const screenId = winConfig.screenId;
+            let x = 0, y = 0;
+            let width = 800; // Default width if not kiosk
+            let height = 600; // Default height if not kiosk
+            let isKiosk = true;
+
             // Sort screens left-to-right to ensure ID matches expectation
             screens.sort((a, b) => a.Bounds.X - b.Bounds.X);
 
-            if (screenId < screens.length) {
-                const screen = screens[screenId];
-                const { X, Y } = screen.Bounds;
+            if (config.debugMode) {
+                // Debug Mode: Use single screen, split top/bottom
+                const debugScreenId = config.debugScreenId || 0;
                 
-                const targetUrl = winConfig.type === 'control' 
-                    ? `http://localhost:${port}/control.html` 
-                    : `http://localhost:${port}/display.html`;
-                
-                console.log(`Launching browser for ${winConfig.type} on Screen ${screenId} at ${X},${Y}`);
+                if (debugScreenId < screens.length) {
+                    const screen = screens[debugScreenId];
+                    // We assume 2 windows in config usually: control and display.
+                    // Top: Display, Bottom: Control (as per user request)
+                    // But we are iterating loop.
+                    
+                    const screenW = screen.Bounds.Width;
+                    const screenH = screen.Bounds.Height;
+                    const startX = screen.Bounds.X;
+                    const startY = screen.Bounds.Y;
 
-                // Launch separate instance
-                await puppeteer.launch({
-                    headless: false,
-                    ignoreDefaultArgs: ['--enable-automation'],
-                    args: [
-                        `--window-position=${X},${Y}`,
-                        `--kiosk`, // Kiosk mode forces fullscreen
-                        `--app=${targetUrl}`,
-                        '--no-first-run',
-                         // distinct user data dir to allow multiple instances
-                        `--user-data-dir=${path.join(__dirname, 'temp_browser_data', 'screen_' + screenId + '_' + winConfig.type)}`
-                    ]
-                });
+                    width = screenW;
+                    height = Math.floor(screenH / 2);
+                    x = startX;
+                    
+                    if (winConfig.type === 'display') {
+                        y = startY; // Top
+                    } else {
+                        y = startY + height; // Bottom
+                    }
+                    
+                    isKiosk = false; // Disable kiosk so we can see sizing (or enable if we want borderless split)
+                    // If we use kiosk, it forces FULL screen of monitor usually.
+                    // We'll use window-size instead.
+                }
+            } else {
+                // Production Mode
+                const screenId = winConfig.screenId;
+                if (screenId < screens.length) {
+                    const screen = screens[screenId];
+                    x = screen.Bounds.X;
+                    y = screen.Bounds.Y;
+                    // Kiosk mode handles width/height automatically
+                }
             }
+
+            const targetUrl = winConfig.type === 'control' 
+                ? `http://localhost:${port}/control.html` 
+                : `http://localhost:${port}/display.html`;
+            
+            console.log(`Launching browser for ${winConfig.type} at ${x},${y} (Debug: ${config.debugMode})`);
+
+            // Launch separate instance
+            const args = [
+                `--window-position=${x},${y}`,
+                `--app=${targetUrl}`,
+                '--no-first-run',
+                // distinct user data dir to allow multiple instances
+                `--user-data-dir=${path.join(__dirname, 'temp_browser_data', 'win_' + winConfig.type)}`
+            ];
+
+            if (isKiosk) {
+                args.push('--kiosk');
+            } else {
+                args.push(`--window-size=${width},${height}`);
+            }
+
+            await puppeteer.launch({
+                headless: false,
+                ignoreDefaultArgs: ['--enable-automation'],
+                args: args
+            });
         }
 
     } catch (err) {

@@ -1,4 +1,6 @@
 {
+  "debugMode": true,
+  "debugScreenId": 0,
   "windows": [
     {
       "screenId": 1,
@@ -10,4 +12,3 @@
     }
   ]
 }
-

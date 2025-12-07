@@ -1,0 +1,12 @@
+{
+    "serverIp": "http://localhost:3000",
+    "debugMode": true,
+    "monitors": [
+        { "screenId": 0 },
+        { "screenId": 0 },
+        { "screenId": 0 },
+        { "screenId": 0 },
+        { "screenId": 0 }
+    ]
+}
+
