@@ -195,8 +195,7 @@
         displayPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
         returnHint.style.transitionDuration = `${HINT_FADE_DURATION}ms`;
 
-        // Socket Listener
-        socket.on('artwork-selected', (artwork) => {
+        const updateControlPanel = (artwork) => {
             // Populate Data
             document.getElementById('artTitle').textContent = artwork.title;
             document.getElementById('artMembers').textContent = artwork.members;
@@ -205,7 +204,13 @@
 
             // Perform Transition: Setting -> Display
             performTransitionToDisplay();
-        });
+        };
+
+        // Listen for 'artwork-current' (new explicit event for local update)
+        socket.on('artwork-current', updateControlPanel);
+        
+        // Also listen for 'artwork-selected' (legacy fallback, though server mostly sends current now)
+        socket.on('artwork-selected', updateControlPanel);
 
         // Event: Generate Button Click
         generateBtn.addEventListener('click', () => {

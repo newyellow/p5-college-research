@@ -62,8 +62,8 @@
         fadeOverlay.style.backgroundColor = FADE_COLOR;
         fadeOverlay.style.transition = `opacity ${FADE_DURATION}ms ease-in-out`;
 
-        socket.on('artwork-selected', (artwork) => {
-            console.log("Loading artwork:", artwork.title);
+        const updateDisplay = (artwork) => {
+             console.log("Loading artwork:", artwork.title);
             
             // 1. Start Fade Out (Cover screen)
             fadeOverlay.style.opacity = '1';
@@ -107,7 +107,13 @@
                 frame.src = url;
 
             }, FADE_DURATION);
-        });
+        };
+
+        // Listen for 'artwork-current' (new explicit event for server display)
+        socket.on('artwork-current', updateDisplay);
+        
+        // Also listen for 'artwork-selected' (legacy fallback)
+        socket.on('artwork-selected', updateDisplay);
     </script>
 </body>
 </html>

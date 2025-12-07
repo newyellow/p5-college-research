@@ -45,12 +45,13 @@
     <iframe id="artworkFrame"></iframe>
     <div id="fadeOverlay"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- No Socket.io script needed here, logic is internal/local -->
     <script>
         // --- CONFIGURATION ---
         const FADE_DURATION = 1000; // milliseconds (Fade In/Out time)
         const FADE_COLOR = '#000000'; // Color of the curtain
         const WAIT_BEFORE_REVEAL = 500; // Extra time to wait at full blackout before revealing new artwork
+        const IDLE_TIMEOUT = 120 * 1000; // 120 seconds idle time
         // ---------------------
 
         const frame = document.getElementById('artworkFrame');
@@ -61,9 +62,35 @@
         fadeOverlay.style.backgroundColor = FADE_COLOR;
         fadeOverlay.style.transition = `opacity ${FADE_DURATION}ms ease-in-out`;
 
-        // Function to be called by puppeteer
+        // State
+        let idleTimer = null;
+
+        function resetIdleTimer() {
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(triggerSelfUpdate, IDLE_TIMEOUT);
+        }
+
+        async function triggerSelfUpdate() {
+            console.log("Idle timeout reached. Fetching random artwork locally...");
+            try {
+                const response = await fetch('/api/random-record');
+                if (!response.ok) throw new Error("API Error");
+                const artwork = await response.json();
+                console.log("Self-update with:", artwork.title);
+                window.updateArtwork(artwork);
+            } catch (e) {
+                console.error("Self-update failed:", e);
+                // Retry in 10s
+                idleTimer = setTimeout(triggerSelfUpdate, 10000);
+            }
+        }
+
+        // Function to be called by puppeteer (or self)
         window.updateArtwork = (artwork) => {
              console.log("Loading artwork:", artwork.title);
+             
+             // Reset idle timer whenever we get an update (remote or local)
+             resetIdleTimer();
             
             // 1. Start Fade Out (Cover screen)
             fadeOverlay.style.opacity = '1';
@@ -110,7 +137,12 @@
         };
         
         console.log("Client Display loaded. Waiting for external commands via window.updateArtwork()");
+        
+        // Initial Start: Trigger immediate self-update if nothing happens
+        // Or wait for IDLE_TIMEOUT? User said "instead of displaying waiting... randomly pick a work"
+        // Let's trigger immediately once.
+        triggerSelfUpdate();
+
     </script>
 </body>
 </html>
-

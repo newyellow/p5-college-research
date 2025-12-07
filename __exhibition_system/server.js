@@ -42,6 +42,9 @@ try {
 }
 
 
+// State to store the previous artwork
+let previousArtworkData = null;
+
 io.on('connection', (socket) => {
     console.log('a user connected');
 
@@ -107,13 +110,31 @@ io.on('connection', (socket) => {
             console.error('Error saving iteration record:', err);
         }
 
-        console.log('Picked artwork:', pickedArtwork.title);
+        console.log('Picked artwork (Current):', pickedArtwork.title);
         
-        // Broadcast the picked artwork AND the generated seed/params to all connected clients
-        io.emit('artwork-selected', {
+        // Construct the current data object
+        const currentData = {
             ...pickedArtwork,
             iteration: record 
-        });
+        };
+
+        // 1. Send the CURRENT artwork to the Local Display (and Control Panel)
+        // We use a specific event 'artwork-current' for local display
+        io.emit('artwork-current', currentData);
+        // Also emit 'artwork-selected' for backward compatibility with control panel and local display if they listen to it
+        // BUT we need to differentiate what the CLIENT receives.
+        
+        // To handle the requirement: "Server sends A to client (pushed away)"
+        // If we have previous artwork, send it to the CLIENTs
+        if (previousArtworkData) {
+             console.log("Sending PREVIOUS artwork to Clients:", previousArtworkData.title);
+             io.emit('artwork-pushed', previousArtworkData); 
+        } else {
+            console.log("No previous artwork to push to clients yet.");
+        }
+
+        // Update the previous artwork to be the current one for next time
+        previousArtworkData = currentData;
     });
 
     socket.on('disconnect', () => {
