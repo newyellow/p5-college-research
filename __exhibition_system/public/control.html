@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exhibition Control Panel</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        button {
+            padding: 20px 40px;
+            font-size: 24px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: left;
+        }
+        h2 { margin-top: 0; }
+        .label { font-weight: bold; color: #555; }
+    </style>
+</head>
+<body>
+
+    <h1>Control Panel</h1>
+    <button id="pickBtn">Pick Random Artwork</button>
+
+    <div id="info" style="display: none;">
+        <h2 id="artTitle"></h2>
+        <p><span class="label">Team Members:</span> <span id="artMembers"></span></p>
+        <p><span class="label">Topic:</span> <span id="artTopic"></span></p>
+        <p><span class="label">Description:</span> <span id="artDesc"></span></p>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const pickBtn = document.getElementById('pickBtn');
+        const infoDiv = document.getElementById('info');
+        
+        pickBtn.addEventListener('click', () => {
+            socket.emit('pick-random');
+        });
+
+        socket.on('artwork-selected', (artwork) => {
+            document.getElementById('artTitle').textContent = artwork.title;
+            document.getElementById('artMembers').textContent = artwork.members;
+            document.getElementById('artTopic').textContent = artwork.topic;
+            document.getElementById('artDesc').textContent = artwork.description;
+            infoDiv.style.display = 'block';
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,13 @@
+{
+  "windows": [
+    {
+      "screenId": 1,
+      "type": "control"
+    },
+    {
+      "screenId": 0,
+      "type": "display"
+    }
+  ]
+}
+

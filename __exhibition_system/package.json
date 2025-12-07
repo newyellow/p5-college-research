@@ -1,0 +1,14 @@
+{
+  "name": "exhibition-system",
+  "version": "1.0.0",
+  "description": "Exhibition system for p5 college research artworks",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^24.32.0",
+    "socket.io": "^4.7.2"
+  }
+}
