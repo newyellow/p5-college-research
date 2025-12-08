@@ -5,12 +5,10 @@ class Collager {
         this.collageProfiles = [];
 
         // buffers
-        this.shapeBufferSize = 1024;
-        this.currentDrawMode = 'rect'; // 'rect' or 'full'
-
         this._baseShapeBuffer = createFramebuffer();
         this._outlineGradientBuffer = createFramebuffer();
         this._finalShapeBuffer = createFramebuffer();
+        this._collageBuffer = createFramebuffer();
 
         this._resultBuffer = new FrameBufferSet();
 
@@ -30,6 +28,12 @@ class Collager {
         this._outlineNoiseScale = 1.2;
         this._outlineQualityLevel = 1;
         this._doOutline = true;
+
+        // shadow settings
+        this._doShadow = false;
+        this._shadowOffset = [10, 10];
+        this._shadowColor = [0, 0, 0, 0.5];
+        this._shadowBlur = 20;
 
         // rect related settings
         this._rectNoiseScale = 0.01;
@@ -77,10 +81,12 @@ class Collager {
         this._baseShapeBuffer.remove();
         this._outlineGradientBuffer.remove();
         this._finalShapeBuffer.remove();
+        this._collageBuffer.remove();
 
         this._baseShapeBuffer = createFramebuffer();
         this._outlineGradientBuffer = createFramebuffer();
         this._finalShapeBuffer = createFramebuffer();
+        this._collageBuffer = createFramebuffer();
     }
 
     clearBuffers() {
@@ -166,7 +172,6 @@ class Collager {
     }
 
     drawRect(_x, _y, _w, _h, _rotateDegree = 0) {
-        // this._checkAndResizeBuffers('rect');
         
         // 1. Generate edge points with noise
         let points = NYModel.generatePointsForRoundedRect(_w, _h, this._rectRoundness, this._rectPointCount, this._rectNoiseScale, this._rectEdgeOffset);
@@ -193,7 +198,7 @@ class Collager {
         rotate(radians(_rotateDegree));
 
         // Draw the full buffer centered. 
-        image(this._finalShapeBuffer, 0, 0, this.shapeBufferSize, this.shapeBufferSize);
+        image(this._finalShapeBuffer, 0, 0);
 
         pop();
 
@@ -262,7 +267,9 @@ class Collager {
         baseBuffer.end();
 
         // final composite the shape
-        finalBuffer.begin();
+        let collageBuffer = this._collageBuffer;
+        
+        collageBuffer.begin();
         clear();
 
         shader(this._shapeMaskShader);
@@ -283,13 +290,45 @@ class Collager {
         this._shapeMaskShader.setUniform('uCutoutRatio', this._baseCutoutRatio);
         this._shapeMaskShader.setUniform('uNoiseCutoutRatio', this._noiseCutoutRatio);
 
-        this._shapeMaskShader.setUniform('uOutlineRatio', this._baseOutlineRatio);
-        this._shapeMaskShader.setUniform('uNoiseOutlineRatio', this._noiseOutlineRatio);
+        if (this._doOutline) {
+            this._shapeMaskShader.setUniform('uOutlineRatio', this._baseOutlineRatio);
+            this._shapeMaskShader.setUniform('uNoiseOutlineRatio', this._noiseOutlineRatio);
+        } else {
+            this._shapeMaskShader.setUniform('uOutlineRatio', 0.0);
+            this._shapeMaskShader.setUniform('uNoiseOutlineRatio', 0.0);
+        }
 
         this._shapeMaskShader.setUniform('uOutlineColor', [1.0, 1.0, 1.0]);
         this._shapeMaskShader.setUniform('uEdgeSharpness', 0.95);
 
         model(quadGeom);
+        resetShader();
+        collageBuffer.end();
+
+        // Shadow Pass
+        finalBuffer.begin();
+        clear();
+        
+        if(this._doShadow) {
+            shader(this.shadowShader);
+            this.shadowShader.setUniform('uMainTexture', collageBuffer);
+            this.shadowShader.setUniform('uTextureSize', [finalBuffer.width, finalBuffer.height]);
+            this.shadowShader.setUniform('uShadowOffset', this._shadowOffset);
+            this.shadowShader.setUniform('uBlurRadius', this._shadowBlur);
+            this.shadowShader.setUniform('uShadowColor', this._shadowColor);
+            this.shadowShader.setUniform('uShadowOpacity', 1.0); // Alpha is handled in uShadowColor
+            this.shadowShader.setUniform('uBlurQuality', 2.0); // Medium quality
+            
+            model(quadGeom);
+        }
+        else {
+             shader(this.textureShader);
+             this.textureShader.setUniform('uMainTexture', collageBuffer);
+             this.textureShader.setUniform('uTextureOffset', [0.0, 0.0]);
+             this.textureShader.setUniform('uTextureScale', [1.0, 1.0]);
+             model(quadGeom);
+        }
+        
         resetShader();
         finalBuffer.end();
         
@@ -392,6 +431,56 @@ class Collager {
         this._rectPointCount = _count;
     }
 
+    // Shadow Settings
+    shadow(_offsetX, _offsetY, _blur, _color = [0, 0, 0], _alpha = 0.5) {
+        this._doShadow = true;
+        this._shadowOffset = [_offsetX, _offsetY];
+        this._shadowBlur = _blur;
+        
+        // Handle color input (array or p5 color or separate components)
+        // Assuming array [r,g,b] or [r,g,b,a] passed, or just [r,g,b] and alpha separate.
+        // User asked for "shadow color, shadow blur size, shadow alpha"
+        // Let's store as [r, g, b, a]
+        let r = _color[0];
+        let g = _color[1];
+        let b = _color[2];
+        // if color has 4 components, use that alpha, else use _alpha
+        let a = _color.length > 3 ? _color[3] : _alpha;
+        
+        this._shadowColor = [r, g, b, a];
+    }
+
+    shadowOffset(_x, _y) {
+        this._shadowOffset = [_x, _y];
+        this._doShadow = true;
+    }
+
+    shadowColor(_r, _g, _b, _a = 0.5) {
+        if (Array.isArray(_r)) {
+            this._shadowColor = _r;
+            if (this._shadowColor.length === 3) {
+                 this._shadowColor.push(_a);
+            }
+        } else {
+            this._shadowColor = [_r, _g, _b, _a];
+        }
+        this._doShadow = true;
+    }
+
+    shadowBlur(_radius) {
+        this._shadowBlur = _radius;
+        this._doShadow = true;
+    }
+
+    shadowAlpha(_a) {
+        this._shadowColor[3] = _a;
+        this._doShadow = true;
+    }
+
+    noShadow() {
+        this._doShadow = false;
+    }
+
     debug(_isDebug = true) {
         this._isDebug = _isDebug;
     }
@@ -423,7 +512,7 @@ class Collager {
         noStroke();
         fill(0, 0, 0, 0.5); // semi-transparent black
         rectMode(CORNER);
-        rect(startX, startY, drawW, drawH * 3);
+        rect(startX, startY, drawW, drawH * 4);
 
         // Draw _baseShapeBuffer
         imageMode(CORNER);
@@ -436,8 +525,11 @@ class Collager {
         // Draw _outlineGradientBuffer
         image(displayOutlineBuffer, startX, startY + drawH, drawW, drawH);
 
+        // Draw _collageBuffer
+        image(this._collageBuffer, startX, startY + drawH * 2, drawW, drawH);
+
         // Draw _finalShapeBuffer
-        image(displayFinalBuffer, startX, startY + drawH * 2, drawW, drawH);
+        image(displayFinalBuffer, startX, startY + drawH * 3, drawW, drawH);
 
         // Add labels
         fill(255);
@@ -446,7 +538,8 @@ class Collager {
         textAlign(LEFT, TOP);
         text("Base Shape", startX + 10, startY + 10);
         text("Outline Grad", startX + 10, startY + drawH + 10);
-        text("Final Shape", startX + 10, startY + drawH * 2 + 10);
+        text("Collage Pass", startX + 10, startY + drawH * 2 + 10);
+        text("Final Shape", startX + 10, startY + drawH * 3 + 10);
 
         pop();
     }

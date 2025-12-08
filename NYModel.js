@@ -116,8 +116,10 @@ class NYModel {
             }
 
             // Apply Noise
-            let nx = (noise(px * 0.01, py * 0.01, seedOffset) - 0.5) * _noiseScale * _noiseOffset;
-            let ny = (noise(px * 0.01 + 100, py * 0.01 + 100, seedOffset) - 0.5) * _noiseScale * _noiseOffset;
+            // Use _noiseScale for frequency (coordinate scaling)
+            // Use _noiseOffset for amplitude (pixel displacement)
+            let nx = (noise(px * _noiseScale, py * _noiseScale, seedOffset) - 0.5) * _noiseOffset * 2.0; 
+            let ny = (noise(px * _noiseScale + 123.45, py * _noiseScale + 123.45, seedOffset) - 0.5) * _noiseOffset * 2.0;
 
             points.push(new NYPoint(px + nx, py + ny));
         }

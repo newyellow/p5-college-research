@@ -17,30 +17,36 @@ async function setup() {
     await collager.addImage('images/test-photo-6.jpg', 0.7, 0.9);
 
     // outline settings
-    collager.cutoutThickness(12);
-    collager.cutoutNoiseScale(0.01);
+    collager.cutoutThickness(20);
+    collager.cutoutNoiseScale(0.24);
+    collager.cutoutRatio(0.0, 1.0);
 
-    collager.outlineWeight(24);
+    // collager.outlineWeight(1);
+    collager.outlineWeight(0);
+    collager.outlineRatio(0.1, 0.9);
     collager.outlineNoiseScale(6.0);
 
     // rect drawing settings
-    collager.rectEdgeOffset(20);
-    collager.rectRoundness(6);
-    collager.rectNoiseScale(0.001);
-    collager.rectPointCount(16);
+    collager.rectEdgeOffset(10);
+    collager.rectRoundness(0);
+    collager.rectNoiseScale(0.03);
+    collager.rectPointCount(24);
+
+    collager.shadow(10, 10, 30, [0, 0, 0], 0.3);
+    collager.noShadow();
 
     // Enable debug mode
     collager.debug(true);
     collager.debugScale(0.25);
 
     // Draw Rects
-    let flowFieldsCount = 2000;
+    let flowFieldsCount = 1000;
     for (let i = 0; i < flowFieldsCount; i++) {
         let posX = random(-width / 2, width / 2);
         let posY = random(-height / 2, 0);
 
         let sizeW = random(20, 40);
-        let sizeH = random(90, 120);
+        let sizeH = random(100, 200);
 
         let angleNoise = noise(posX * 0.001, posY * 0.0006, 666.0);
         let angleDegree = lerp(-360, 360, angleNoise);
@@ -52,7 +58,7 @@ async function setup() {
         }
     }
 
-   
+
     // draw mountains
     collager.cutoutThickness(200);
     collager.cutoutNoiseScale(0.6);

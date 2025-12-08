@@ -37,6 +37,8 @@ async function setup() {
   collager.outlineWeight(2);
   collager.outlineNoiseScale(1.0);
 
+  collager.shadow(10, 10, 6, [0, 0, 0], 0.4);
+
   let gridX = 36;
   let gridY = 4;
 
