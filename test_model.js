@@ -30,28 +30,29 @@ async function setup() {
     collager.rectPointCount(16);
 
     // Enable debug mode
-    collager.debug(false);
+    collager.debug(true);
+    collager.debugScale(0.25);
 
     // Draw Rects
-    // let flowFieldsCount = 1000;
-    // for (let i = 0; i < flowFieldsCount; i++) {
-    //     let posX = random(-width / 2, width / 2);
-    //     let posY = random(-height / 2, 0);
+    let flowFieldsCount = 2000;
+    for (let i = 0; i < flowFieldsCount; i++) {
+        let posX = random(-width / 2, width / 2);
+        let posY = random(-height / 2, 0);
 
-    //     let sizeW = random(20, 40);
-    //     let sizeH = random(90, 120);
+        let sizeW = random(20, 40);
+        let sizeH = random(90, 120);
 
-    //     let angleNoise = noise(posX * 0.001, posY * 0.0006, 666.0);
-    //     let angleDegree = lerp(-360, 360, angleNoise);
+        let angleNoise = noise(posX * 0.001, posY * 0.0006, 666.0);
+        let angleDegree = lerp(-360, 360, angleNoise);
 
-    //     collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
+        collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
 
-    //     if (i % 10 == 0) {
-    //         await sleep(1);
-    //     }
-    // }
+        if (i % 10 == 0) {
+            await sleep(1);
+        }
+    }
 
-
+   
     // draw mountains
     collager.cutoutThickness(200);
     collager.cutoutNoiseScale(0.6);
@@ -61,8 +62,9 @@ async function setup() {
     collager.outlineNoiseScale(0.018);
     collager.outlineRatio(0.3, 0.7);
 
+
     let mountainLayerCount = 12;
-    let xSamplePoints = 120;
+    let xSamplePoints = 10;
 
     let mountainHeightRange = [60, 666];
     let mountainHeightNoiseScaleX = 0.002;
@@ -70,7 +72,7 @@ async function setup() {
 
     let mountainLayerOffset = 80;
 
-    let yStart = -400;
+    let yStart = 0;
 
     for (let y = 0; y < mountainLayerCount; y++) {
         yStart += mountainLayerOffset * random(0.2, 1.0);

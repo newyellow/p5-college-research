@@ -11,17 +11,13 @@ class Collager {
         this._baseShapeBuffer = createFramebuffer();
         this._outlineGradientBuffer = createFramebuffer();
         this._finalShapeBuffer = createFramebuffer();
-        
-        // Initial resize for default 'rect' mode
-        this._baseShapeBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
-        this._outlineGradientBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
-        this._finalShapeBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
 
         this._resultBuffer = new FrameBufferSet();
 
         // shape stuff
         this.shapeModel = new NYModel('shape');
         this.outlineModel = null;
+        this._drawModelIndex = 0;
 
         // settings
         this._cutoutThickness = 60;
@@ -42,8 +38,8 @@ class Collager {
         this._rectRoundness = 0;
 
         // debug features
-        this._isDebug = false;
-        this._debugScale = 0.33;
+        this._isDebug = true;
+        this._debugScale = 0.25;
     }
 
     async initSystem() {
@@ -52,7 +48,6 @@ class Collager {
         this._fillShapeShader = await loadShader('shaders/fill_shape.vert', 'shaders/fill_shape.frag');
 
         this.outlineShaderProgram = await loadShader('shaders/outline.vert', 'shaders/outline.frag');
-        this.maskShader = await loadShader('shaders/mask.vert', 'shaders/mask.frag');
         // this.blurShader = await loadShader('shaders/blur.vert', 'shaders/blur.frag');
         // this.thresholdShader = await loadShader('shaders/threshold.vert', 'shaders/threshold.frag');
         this.debugShader = await loadShader('shaders/debug.vert', 'shaders/debug.frag');
@@ -78,6 +73,16 @@ class Collager {
         this.collageProfiles.push(new CollageProfile(minRatio, maxRatio));
     }
 
+    resetBuffers() {
+        this._baseShapeBuffer.remove();
+        this._outlineGradientBuffer.remove();
+        this._finalShapeBuffer.remove();
+
+        this._baseShapeBuffer = createFramebuffer();
+        this._outlineGradientBuffer = createFramebuffer();
+        this._finalShapeBuffer = createFramebuffer();
+    }
+
     clearBuffers() {
         this.imgPieceBuffer.begin();
         clear();
@@ -92,36 +97,32 @@ class Collager {
         this.frameBufferB.end();
     }
 
+    clearBufferBindings() {
+        const gl = p5.instance._renderer.GL;
+
+        // Clear WebGL buffer bindings
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+        // Reset all vertex attrib bindings
+        const maxAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+        for (let i = 0; i < maxAttribs; i++) {
+            gl.disableVertexAttribArray(i);
+        }
+
+        if(gl.bindVertexArray)
+            gl.bindVertexArray(null);
+
+        gl.useProgram(null);
+    }
+
     clearImages() {
         this.images = [];
         this.collageProfiles = [];
     }
 
-    _checkAndResizeBuffers(_targetMode) {
-        if(this.currentDrawMode != _targetMode) {
-            console.log("RESIZED: ", _targetMode);
-
-            this.currentDrawMode = _targetMode;
-            
-            let targetW, targetH;
-
-            if(_targetMode == 'rect') {
-                targetW = this.shapeBufferSize;
-                targetH = this.shapeBufferSize;
-            } else if (_targetMode == 'full') {
-                targetW = width;
-                targetH = height;
-            }
-
-            this._baseShapeBuffer.resize(targetW, targetH);
-            this._outlineGradientBuffer.resize(targetW, targetH);
-            this._finalShapeBuffer.resize(targetW, targetH);
-        }
-    }
 
     drawVertexShape(_edgePointsArray) {
-        this._checkAndResizeBuffers('full');
-        
         // 1. Build Shape Model
         this._setShapeByEdgePoints(_edgePointsArray);
 
@@ -135,13 +136,13 @@ class Collager {
         // We need to calculate the bounding box of the shape to determine UV scale/offset?
         // OR we just use a random crop for the whole screen?
         // Let's assume we fit the image to the bounding box of the vertex shape.
-        
+
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for(let p of _edgePointsArray) {
-            if(p.x < minX) minX = p.x;
-            if(p.x > maxX) maxX = p.x;
-            if(p.y < minY) minY = p.y;
-            if(p.y > maxY) maxY = p.y;
+        for (let p of _edgePointsArray) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
         }
         let shapeW = maxX - minX;
         let shapeH = maxY - minY;
@@ -150,23 +151,22 @@ class Collager {
         let uvInfos = calculateUVInfosCoverMode(shapeW, shapeH, targetImg.width, targetImg.height, drawScale);
 
         // 4. Draw to Buffer (Full Screen)
-        this._processTearingEffect(this.shapeModel, targetImg, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
+        this._processTearingEffect(targetImg, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
 
         // 5. Draw to Screen
         // Since we drew into full screen buffer, we just composite it.
         push();
-        resetMatrix();
         imageMode(CORNER);
-        image(this._finalShapeBuffer, -width/2, -height/2, width, height);
+        image(this._finalShapeBuffer, -width / 2, -height / 2, width, height);
         pop();
-        
+
         if (this._isDebug) {
             this.drawDebug();
         }
     }
 
     drawRect(_x, _y, _w, _h, _rotateDegree = 0) {
-        this._checkAndResizeBuffers('rect');
+        // this._checkAndResizeBuffers('rect');
         
         // 1. Generate edge points with noise
         let points = NYModel.generatePointsForRoundedRect(_w, _h, this._rectRoundness, this._rectPointCount, this._rectNoiseScale, this._rectEdgeOffset);
@@ -185,7 +185,7 @@ class Collager {
         let uvInfos = calculateUVInfosCoverMode(_w, _h, targetImg.width, targetImg.height, drawScale);
 
         // 3. Draw to Buffer
-        this._processTearingEffect(this.shapeModel, targetImg, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
+        this._processTearingEffect(targetImg, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
 
         // 4. Draw to Screen
         push();
@@ -204,30 +204,29 @@ class Collager {
 
     _setShapeByEdgePoints(_edgePointsArray) {
         this.shapeModel.clear();
+        this.shapeModel = new NYModel('shape_' + this._drawModelIndex++);
         this.shapeModel.addTrianglesByEdgePoints(_edgePointsArray);
         this.shapeModel.normalizeUV();
     }
 
-    _processTearingEffect(_model, _imageData, _uvOffset = [0.0, 0.0], _uvScale = [1.0, 1.0]) {
+    _processTearingEffect(_imageData, _uvOffset = [0.0, 0.0], _uvScale = [1.0, 1.0]) {
 
         let baseBuffer = this._baseShapeBuffer;
         let outlineBuffer = this._outlineGradientBuffer;
         let finalBuffer = this._finalShapeBuffer;
         
-        let bufferW, bufferH;
-
-        if (this.currentDrawMode == 'rect') {
-            bufferW = this.shapeBufferSize;
-            bufferH = this.shapeBufferSize;
-        } else {
-            bufferW = width;
-            bufferH = height;
-        }
+        let bufferW = baseBuffer.width;
+        let bufferH = baseBuffer.height;
 
         let quadModel = NYModel.generateFullScreenQuadModel(bufferW, bufferH);
 
         // generate outline model
-        let outlineModel = this.shapeModel.generateOutlineModel(this._innerThickness, this._outlineThickness);
+        let outlineModel = this.shapeModel.generateOutlineModel(this._cutoutThickness, this._outlineThickness);
+
+        // Build Geometries
+        let shapeGeom = this.shapeModel.build();
+        let outlineGeom = outlineModel.build();
+        let quadGeom = quadModel.build();
 
         // draw outline gradient for use
         outlineBuffer.begin();
@@ -237,11 +236,11 @@ class Collager {
         // fill inside
         shader(this._fillShapeShader);
         this._fillShapeShader.setUniform('uFillColor', [0.0, 0.0, 0.0, 1.0]);
-        model(this.shapeModel.build());
+        model(shapeGeom);
         resetShader();
 
         shader(this._outlineGradientShader);
-        model(outlineModel.build());
+        model(outlineGeom);
 
         resetShader();
         outlineBuffer.end();
@@ -257,7 +256,7 @@ class Collager {
         this.textureShader.setUniform('uTextureOffset', _uvOffset);
         this.textureShader.setUniform('uTextureScale', _uvScale);
 
-        model(this.shapeModel.build());
+        model(shapeGeom);
 
         resetShader();
         baseBuffer.end();
@@ -290,96 +289,16 @@ class Collager {
         this._shapeMaskShader.setUniform('uOutlineColor', [1.0, 1.0, 1.0]);
         this._shapeMaskShader.setUniform('uEdgeSharpness', 0.95);
 
-        model(quadModel.build());
+        model(quadGeom);
         resetShader();
         finalBuffer.end();
-    }
-
-    maskedImagePass(_targetBuffer, _targetImgIndex, _tearThicknessRatio, _shapeNoiseScale, _detailTearRatio = 0.5, _useDetailNoise = true) {
-
-        // padding is saved for outline; although usually don't need much
-        let imgWidth = _targetBuffer.width;
-        let imgHeight = _targetBuffer.height;
-
-        let aspectRatio = imgWidth / imgHeight;
-
-        //
-        // TEXTURE SAMPLE SETTINGS
-        //
-
-        let targetImg = this.images[_targetImgIndex];
-        let targetProfile = this.collageProfiles[_targetImgIndex];
-
-        let targetDrawSizeRatio = random(targetProfile.minRatio, targetProfile.maxRatio);
-
-        let targetUVWidth = aspectRatio * targetDrawSizeRatio;
-        let targetUVHeight = 1.0 * targetDrawSizeRatio;
-
-        let cropScaleX = targetUVWidth;
-        let cropScaleY = targetUVHeight;
-
-        let cropOffsetX = random(0.0, 1.0 - cropScaleX);
-        let cropOffsetY = random(0.0, 1.0 - cropScaleY);
-
-        //
-        // NOISE MASK SETTINGS
-        //
-
-        // Base noise (Shape) settings
-        let noiseOffsetX = random(-1.0, 1.0);
-        let noiseOffsetY = random(-1.0, 1.0);
-        // Adjust tiling to apply aspect ratio and prevent distortion
-        let tilingX = _shapeNoiseScale * (aspectRatio > 1.0 ? aspectRatio : 1.0); // stretch X if wide
-        let tilingY = _shapeNoiseScale * (aspectRatio < 1.0 ? 1.0 / aspectRatio : 1.0); // stretch Y if tall
-
-        // Detail noise (Tear) settings
-        let detailOffsetX = random(-1.0, 1.0);
-        let detailOffsetY = random(-1.0, 1.0);
-
-        // Scale tiling based on aspect ratio to prevent distortion
-        let baseDetailScale = 0.2;
-
-        // If width > height, we need more tiling on X to keep square noise pixels
-        // If height > width, we need more tiling on Y
-        let detailTilingX = baseDetailScale * (aspectRatio > 1.0 ? aspectRatio : 1.0);
-        let detailTilingY = baseDetailScale * (aspectRatio < 1.0 ? 1.0 / aspectRatio : 1.0);
-
-        _targetBuffer.begin();
-
-        noStroke();
-
-        shader(this.maskShader);
-        this.setTextureWrap(targetImg, CLAMP);
-        this.maskShader.setUniform('uMainTexture', targetImg);
-
-        // Pass main texture transform
-        this.maskShader.setUniform('uMainTextureOffset', [cropOffsetX, cropOffsetY]);
-        this.maskShader.setUniform('uMainTextureScale', [cropScaleX, cropScaleY]); // Uniform scaling for now
-
-        this.setTextureWrap(this.noiseImageShape, REPEAT);
-        this.setTextureWrap(this.noiseImage, REPEAT);
-        this.maskShader.setUniform('uNoiseTexture', this.noiseImageShape); // Shape noise
-        this.maskShader.setUniform('uDetailNoiseTexture', this.noiseImage); // Detail noise
-        this.maskShader.setUniform('uUseDetailNoise', _useDetailNoise ? 1.0 : 0.0); // Enable/Disable detail noise
-
-        // Pass parameters to control tearing
-        this.maskShader.setUniform('uTearRatio', _tearThicknessRatio);
-        this.maskShader.setUniform('uDetailTearRatio', _detailTearRatio);
-
-        // Pass random noise transform for Base
-        this.maskShader.setUniform('uNoiseOffset', [noiseOffsetX, noiseOffsetY]);
-        this.maskShader.setUniform('uNoiseScale', [tilingX, tilingY]);
-
-        // Pass random noise transform for Detail
-        this.maskShader.setUniform('uDetailNoiseOffset', [detailOffsetX, detailOffsetY]);
-        this.maskShader.setUniform('uDetailNoiseScale', [detailTilingX, detailTilingY]);
-
-        // Draw a full screen rect to apply the mask shader
-        noStroke();
-        fill(60, 60, 100);
-        rect(0, 0, imgWidth, imgHeight);
-
-        _targetBuffer.end();
+        
+        // Clean up geometries to prevent memory leaks
+        p5.instance.freeGeometry(shapeGeom);
+        p5.instance.freeGeometry(outlineGeom);
+        // Note: quadGeom is reused (constant GID), so we don't free it to leverage caching.
+        // However, if buffer size changes, we might want to manage it differently.
+        // For now, assuming fixed buffer size, letting p5 cache it is fine.
     }
 
     shadowPass(_sourceBuffer, _targetBuffer, _offset = [10.0, 10.0], _radius = 20.0, _color = [0.0, 0.0, 0.0, 0.5]) {
@@ -497,34 +416,29 @@ class Collager {
         let displayOutlineBuffer = this._outlineGradientBuffer;
         let displayFinalBuffer = this._finalShapeBuffer;
 
-        if (this.currentDrawMode == 'rect') {
-            drawW = this.shapeBufferSize * this._debugScale;
-            drawH = this.shapeBufferSize * this._debugScale;
-        } else {
-            drawW = width * this._debugScale;
-            drawH = height * this._debugScale;
-        }
+        drawW = width * this._debugScale;
+        drawH = height * this._debugScale;
 
         // Draw background for debug area to make it visible
         noStroke();
         fill(0, 0, 0, 0.5); // semi-transparent black
         rectMode(CORNER);
         rect(startX, startY, drawW, drawH * 3);
-        
+
         // Draw _baseShapeBuffer
         imageMode(CORNER);
         // We need to flip Y because typically framebuffers are flipped? 
         // Or just standard image draw.
         // P5 images are usually fine.
-        
+
         image(displayBaseBuffer, startX, startY, drawW, drawH);
-        
+
         // Draw _outlineGradientBuffer
         image(displayOutlineBuffer, startX, startY + drawH, drawW, drawH);
-        
+
         // Draw _finalShapeBuffer
         image(displayFinalBuffer, startX, startY + drawH * 2, drawW, drawH);
-        
+
         // Add labels
         fill(255);
         textSize(16);

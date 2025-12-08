@@ -404,7 +404,7 @@ class NYModel {
     }
 
     static generateFullScreenQuadModel (_width, _height) {
-        let quadModel = new NYModel(this.modelName + "_fullscreen_quad");
+        let quadModel = new NYModel("NYModel_fullscreen_quad");
         
         let halfW = _width / 2.0;
         let halfH = _height / 2.0;
