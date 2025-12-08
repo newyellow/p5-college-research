@@ -20,6 +20,111 @@ class NYModel {
         this.uvMode = NYModel.UV_TOP_DOWN;
     }
 
+    static generatePointsForRoundedRect(_w, _h, _radius, _pointCount, _noiseScale = 0, _noiseOffset = 0) {
+        let points = [];
+        
+        let halfW = _w / 2;
+        let halfH = _h / 2;
+        
+        // Clamp radius
+        let r = _radius;
+        let maxR = min(_w, _h) / 2;
+        if (r > maxR) r = maxR;
+        if (r < 0) r = 0;
+
+        // Segments
+        let lineTopLen = _w - 2 * r;
+        let arcTRLen = HALF_PI * r;
+        let lineRightLen = _h - 2 * r;
+        let arcBRLen = HALF_PI * r;
+        let lineBottomLen = _w - 2 * r;
+        let arcBLLen = HALF_PI * r;
+        let lineLeftLen = _h - 2 * r;
+        let arcTLLen = HALF_PI * r;
+
+        let perimeter = lineTopLen + arcTRLen + lineRightLen + arcBRLen + lineBottomLen + arcBLLen + lineLeftLen + arcTLLen;
+        
+        let seedOffset = random(-1000.0, 1000.0);
+
+        for(let i=0; i<_pointCount; i++) {
+            let t = i / _pointCount; 
+            let currentDist = t * perimeter;
+            
+            let px = 0;
+            let py = 0;
+
+            // Determine segment
+            // Top Line
+            if (currentDist < lineTopLen) {
+                let localDist = currentDist;
+                px = -halfW + r + localDist;
+                py = -halfH;
+            } else {
+                currentDist -= lineTopLen;
+                // TR Arc
+                if (currentDist < arcTRLen) {
+                    let angle = -HALF_PI + (currentDist / arcTRLen) * HALF_PI;
+                    px = halfW - r + cos(angle) * r;
+                    py = -halfH + r + sin(angle) * r;
+                } else {
+                    currentDist -= arcTRLen;
+                    // Right Line
+                    if (currentDist < lineRightLen) {
+                        let localDist = currentDist;
+                        px = halfW;
+                        py = -halfH + r + localDist;
+                    } else {
+                        currentDist -= lineRightLen;
+                        // BR Arc
+                        if (currentDist < arcBRLen) {
+                            let angle = 0 + (currentDist / arcBRLen) * HALF_PI;
+                            px = halfW - r + cos(angle) * r;
+                            py = halfH - r + sin(angle) * r;
+                        } else {
+                            currentDist -= arcBRLen;
+                            // Bottom Line
+                            if (currentDist < lineBottomLen) {
+                                let localDist = currentDist;
+                                px = halfW - r - localDist; // moving left
+                                py = halfH;
+                            } else {
+                                currentDist -= lineBottomLen;
+                                // BL Arc
+                                if (currentDist < arcBLLen) {
+                                    let angle = HALF_PI + (currentDist / arcBLLen) * HALF_PI;
+                                    px = -halfW + r + cos(angle) * r;
+                                    py = halfH - r + sin(angle) * r;
+                                } else {
+                                    currentDist -= arcBLLen;
+                                    // Left Line
+                                    if (currentDist < lineLeftLen) {
+                                        let localDist = currentDist;
+                                        px = -halfW;
+                                        py = halfH - r - localDist; // moving up
+                                    } else {
+                                        currentDist -= lineLeftLen;
+                                        // TL Arc
+                                        let angle = PI + (currentDist / arcTLLen) * HALF_PI;
+                                        px = -halfW + r + cos(angle) * r;
+                                        py = -halfH + r + sin(angle) * r;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Apply Noise
+            let nx = (noise(px * 0.01, py * 0.01, seedOffset) - 0.5) * _noiseScale * _noiseOffset;
+            let ny = (noise(px * 0.01 + 100, py * 0.01 + 100, seedOffset) - 0.5) * _noiseScale * _noiseOffset;
+
+            points.push(new NYPoint(px + nx, py + ny));
+        }
+
+        return points;
+    }
+
     addRegularShape(_centerX, _centerY, _radius = 100, _edgeCount = 4, _initRotation = 0) {
 
         let minX = _centerX - _radius;

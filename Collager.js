@@ -13,7 +13,6 @@ class Collager {
         this._outlineGradientBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
         this._finalShapeBuffer.resize(this.shapeBufferSize, this.shapeBufferSize);
 
-
         this._resultBuffer = new FrameBufferSet();
 
         // shape stuff
@@ -25,17 +24,28 @@ class Collager {
         this._doOutline = true;
         this._outlineQualityLevel = 1;
         this._outlineNoiseScale = 1.2;
+
+        // rect related settings
+        this._rectNoiseScale = 0.01;
+        this._rectEdgeOffset = 10;
+        this._rectPointCount = 120;
+        this._rectRoundness = 0;
+
+        // debug features
+        this._isDebug = false;
+        this._debugScale = 0.2;
     }
 
-    async initShaders() {
+    async initSystem() {
         this._outlineGradientShader = await loadShader('shaders/outline_gradient.vert', 'shaders/outline_gradient.frag');
         this._shapeMaskShader = await loadShader('shaders/shape_mask_outline.vert', 'shaders/shape_mask_outline.frag');
         this._fillShapeShader = await loadShader('shaders/fill_shape.vert', 'shaders/fill_shape.frag');
 
         this.outlineShaderProgram = await loadShader('shaders/outline.vert', 'shaders/outline.frag');
         this.maskShader = await loadShader('shaders/mask.vert', 'shaders/mask.frag');
-        this.blurShader = await loadShader('shaders/blur.vert', 'shaders/blur.frag');
-        this.thresholdShader = await loadShader('shaders/threshold.vert', 'shaders/threshold.frag');
+        // this.blurShader = await loadShader('shaders/blur.vert', 'shaders/blur.frag');
+        // this.thresholdShader = await loadShader('shaders/threshold.vert', 'shaders/threshold.frag');
+        this.debugShader = await loadShader('shaders/debug.vert', 'shaders/debug.frag');
 
         this.shadowShader = await loadShader('shaders/shadow.vert', 'shaders/shadow.frag');
         this.lutShader = await loadShader('shaders/lut.vert', 'shaders/lut.frag');
@@ -46,8 +56,10 @@ class Collager {
         this.noiseImage = await loadImage('textures/TilingNoise05.PNG');
 
         this.lutTexture = await loadImage('lut_textures/800T Night 03.png');
-        
+
         // this.noiseImage = await loadImage('textures/T_Noise_18.PNG');
+
+        this.fontResource = await loadFont('fonts/Monospace.ttf');
     }
 
     async addImage(imageUrl, minRatio, maxRatio) {
@@ -75,14 +87,52 @@ class Collager {
         this.collageProfiles = [];
     }
 
-    setShapeByEdgePoints(_edgePointsArray) {
+    drawVertexShape(_edgePointsArray) {
+
+    }
+
+    drawRect(_x, _y, _w, _h, _rotateDegree = 0) {
+        // 1. Generate edge points with noise
+        let points = NYModel.generatePointsForRoundedRect(_w, _h, this._rectRoundness, this._rectPointCount, this._rectNoiseScale, this._rectEdgeOffset);
+
+        // 2. Build Shape Model
+        this._setShapeByEdgePoints(points);
+
+        // prepare the image and uv offset/scale
+        let imageIndex = floor(random(0, this.images.length));
+
+        let targetImg = this.images[imageIndex];
+        let targetProfile = this.collageProfiles[imageIndex];
+
+        let drawScale = random(targetProfile.minRatio, targetProfile.maxRatio);
+
+        let uvInfos = calculateUVInfosCoverMode(_w, _h, targetImg.width, targetImg.height, drawScale);
+
+        // 3. Draw to Buffer
+        this._processTearingEffect(this.shapeModel, targetImg, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
+
+        // 4. Draw to Screen
+        push();
+        translate(_x, _y); // Center of rect
+        rotate(radians(_rotateDegree));
+
+        // Draw the full buffer centered. 
+        image(this._finalShapeBuffer, 0, 0, this.shapeBufferSize, this.shapeBufferSize);
+
+        pop();
+
+        if (this._isDebug) {
+            this.drawDebug();
+        }
+    }
+
+    _setShapeByEdgePoints(_edgePointsArray) {
         this.shapeModel.clear();
         this.shapeModel.addTrianglesByEdgePoints(_edgePointsArray);
         this.shapeModel.normalizeUV();
     }
 
-    drawShape() {
-        let targetImgIndex = floor(random(0, this.images.length));
+    _processTearingEffect(_model, _imageData, _uvOffset = [0.0, 0.0], _uvScale = [1.0, 1.0]) {
 
         // generate outline model
         let outlineModel = this.shapeModel.generateOutlineModel(60, this._outlineThickness);
@@ -104,14 +154,18 @@ class Collager {
 
         resetShader();
         this._outlineGradientBuffer.end();
-        
+
 
         // draw the basic image on the result buffer
         this._baseShapeBuffer.begin();
         clear();
 
         shader(this.textureShader);
-        this.textureShader.setUniform('uMainTexture', this.images[targetImgIndex]);
+        // shader(this.debugShader);
+        this.textureShader.setUniform('uMainTexture', _imageData);
+        this.textureShader.setUniform('uTextureOffset', _uvOffset);
+        this.textureShader.setUniform('uTextureScale', _uvScale);
+
         model(this.shapeModel.build());
 
         resetShader();
@@ -148,121 +202,6 @@ class Collager {
         model(quadModel.build());
         resetShader();
         this._finalShapeBuffer.end();
-    }
-
-    drawImage(_x, _y, _w, _h, _rotateDegree = 0, _imageIndex = -1) {
-
-        let targetImgIndex = _imageIndex;
-        if (_imageIndex == -1) {
-            targetImgIndex = floor(random(0, this.images.length));
-        }
-
-        // image mask pass: generated the teared texture
-        this.imgPieceBuffer.resize(_w, _h);
-        this.maskedImagePass(this.imgPieceBuffer, targetImgIndex, 0.2, 0.1);
-
-        // draw on the source layer
-        this.sourceBuffer.begin();
-        push();
-        translate(_x + _w / 2, _y + _h / 2);
-        rotate(radians(_rotateDegree));
-        image(this.imgPieceBuffer, 0, 0, _w, _h);
-        pop();
-        this.sourceBuffer.end();
-
-        // apply outline
-        this.blurOutlinePass(this.sourceBuffer, this.targetBuffer, [1.0, 1.0, 1.0, 1.0]);
-        this.FboSwap();
-        
-        // apply shadow
-        this.shadowPass(this.sourceBuffer, this.targetBuffer, [-10.0, -10.0], 6.0, [0.0, 0.0, 0.0, 0.6]);
-        this.FboSwap();
-
-        // apply lut
-        this.lutPass(this.sourceBuffer, this.targetBuffer, this.lutTexture, 1.0);
-        this.FboSwap();
-
-        // image(this.sourceBuffer, 0, 0, width, height);
-        image(this.sourceBuffer, 0, 0, width, height);
-        this.clearBuffers();
-    }
-
-    // outline pass using simple circle sampling
-    circleOutlinePass(_sourceBuffer, _targetBuffer, _outlineColor = [1.0, 1.0, 1.0, 1.0]) {
-        _targetBuffer.begin();
-        clear();
-        shader(this.outlineShaderProgram);
-        this.outlineShaderProgram.setUniform('uMainTexture', _sourceBuffer);
-        this.outlineShaderProgram.setUniform('uResolution', [_targetBuffer.width, _targetBuffer.height]);
-        this.outlineShaderProgram.setUniform('uThickness', this._outlineThickness);
-        this.outlineShaderProgram.setUniform('uOutlineColor', _outlineColor.slice(0, 3)); // rgb only
-        noStroke();
-        rect(0, 0, _targetBuffer.width, _targetBuffer.height);
-        _targetBuffer.end();
-    }
-
-    // outline pass using separable gaussian blur + threshold
-    blurOutlinePass(_sourceBuffer, _targetBuffer, _outlineColor = [1.0, 1.0, 1.0, 1.0]) {
-        // Pass 1: Blur Horizontal
-        // We need an intermediate buffer for the blur passes
-        if (!this.blurBuffer) this.blurBuffer = createFramebuffer();
-        
-        this.blurBuffer.resize(ceil(_targetBuffer.width * 0.5), ceil(_targetBuffer.height * 0.5));
-        
-        // Blur Pass 1 (Horizontal) -> source to blurBuffer
-        this.blurBuffer.begin();
-        clear();
-        shader(this.blurShader);
-        this.blurShader.setUniform('uMainTexture', _sourceBuffer);
-        this.blurShader.setUniform('uResolution', [this.blurBuffer.width, this.blurBuffer.height]);
-        this.blurShader.setUniform('uDirection', [1.0, 0.0]);
-        // Scale blur size down since buffer is smaller
-        this.blurShader.setUniform('uBlurSize', this._outlineThickness * 0.5 * 0.5); 
-        this.blurShader.setUniform('uBlurQuality', this._outlineQualityLevel);
-
-        noStroke();
-        rect(0, 0, this.blurBuffer.width, this.blurBuffer.height);
-        this.blurBuffer.end();
-
-        
-        // Blur Pass 2 (Vertical) -> blurBuffer to blurBuffer2 (temp)
-        if (!this.blurBuffer2) this.blurBuffer2 = createFramebuffer();
-        this.blurBuffer2.resize(this.blurBuffer.width, this.blurBuffer.height);
-        
-        this.blurBuffer2.begin();
-        clear();
-        shader(this.blurShader);
-        this.blurShader.setUniform('uMainTexture', this.blurBuffer);
-        this.blurShader.setUniform('uResolution', [this.blurBuffer2.width, this.blurBuffer2.height]);
-        this.blurShader.setUniform('uDirection', [0.0, 1.0]);
-        this.blurShader.setUniform('uBlurSize', this._outlineThickness * 0.5 * 0.5);
-        this.blurShader.setUniform('uBlurQuality', this._outlineQualityLevel);
-        noStroke();
-        rect(0, 0, this.blurBuffer2.width, this.blurBuffer2.height);
-        this.blurBuffer2.end();
-        
-        // Threshold Pass -> Combine Original (_sourceBuffer) and Blurred (blurBuffer2) into _targetBuffer
-        _targetBuffer.begin();
-        clear();
-        shader(this.thresholdShader);
-        this.thresholdShader.setUniform('uMainTexture', _sourceBuffer); // Original sharp image
-        this.thresholdShader.setUniform('uBlurTexture', this.blurBuffer2); // Blurred mask
-        this.thresholdShader.setUniform('uNoiseTexture', this.noiseImage); // Noise texture
-        
-        this.thresholdShader.setUniform('uResolution', [_targetBuffer.width, _targetBuffer.height]);
-        this.thresholdShader.setUniform('uOutlineColor', _outlineColor.slice(0, 3)); // rgb only
-        
-        this.thresholdShader.setUniform('uBaseThreshold', 0.1); 
-        this.thresholdShader.setUniform('uNoiseThreshold', 0.6); 
-        this.thresholdShader.setUniform('uEdgeSharpness', 0.96); 
-        
-        // Random noise offset for variety
-        this.thresholdShader.setUniform('uNoiseOffset', [random(-100.0, 100.0), random(-100.0, 100.0)]);
-        this.thresholdShader.setUniform('uNoiseScale', [this._outlineNoiseScale, this._outlineNoiseScale]);
-
-        noStroke();
-        rect(0, 0, _targetBuffer.width, _targetBuffer.height);
-        _targetBuffer.end();
     }
 
     maskedImagePass(_targetBuffer, _targetImgIndex, _tearThicknessRatio, _shapeNoiseScale, _detailTearRatio = 0.5, _useDetailNoise = true) {
@@ -380,35 +319,104 @@ class Collager {
         _targetBuffer.end();
     }
 
-    setTextureWrap (_texture, _wrapS = CLAMP, _wrapT = null) {
-        if(_wrapT == null)
+    setTextureWrap(_texture, _wrapS = CLAMP, _wrapT = null) {
+        if (_wrapT == null)
             _wrapT = _wrapS;
 
         let renderer = p5.instance._renderer;
         let p5Tex = renderer.getTexture(_texture);
-        
-        if(p5Tex) {
+
+        if (p5Tex) {
             p5Tex.setWrapMode(_wrapS, _wrapT);
         }
     }
 
-    outlineWeight (_thickness) {
+    outlineWeight(_thickness) {
         this._outlineThickness = _thickness;
         this._doOutline = true;
     }
 
-    outlineQuality (_qualityLevel) {
+    outlineQuality(_qualityLevel) {
         this._outlineQualityLevel = _qualityLevel;
     }
 
-    outlineNoiseScale (_scale) {
+    outlineNoiseScale(_scale) {
         this._outlineNoiseScale = _scale;
     }
 
-    noOutline () {
+    noOutline() {
         this._doOutline = false;
     }
 
+    rectEdgeOffset(_offset) {
+        this._rectEdgeOffset = _offset;
+    }
+
+    rectRoundness(_roundness) {
+        this._rectRoundness = _roundness;
+    }
+
+    rectNoiseScale(_scale) {
+        this._rectNoiseScale = _scale;
+    }
+
+    rectPointCount(_count) {
+        this._rectPointCount = _count;
+    }
+
+    debug(_isDebug = true) {
+        this._isDebug = _isDebug;
+    }
+
+    debugScale(_scale) {
+        this._debugScale = _scale;
+    }
+
+    drawDebug() {
+        if (!this._isDebug) return;
+
+        // Save current state
+        push();
+        resetMatrix(); // Draw in screen space
+
+        // In WebGL, 0,0 is center. Top left is -width/2, -height/2
+        let startX = -width / 2;
+        let startY = -height / 2;
+
+        let drawW = this.shapeBufferSize * this._debugScale;
+        let drawH = this.shapeBufferSize * this._debugScale;
+
+        // Draw background for debug area to make it visible
+        noStroke();
+        fill(0, 0, 0, 0.5); // semi-transparent black
+        rectMode(CORNER);
+        rect(startX, startY, drawW, drawH * 3);
+
+        // Draw _baseShapeBuffer
+        imageMode(CORNER);
+        // We need to flip Y because typically framebuffers are flipped? 
+        // Or just standard image draw.
+        // P5 images are usually fine.
+
+        image(this._baseShapeBuffer, startX, startY, drawW, drawH);
+
+        // Draw _outlineGradientBuffer
+        image(this._outlineGradientBuffer, startX, startY + drawH, drawW, drawH);
+
+        // Draw _finalShapeBuffer
+        image(this._finalShapeBuffer, startX, startY + drawH * 2, drawW, drawH);
+
+        // Add labels
+        fill(255);
+        textSize(16);
+        textFont(this.fontResource);
+        textAlign(LEFT, TOP);
+        text("Base Shape", startX + 10, startY + 10);
+        text("Outline Grad", startX + 10, startY + drawH + 10);
+        text("Final Shape", startX + 10, startY + drawH * 2 + 10);
+
+        pop();
+    }
 
 }
 
