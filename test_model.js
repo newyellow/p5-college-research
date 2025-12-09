@@ -33,7 +33,6 @@ async function setup() {
     collager.rectPointCount(24);
 
     collager.shadow(10, 10, 30, [0, 0, 0], 0.3);
-    collager.noShadow();
 
     // Enable debug mode
     collager.debug(true);

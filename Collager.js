@@ -1,8 +1,13 @@
+const basePath = document.currentScript.src.substring(0, document.currentScript.src.lastIndexOf('/'));
+
 class Collager {
     constructor() {
 
         this.images = [];
         this.collageProfiles = [];
+
+        // graphic reference
+        this._targetGraphics = null;
 
         // buffers
         this._baseShapeBuffer = createFramebuffer();
@@ -42,33 +47,37 @@ class Collager {
         this._rectRoundness = 0;
 
         // debug features
-        this._isDebug = true;
+        this._isDebug = false;
         this._debugScale = 0.25;
     }
 
     async initSystem() {
-        this._outlineGradientShader = await loadShader('shaders/outline_gradient.vert', 'shaders/outline_gradient.frag');
-        this._shapeMaskShader = await loadShader('shaders/shape_mask_outline.vert', 'shaders/shape_mask_outline.frag');
-        this._fillShapeShader = await loadShader('shaders/fill_shape.vert', 'shaders/fill_shape.frag');
+        this._outlineGradientShader = await loadShader(`${basePath}/shaders/outline_gradient.vert`, `${basePath}/shaders/outline_gradient.frag`);
+        this._shapeMaskShader = await loadShader(`${basePath}/shaders/shape_mask_outline.vert`, `${basePath}/shaders/shape_mask_outline.frag`);
+        this._fillShapeShader = await loadShader(`${basePath}/shaders/fill_shape.vert`, `${basePath}/shaders/fill_shape.frag`);
 
-        this.outlineShaderProgram = await loadShader('shaders/outline.vert', 'shaders/outline.frag');
-        // this.blurShader = await loadShader('shaders/blur.vert', 'shaders/blur.frag');
-        // this.thresholdShader = await loadShader('shaders/threshold.vert', 'shaders/threshold.frag');
-        this.debugShader = await loadShader('shaders/debug.vert', 'shaders/debug.frag');
+        this.outlineShaderProgram = await loadShader(`${basePath}/shaders/outline.vert`, `${basePath}/shaders/outline.frag`);
+        // this.blurShader = await loadShader(`${basePath}/shaders/blur.vert`, `${basePath}/shaders/blur.frag`);
+        // this.thresholdShader = await loadShader(`${basePath}/shaders/threshold.vert`, `${basePath}/shaders/threshold.frag`);
+        this.debugShader = await loadShader(`${basePath}/shaders/debug.vert`, `${basePath}/shaders/debug.frag`);
 
-        this.shadowShader = await loadShader('shaders/shadow.vert', 'shaders/shadow.frag');
-        this.lutShader = await loadShader('shaders/lut.vert', 'shaders/lut.frag');
+        this.shadowShader = await loadShader(`${basePath}/shaders/shadow.vert`, `${basePath}/shaders/shadow.frag`);
+        this.lutShader = await loadShader(`${basePath}/shaders/lut.vert`, `${basePath}/shaders/lut.frag`);
 
-        this.textureShader = await loadShader('shaders/texture.vert', 'shaders/texture.frag');
+        this.textureShader = await loadShader(`${basePath}/shaders/texture.vert`, `${basePath}/shaders/texture.frag`);
 
-        this.noiseImageShape = await loadImage('textures/T_Noise_18.PNG');
-        this.noiseImage = await loadImage('textures/TilingNoise05.PNG');
+        this.noiseImageShape = await loadImage(`${basePath}/textures/T_Noise_18.PNG`);
+        this.noiseImage = await loadImage(`${basePath}/textures/TilingNoise05.PNG`);
 
-        this.lutTexture = await loadImage('lut_textures/800T Night 03.png');
+        this.lutTexture = await loadImage(`${basePath}/lut_textures/800T Night 03.png`);
 
-        // this.noiseImage = await loadImage('textures/T_Noise_18.PNG');
+        // this.noiseImage = await loadImage(`${basePath}/textures/T_Noise_18.PNG`);
 
-        this.fontResource = await loadFont('fonts/Monospace.ttf');
+        this.fontResource = await loadFont(`${basePath}/fonts/Monospace.ttf`);
+    }
+
+    setTargetGraphics(_graphics) {
+        this._targetGraphics = _graphics;
     }
 
     async addImage(imageUrl, minRatio, maxRatio) {
@@ -116,7 +125,7 @@ class Collager {
             gl.disableVertexAttribArray(i);
         }
 
-        if(gl.bindVertexArray)
+        if (gl.bindVertexArray)
             gl.bindVertexArray(null);
 
         gl.useProgram(null);
@@ -161,10 +170,18 @@ class Collager {
 
         // 5. Draw to Screen
         // Since we drew into full screen buffer, we just composite it.
-        push();
-        imageMode(CORNER);
-        image(this._finalShapeBuffer, -width / 2, -height / 2, width, height);
-        pop();
+        if (this._targetGraphics != null) {
+            this._targetGraphics.push();
+            this._targetGraphics.imageMode(CORNER);
+            this._targetGraphics.image(this._finalShapeBuffer, 0, 0, width, height);
+            this._targetGraphics.pop();
+        }
+        else {
+            push();
+            imageMode(CORNER);
+            image(this._finalShapeBuffer, -width / 2, -height / 2, width, height);
+            pop();
+        }
 
         if (this._isDebug) {
             this.drawDebug();
@@ -172,7 +189,7 @@ class Collager {
     }
 
     drawRect(_x, _y, _w, _h, _rotateDegree = 0) {
-        
+
         // 1. Generate edge points with noise
         let points = NYModel.generatePointsForRoundedRect(_w, _h, this._rectRoundness, this._rectPointCount, this._rectNoiseScale, this._rectEdgeOffset);
 
@@ -193,14 +210,27 @@ class Collager {
         this._processTearingEffect(targetImg, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
 
         // 4. Draw to Screen
-        push();
-        translate(_x, _y); // Center of rect
-        rotate(radians(_rotateDegree));
+        if (this._targetGraphics != null) {
+            this._targetGraphics.push();
+            
+            this._targetGraphics.translate(_x, _y);
+            this._targetGraphics.rotate(radians(_rotateDegree));
 
-        // Draw the full buffer centered. 
-        image(this._finalShapeBuffer, 0, 0);
+            this._targetGraphics.imageMode(CENTER);
+            this._targetGraphics.image(this._finalShapeBuffer, 0, 0);
 
-        pop();
+            this._targetGraphics.pop();
+        }
+        else {
+            push();
+            translate(_x, _y); // Center of rect
+            rotate(radians(_rotateDegree));
+
+            // Draw the full buffer centered. 
+            image(this._finalShapeBuffer, 0, 0);
+
+            pop();
+        }
 
         if (this._isDebug) {
             this.drawDebug();
@@ -219,7 +249,7 @@ class Collager {
         let baseBuffer = this._baseShapeBuffer;
         let outlineBuffer = this._outlineGradientBuffer;
         let finalBuffer = this._finalShapeBuffer;
-        
+
         let bufferW = baseBuffer.width;
         let bufferH = baseBuffer.height;
 
@@ -268,7 +298,7 @@ class Collager {
 
         // final composite the shape
         let collageBuffer = this._collageBuffer;
-        
+
         collageBuffer.begin();
         clear();
 
@@ -308,8 +338,8 @@ class Collager {
         // Shadow Pass
         finalBuffer.begin();
         clear();
-        
-        if(this._doShadow) {
+
+        if (this._doShadow) {
             shader(this.shadowShader);
             this.shadowShader.setUniform('uMainTexture', collageBuffer);
             this.shadowShader.setUniform('uTextureSize', [finalBuffer.width, finalBuffer.height]);
@@ -318,20 +348,20 @@ class Collager {
             this.shadowShader.setUniform('uShadowColor', this._shadowColor);
             this.shadowShader.setUniform('uShadowOpacity', 1.0); // Alpha is handled in uShadowColor
             this.shadowShader.setUniform('uBlurQuality', 2.0); // Medium quality
-            
+
             model(quadGeom);
         }
         else {
-             shader(this.textureShader);
-             this.textureShader.setUniform('uMainTexture', collageBuffer);
-             this.textureShader.setUniform('uTextureOffset', [0.0, 0.0]);
-             this.textureShader.setUniform('uTextureScale', [1.0, 1.0]);
-             model(quadGeom);
+            shader(this.textureShader);
+            this.textureShader.setUniform('uMainTexture', collageBuffer);
+            this.textureShader.setUniform('uTextureOffset', [0.0, 0.0]);
+            this.textureShader.setUniform('uTextureScale', [1.0, 1.0]);
+            model(quadGeom);
         }
-        
+
         resetShader();
         finalBuffer.end();
-        
+
         // Clean up geometries to prevent memory leaks
         p5.instance.freeGeometry(shapeGeom);
         p5.instance.freeGeometry(outlineGeom);
@@ -436,7 +466,7 @@ class Collager {
         this._doShadow = true;
         this._shadowOffset = [_offsetX, _offsetY];
         this._shadowBlur = _blur;
-        
+
         // Handle color input (array or p5 color or separate components)
         // Assuming array [r,g,b] or [r,g,b,a] passed, or just [r,g,b] and alpha separate.
         // User asked for "shadow color, shadow blur size, shadow alpha"
@@ -446,7 +476,7 @@ class Collager {
         let b = _color[2];
         // if color has 4 components, use that alpha, else use _alpha
         let a = _color.length > 3 ? _color[3] : _alpha;
-        
+
         this._shadowColor = [r, g, b, a];
     }
 
@@ -459,7 +489,7 @@ class Collager {
         if (Array.isArray(_r)) {
             this._shadowColor = _r;
             if (this._shadowColor.length === 3) {
-                 this._shadowColor.push(_a);
+                this._shadowColor.push(_a);
             }
         } else {
             this._shadowColor = [_r, _g, _b, _a];
@@ -499,7 +529,7 @@ class Collager {
         // In WebGL, 0,0 is center. Top left is -width/2, -height/2
         let startX = -width / 2;
         let startY = -height / 2;
-        
+
         let drawW, drawH;
         let displayBaseBuffer = this._baseShapeBuffer;
         let displayOutlineBuffer = this._outlineGradientBuffer;
