@@ -19,6 +19,7 @@ let sizeVariation = 0;
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
+  flex();
   fontResource = await loadFont('../fonts/Monospace.ttf');
 
   randomSeed(seed);

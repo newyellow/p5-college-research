@@ -28,6 +28,7 @@ let layerBreathingMask;
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
+  flex();
   fontResource = await loadFont('../fonts/Monospace.ttf');
   frameRate(60);
   colorMode(HSB);
