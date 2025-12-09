@@ -76,9 +76,10 @@ class Collager {
         this.fontResource = await loadFont(`${basePath}/fonts/Monospace.ttf`);
     }
 
-    setTargetGraphics(_graphics) {
-        this._targetGraphics = _graphics;
-    }
+    // disable for now
+    // setTargetGraphics(_graphics) {
+    //     this._targetGraphics = _graphics;
+    // }
 
     async addImage(imageUrl, minRatio, maxRatio) {
         let newImg = await loadImage(imageUrl);
@@ -172,13 +173,13 @@ class Collager {
         // Since we drew into full screen buffer, we just composite it.
         if (this._targetGraphics != null) {
             this._targetGraphics.push();
-            this._targetGraphics.imageMode(CORNER);
+            this._targetGraphics.imageMode(CENTER);
             this._targetGraphics.image(this._finalShapeBuffer, 0, 0, width, height);
             this._targetGraphics.pop();
         }
         else {
             push();
-            imageMode(CORNER);
+            imageMode(CENTER);
             image(this._finalShapeBuffer, -width / 2, -height / 2, width, height);
             pop();
         }
@@ -227,6 +228,7 @@ class Collager {
             rotate(radians(_rotateDegree));
 
             // Draw the full buffer centered. 
+            imageMode(CENTER);
             image(this._finalShapeBuffer, 0, 0);
 
             pop();
