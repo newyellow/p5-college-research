@@ -225,7 +225,7 @@ async function asyncDraw() {
   // do breathing effect
   let breathingShader = await loadShader(
     "../shaders/uniform.vert",
-    "../shaders/effect.frag"
+    "../shaders/effect_02.frag"
   );
 
   let startTime = millis();
@@ -240,6 +240,7 @@ async function asyncDraw() {
 
     breathingShader.setUniform("utexture", bufferLayerColorful);
     breathingShader.setUniform("uMaskTexture", bufferLayerMask);
+    breathingShader.setUniform("flipV", true);
 
     noStroke();
     rect(0, 0, width, height);

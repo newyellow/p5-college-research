@@ -11,6 +11,11 @@ const p4 = urlParams.get('p4') || Math.random();
 let _renderer = null;
 let fontResource = null;
 
+// for creating breathing effect
+let bufferLayerColorful;
+let bufferLayerMask;
+let INCLUDE_OUTLINE_IN_MASK = false;
+
 // collager
 let collager;
 
@@ -38,24 +43,23 @@ async function setup() {
   randomSeed(seed);
   noiseSeed(seed);
 
-  // layerBg = createGraphics(width, height, WEBGL);
-  // layerBottleStroke = createGraphics(width, height, WEBGL);
-  // layerBottleInner = createGraphics(width, height, WEBGL);
-  // layerBottleHole = createGraphics(width, height, WEBGL);
-  // layerBreathingMask = createGraphics(width, height, WEBGL);
+  // init buffers
+  bufferLayerColorful = createFramebuffer();
+  bufferLayerMask = createFramebuffer();
+
 
   // init collager
   collager = new Collager();
   await collager.initSystem();
 
   let bottleIndex = int(random(0, 3));
-  // bottleIndex = 2;
 
-  if(bottleIndex == 0)
+
+  if (bottleIndex == 0)
     drawBottleA();
-  else if(bottleIndex == 1)
+  else if (bottleIndex == 1)
     drawBottleB();
-  else if(bottleIndex == 2)
+  else if (bottleIndex == 2)
     drawBottleC();
 
   // let testBufferA = createFramebuffer();
@@ -111,7 +115,28 @@ async function drawBottleA() {
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
 
+
+      // mask stuff
+      let drawInMask = random(0, 1) < 0.12;
+      if (drawInMask || INCLUDE_OUTLINE_IN_MASK) {
+        collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
+      }
+
+      // draw rect
       collager.drawRect(posX, posY, sizeX, sizeY, angleDegree);
+
+      if (drawInMask) {
+        bufferLayerMask.draw(() => {
+          tint(0, 0, 100);
+          collager.redrawRectMask(posX, posY, sizeX, sizeY, angleDegree);
+        });
+      }
+      else {
+        bufferLayerMask.draw(() => {
+          tint(0, 0, 0);
+          collager.redrawRectMask(posX, posY, sizeX, sizeY, angleDegree);
+        });
+      }
 
       if (i % 6 == 0)
         await sleep(16);
@@ -141,7 +166,7 @@ async function drawBottleA() {
 
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
-
+      
       collager.drawRect(posX, posY, sizeX, sizeY, angleDegree);
 
       if (i % 6 == 0)
@@ -157,6 +182,23 @@ async function drawBottleA() {
   let strokeSampleCount = int(random(100, 2000));
   let strokeThickness = random(12, 48);
   drawCurveStroke(5, strokeThickness, strokeNoiseScale, strokeSampleCount);
+
+  bufferLayerMask.draw(() => {
+    noStroke();
+    fill(0, 0, 0);
+    drawCurveStroke(5, strokeThickness, strokeNoiseScale, strokeSampleCount);
+  });
+
+  let canvasSnapshot = get();
+
+  // draw the current canvas on colorful buffer
+  bufferLayerColorful.draw(() => {
+    imageMode(CENTER);
+    image(canvasSnapshot, 0, 0, width, height);
+  });
+  
+
+  startBreathingEffect();
 }
 
 async function drawBottleB() {
@@ -201,7 +243,26 @@ async function drawBottleB() {
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
 
+      // mask stuff
+      let drawInMask = random(0, 1) < 0.12;
+      if (drawInMask || INCLUDE_OUTLINE_IN_MASK) {
+        collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
+      }
+
       collager.drawRect(posX, posY, sizeX, sizeY, angleDegree);
+
+      if (drawInMask) {
+        bufferLayerMask.draw(() => {
+          tint(0, 0, 100);
+          collager.redrawRectMask(posX, posY, sizeX, sizeY, angleDegree);
+        });
+      }
+      else {
+        bufferLayerMask.draw(() => {
+          tint(0, 0, 0);
+          collager.redrawRectMask(posX, posY, sizeX, sizeY, angleDegree);
+        });
+      }
 
       if (i % 6 == 0)
         await sleep(16);
@@ -284,6 +345,22 @@ async function drawBottleB() {
   let strokeSampleCount = int(random(100, 2000));
   let strokeThickness = random(12, 48);
   drawCurveStroke(5, strokeThickness, strokeNoiseScale, strokeSampleCount);
+
+  bufferLayerMask.draw(() => {
+    noStroke();
+    fill(0, 0, 0);
+    drawCurveStroke(5, strokeThickness, strokeNoiseScale, strokeSampleCount);
+  });
+
+  let canvasSnapshot = get();
+
+  // draw the current canvas on colorful buffer
+  bufferLayerColorful.draw(() => {
+    imageMode(CENTER);
+    image(canvasSnapshot, 0, 0, width, height);
+  });
+
+  startBreathingEffect();
 }
 
 
@@ -329,7 +406,26 @@ async function drawBottleC() {
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
 
+      // mask stuff
+      let drawInMask = random(0, 1) < 0.12;
+      if (drawInMask || INCLUDE_OUTLINE_IN_MASK) {
+        collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
+      }
+
       collager.drawRect(posX, posY, sizeX, sizeY, angleDegree);
+
+      if (drawInMask) {
+        bufferLayerMask.draw(() => {
+          tint(0, 0, 100);
+          collager.redrawRectMask(posX, posY, sizeX, sizeY, angleDegree);
+        });
+      }
+      else {
+        bufferLayerMask.draw(() => {
+          tint(0, 0, 0);
+          collager.redrawRectMask(posX, posY, sizeX, sizeY, angleDegree);
+        });
+      }
 
       if (i % 6 == 0)
         await sleep(16);
@@ -399,6 +495,51 @@ async function drawBottleC() {
   let strokeSampleCount = int(random(100, 2000));
   let strokeThickness = random(12, 48);
   drawCurveStroke(5, strokeThickness, strokeNoiseScale, strokeSampleCount);
+
+  bufferLayerMask.draw(() => {
+    noStroke();
+    fill(0, 0, 0);
+    drawCurveStroke(5, strokeThickness, strokeNoiseScale, strokeSampleCount);
+  });
+
+  let canvasSnapshot = get();
+
+  // draw the current canvas on colorful buffer
+  bufferLayerColorful.draw(() => {
+    imageMode(CENTER);
+    image(canvasSnapshot, 0, 0, width, height);
+  });
+
+  startBreathingEffect();
+
+}
+
+async function startBreathingEffect() {
+  // do breathing effect
+  let breathingShader = await loadShader(
+    "../shaders/uniform.vert",
+    "../shaders/effect_02.frag"
+  );
+
+  let startTime = millis();
+
+  // loop draw
+  while (true) {
+    shader(breathingShader);
+    breathingShader.setUniform("width", 1080.0);
+    breathingShader.setUniform("height", 1920.0);
+    breathingShader.setUniform("time", (millis() - startTime) / 1000.0);
+    breathingShader.setUniform("uresolution", [width, height]);
+
+    breathingShader.setUniform("utexture", bufferLayerColorful);
+    breathingShader.setUniform("uMaskTexture", bufferLayerMask);
+    breathingShader.setUniform("flipV", true);
+
+    noStroke();
+    rect(0, 0, width, height);
+
+    await sleep(16);
+  }
 }
 
 function sleep(ms) {

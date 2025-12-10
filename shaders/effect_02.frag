@@ -69,7 +69,7 @@ float map(float value, float min1, float max1, float min2, float max2) {
     return result;
 }
 
-float mapc(float value, float min1, float max1, float min2, float max2) {    
+float mapc(float value, float min1, float max1, float min2, float max2) {
     float value2 = clamp(value, min1, max1);
     return map(value2, min1, max1, min2, max2);
 }
@@ -87,45 +87,40 @@ void main() {
     vec2 pos = uv * vec2(width, height);
     vec2 center = vec2(width/2., height/2.);
     vec2 distortedPos = pos;
-    
+
     distortedPos.x += sin(distortedPos.y*0.1 + time*0.01) * 0.02;
     distortedPos.y += sin(distortedPos.x*0.1 + time*0.01) * 0.02;
-    
+
     // lens
-    for (int i = 0; i < 5; i++){
+    for (int i = 0; i < 5; i++) {
         float ii = float(i);
-        
+
         float angle = ii * 2.0 + time * 0.03;
         float radius = width * 0.3 * (0.5 + sin(time * 0.02 + ii) * 0.5);
         vec2 lensCenter = center + vec2(cos(angle), sin(angle)) * radius;
-        
+
         float lensSize = width * 0.15 * (0.8 + sin(ii + time*0.01) * 0.2);
         float pct;
         bool inLens = false;
-        
+
         float sparkle = 0.9 + random(uv*0.5) * 0.1;
         vec2 diff = abs(distortedPos - lensCenter) * 0.4 * sparkle;
-        
+
         float maxDist = max(diff.x, diff.y);
         if (maxDist < lensSize) {
             pct = 1.0 - (maxDist / lensSize);
             inLens = true;
         }
-        
+
         if (inLens) {
             vec2 diff = normalize(distortedPos - lensCenter);
             float distCenter = distance(distortedPos, lensCenter);
-            distortedPos = lensCenter + diff * distCenter * mapc(sin(pct*100.)-1., -1., 0.5, 1., 1.05); 
+            distortedPos = lensCenter + diff * distCenter * mapc(sin(pct*100.)-1., -1., 0.5, 1., 1.05);
         }
     }
-    
+
     vec2 distortedUV = distortedPos / vec2(width, height);
     vec4 texColor = texture2D(utexture, distortedUV);
-    
-
-    if(flipV) {
-        uv.y = 1.0 - uv.y;
-    }
 
     float cycleDuration = 5.0;
     float cyclePhase = mod(time, cycleDuration) / cycleDuration;
@@ -144,22 +139,22 @@ void main() {
 
     float breathCycle = sin(time * 2.0) * 0.5 + 0.5;
     float spatialVar = sin(time * 3.0 + uv.x * PI * 4.0) * 0.5 + 0.5;
-    
+
     vec3 warp = warpColor(uv, time * 0.05);
-    
+
     float colorValue = luminance 
     + breathCycle * 0.5 * mixFactor
     + spatialVar * 0.4 * mixFactor
     ;
     colorValue = clamp(colorValue, 0.0, 1.0);
-    
+
     vec3 mappedColor = mix(texColor.rgb, (customColorMap(colorValue)+warp)*0.5, 0.6);
     vec4 maskColor = texture2D(uMaskTexture, uv);
-    
+
     vec4 originalColor = texture2D(utexture, uv);
-    
+
     vec3 finalColor = mix(originalColor.rgb, mappedColor, maskColor.r);
-    
+
     gl_FragColor = vec4(finalColor, texColor.a);
 }
 
