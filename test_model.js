@@ -30,7 +30,7 @@ async function setup() {
     collager.cutoutRatio(0.2, 0.8);
 
     // collager.outlineWeight(1);
-    collager.outlineWeight(16);
+    collager.outlineWeight(80);
     collager.outlineRatio(0.1, 0.9);
     collager.outlineNoiseScale(0.8);
 
@@ -47,6 +47,7 @@ async function setup() {
     collager.debugScale(0.2);
 
 
+
     // Draw Rects
     let flowFieldsCount = 1000;
     for (let i = 0; i < flowFieldsCount; i++) {
@@ -59,6 +60,11 @@ async function setup() {
         let angleNoise = noise(posX * 0.0006, posY * 0.00036, 666.0);
         let angleDegree = lerp(-360, 360, angleNoise);
 
+        // need to set outline states before drawing
+        let inColorMask = random(0, 1) < 0.2;
+        collager.outlineInMask(!inColorMask);
+
+
         collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
 
         // draw on colorful
@@ -67,8 +73,7 @@ async function setup() {
         });
 
         // draw on mask
-        let maskColorRandom = random(0, 1);
-        if (maskColorRandom < 0.2) {
+        if (inColorMask) {
             bufferLayerMask.draw(() => {
                 tint(0, 0, 100);
                 collager.redrawRectMask(posX, posY, sizeW, sizeH, angleDegree);
@@ -146,6 +151,11 @@ async function setup() {
         mountainPoints.push(...mountainUpperPoints);
         mountainPoints.push(...mountainLowerPoints.reverse());
 
+        // need to set outline states before drawing
+        let inColorMask = random(0, 1) < 0.3;
+        collager.outlineInMask(!inColorMask);
+
+
         collager.drawVertexShape(mountainPoints);
 
         // draw on colorful
@@ -154,8 +164,7 @@ async function setup() {
         });
 
         // draw on mask
-        let maskColorRandom = random(0, 1);
-        if (maskColorRandom < 0.3) {
+        if (inColorMask) {
             bufferLayerMask.draw(() => {
                 tint(0, 0, 100);
                 collager.redrawVertexShapeMask();
@@ -177,7 +186,7 @@ async function setup() {
     // breathing shader
     let uniformsShader = await loadShader(
         "shaders/uniform.vert",
-        "shaders/effect_02.frag"
+        "shaders/effect.frag"
     );
     startTime = millis();
 

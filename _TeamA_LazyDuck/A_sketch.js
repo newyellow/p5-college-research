@@ -11,6 +11,11 @@ const p4 = urlParams.get('p4') || Math.random();
 let _renderer = null;
 let fontResource = null;
 
+// for creating breathing effect
+let bufferLayerColorful;
+let bufferLayerMask;
+let INCLUDE_OUTLINE_IN_MASK = false;
+
 
 let mainHue = 0;
 let rectBaseSize = 0;
@@ -22,6 +27,12 @@ async function setup() {
   flex();
   fontResource = await loadFont('../fonts/Monospace.ttf');
 
+  // init buffers
+  bufferLayerColorful = createFramebuffer();
+  bufferLayerMask = createFramebuffer();
+
+
+  // setup random values
   randomSeed(seed);
   noiseSeed(seed);
 
@@ -91,7 +102,29 @@ async function asyncDraw() {
     let angleNoise = noise(posX * skyRotationNoiseScale, posY * skyRotationNoiseScale, 666.0);
     let angleDegree = lerp(-360, 360, angleNoise);
 
+    let drawInMask = random(0, 1) < 0.3;
+    collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
+
     collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
+
+    // draw on color
+    bufferLayerColorful.draw(() => {
+      collager.redrawRect(posX, posY, sizeW, sizeH, angleDegree);
+    });
+
+    // draw on mask
+    if (drawInMask) {
+      bufferLayerMask.draw(() => {
+        tint(0, 0, 100);
+        collager.redrawRectMask(posX, posY, sizeW, sizeH, angleDegree);
+      });
+    }
+    else {
+      bufferLayerMask.draw(() => {
+        tint(0, 0, 0);
+        collager.redrawRectMask(posX, posY, sizeW, sizeH, angleDegree);
+      });
+    }
 
     if (i % 10 == 0) {
       await sleep(1);
@@ -162,8 +195,56 @@ async function asyncDraw() {
     mountainPoints.push(...mountainUpperPoints);
     mountainPoints.push(...mountainLowerPoints.reverse());
 
+    let drawInMask = random(0, 1) < 0.3;
+    collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
+
     collager.drawVertexShape(mountainPoints);
+
+    // draw on color
+    bufferLayerColorful.draw(() => {
+      collager.redrawVertexShape();
+    });
+
+    // draw on mask
+    if (drawInMask) {
+      bufferLayerMask.draw(() => {
+        tint(0, 0, 100);
+        collager.redrawVertexShapeMask();
+      });
+    }
+    else {
+      bufferLayerMask.draw(() => {
+        tint(0, 0, 0);
+        collager.redrawVertexShapeMask();
+      });
+    }
+
     await sleep(10);
+  }
+
+  // do breathing effect
+  let breathingShader = await loadShader(
+    "../shaders/uniform.vert",
+    "../shaders/effect_02.frag"
+  );
+
+  let startTime = millis();
+
+  // loop draw
+  while (true) {
+    shader(breathingShader);
+    breathingShader.setUniform("width", 1080.0);
+    breathingShader.setUniform("height", 1920.0);
+    breathingShader.setUniform("time", (millis() - startTime) / 1000.0);
+    breathingShader.setUniform("uresolution", [width, height]);
+
+    breathingShader.setUniform("utexture", bufferLayerColorful);
+    breathingShader.setUniform("uMaskTexture", bufferLayerMask);
+
+    noStroke();
+    rect(0, 0, width, height);
+
+    await sleep(16);
   }
 }
 

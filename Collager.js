@@ -47,6 +47,9 @@ class Collager {
         this._rectPointCount = 120;
         this._rectRoundness = 0;
 
+        // for drawing effect mask
+        this._includeOutlineInMask = false;
+
         // debug features
         this._isDebug = false;
         this._debugScale = 0.25;
@@ -57,7 +60,7 @@ class Collager {
         this._shapeMaskShader = await loadShader(`${basePath}/shaders/shape_mask_outline.vert`, `${basePath}/shaders/shape_mask_outline.frag`);
         this._fillShapeShader = await loadShader(`${basePath}/shaders/fill_shape.vert`, `${basePath}/shaders/fill_shape.frag`);
 
-        this.outlineShaderProgram = await loadShader(`${basePath}/shaders/outline.vert`, `${basePath}/shaders/outline.frag`);
+        // this.outlineShaderProgram = await loadShader(`${basePath}/shaders/outline.vert`, `${basePath}/shaders/outline.frag`);
         // this.blurShader = await loadShader(`${basePath}/shaders/blur.vert`, `${basePath}/shaders/blur.frag`);
         // this.thresholdShader = await loadShader(`${basePath}/shaders/threshold.vert`, `${basePath}/shaders/threshold.frag`);
         this.debugShader = await loadShader(`${basePath}/shaders/debug.vert`, `${basePath}/shaders/debug.frag`);
@@ -245,7 +248,7 @@ class Collager {
         push();
         translate(_x, _y); // Center of rect
         rotate(radians(_rotateDegree));
-        
+
         imageMode(CENTER);
         image(this._finalShapeBuffer, 0, 0);
         pop();
@@ -323,15 +326,23 @@ class Collager {
         resetShader();
         baseBuffer.end();
 
+        // set the random values here, for later user
+        let cutoutNoiseOffsetX = random(-1000.0, 1000.0);
+        let cutoutNoiseOffsetY = random(-1000.0, 1000.0);
+        let outlineNoiseOffsetX = random(-1000.0, 1000.0);
+        let outlineNoiseOffsetY = random(-1000.0, 1000.0);
         // final composite the shape
         let collageBuffer = this._collageBuffer;
 
         collageBuffer.begin();
         clear();
 
+
         shader(this._shapeMaskShader);
         this._shapeMaskShader.setUniform('uMainTexture', baseBuffer);
         this._shapeMaskShader.setUniform('uGradientTexture', outlineBuffer);
+
+        this._shapeMaskShader.setUniform('uDoFillColor', false);
 
         this.setTextureWrap(this.noiseImage, REPEAT);
         this.setTextureWrap(this.noiseImage, REPEAT);
@@ -341,8 +352,8 @@ class Collager {
         this._shapeMaskShader.setUniform('uCutoutNoiseScale', [this._cutoutNoiseScale, this._cutoutNoiseScale]);
         this._shapeMaskShader.setUniform('uOutlineNoiseScale', [this._outlineNoiseScale, this._outlineNoiseScale]);
 
-        this._shapeMaskShader.setUniform('uCutoutNoiseOffset', [random(-1000.0, 1000.0), random(-1000.0, 1000.0)]);
-        this._shapeMaskShader.setUniform('uOutlineNoiseOffset', [random(-1000.0, 1000.0), random(-1000.0, 1000.0)]);
+        this._shapeMaskShader.setUniform('uCutoutNoiseOffset', [cutoutNoiseOffsetX, cutoutNoiseOffsetY]);
+        this._shapeMaskShader.setUniform('uOutlineNoiseOffset', [outlineNoiseOffsetX, outlineNoiseOffsetY]);
 
         this._shapeMaskShader.setUniform('uCutoutRatio', this._baseCutoutRatio);
         this._shapeMaskShader.setUniform('uNoiseCutoutRatio', this._noiseCutoutRatio);
@@ -362,16 +373,56 @@ class Collager {
         resetShader();
         collageBuffer.end();
 
-        // draw the shape mask to the shape mask buffer
-        this._shapeMaskBuffer.begin();
-        clear();
-        shader(this._fillShapeShader);
-        this._fillShapeShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
-        this._fillShapeShader.setUniform('uMainTexture', collageBuffer);
-        this._fillShapeShader.setUniform('uUseTextureAlpha', 1);
-        model(quadGeom);
-        resetShader();
-        this._shapeMaskBuffer.end();
+        // include outline in mask
+        if (this._includeOutlineInMask) {
+            // draw the shape mask to the shape mask buffer
+            this._shapeMaskBuffer.begin();
+            clear();
+            shader(this._fillShapeShader);
+            this._fillShapeShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
+            this._fillShapeShader.setUniform('uMainTexture', collageBuffer);
+            this._fillShapeShader.setUniform('uUseTextureAlpha', 1);
+            model(quadGeom);
+            resetShader();
+            this._shapeMaskBuffer.end();
+        }
+        else {
+            this._shapeMaskBuffer.begin();
+            clear();
+
+
+            shader(this._shapeMaskShader);
+            this._shapeMaskShader.setUniform('uMainTexture', baseBuffer);
+            this._shapeMaskShader.setUniform('uGradientTexture', outlineBuffer);
+
+            this._shapeMaskShader.setUniform('uDoFillColor', true);
+            this._shapeMaskShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
+
+            this.setTextureWrap(this.noiseImage, REPEAT);
+            this.setTextureWrap(this.noiseImage, REPEAT);
+            this._shapeMaskShader.setUniform('uCutoutNoiseTexture', this.noiseImage);
+            this._shapeMaskShader.setUniform('uOutlineNoiseTexture', this.noiseImage);
+
+            this._shapeMaskShader.setUniform('uCutoutNoiseScale', [this._cutoutNoiseScale, this._cutoutNoiseScale]);
+            this._shapeMaskShader.setUniform('uOutlineNoiseScale', [this._outlineNoiseScale, this._outlineNoiseScale]);
+
+            this._shapeMaskShader.setUniform('uCutoutNoiseOffset', [cutoutNoiseOffsetX, cutoutNoiseOffsetY]);
+            this._shapeMaskShader.setUniform('uOutlineNoiseOffset', [outlineNoiseOffsetX, outlineNoiseOffsetY]);
+
+            this._shapeMaskShader.setUniform('uCutoutRatio', this._baseCutoutRatio);
+            this._shapeMaskShader.setUniform('uNoiseCutoutRatio', this._noiseCutoutRatio);
+
+            // no outline
+            this._shapeMaskShader.setUniform('uOutlineRatio', 0.0);
+            this._shapeMaskShader.setUniform('uNoiseOutlineRatio', 0.0);
+
+            this._shapeMaskShader.setUniform('uOutlineColor', [1.0, 1.0, 1.0]);
+            this._shapeMaskShader.setUniform('uEdgeSharpness', 0.95);
+
+            model(quadGeom);
+            resetShader();
+            this._shapeMaskBuffer.end();
+        }
 
         // Shadow Pass
         finalBuffer.begin();
@@ -446,6 +497,10 @@ class Collager {
         if (p5Tex) {
             p5Tex.setWrapMode(_wrapS, _wrapT);
         }
+    }
+
+    outlineInMask(_include = true) {
+        this._includeOutlineInMask = _include;
     }
 
     cutoutRatio(_baseRatio, _noiseRatio) {

@@ -3,6 +3,10 @@ precision mediump float;
 uniform sampler2D uMainTexture;     // The main image texture
 uniform sampler2D uGradientTexture; // The shape map (0.0 center -> 0.5 edge -> 1.0 outside)
 
+// option to fill the color, for building mask
+uniform bool uDoFillColor;
+uniform vec4 uFillColor;
+
 uniform sampler2D uCutoutNoiseTexture;
 uniform sampler2D uOutlineNoiseTexture;
 
@@ -56,17 +60,33 @@ void main() {
     float smoothEdge = smoothstep(cutThreshold, cutThreshold + edgeWidth * 2.0, gradientVal);
 
     if (gradientVal < cutThreshold) {
-        gl_FragColor = vec4(imgColor.rgb, 1.0);
+        if(uDoFillColor) {
+            gl_FragColor = uFillColor;
+        }
+        else {
+            gl_FragColor = vec4(imgColor.rgb, 1.0);
+        }
     }
     else if(gradientVal < outlineThreshold) {
         // Interpolate between image color and white for a soft transition
         vec3 blendedColor = mix(imgColor.rgb, vec3(1.0), smoothEdge);
         // Make alpha also smoothly fade out towards the outline threshold
         float alpha = mix(1.0, 0.0, smoothstep(outlineThreshold - edgeWidth * 2.0, outlineThreshold, gradientVal));
-        gl_FragColor = vec4(blendedColor, alpha);
+
+        if(uDoFillColor) {
+            gl_FragColor = vec4(uFillColor.rgb, alpha);
+        }
+        else {
+            gl_FragColor = vec4(blendedColor, alpha);
+        }
     }
     else {
         // Outline color
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0);
+        if(uDoFillColor) {
+            gl_FragColor = vec4(uFillColor.rgb, 0.0);
+        }
+        else {
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0);
+        }
     }
 }
