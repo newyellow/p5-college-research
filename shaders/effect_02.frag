@@ -11,6 +11,8 @@ uniform float time;
 uniform float width;
 uniform float height;
 
+uniform bool flipV;
+
 uniform vec3 customPalette[12];
 
 float getLuminance(vec3 color) {
@@ -63,7 +65,10 @@ float smoothCurve(float x) {
 
 void main() {
     vec2 uv = vTexCoord;
-    uv.y = 1.0 - uv.y;
+
+    if(flipV) {
+        uv.y = 1.0 - uv.y;
+    }
 
     vec4 texColor = texture2D(utexture, uv);
 

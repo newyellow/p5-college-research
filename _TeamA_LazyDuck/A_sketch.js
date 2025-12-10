@@ -225,7 +225,7 @@ async function asyncDraw() {
   // do breathing effect
   let breathingShader = await loadShader(
     "../shaders/uniform.vert",
-    "../shaders/effect_02.frag"
+    "../shaders/effect.frag"
   );
 
   let startTime = millis();
