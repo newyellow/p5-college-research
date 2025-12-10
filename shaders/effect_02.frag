@@ -4,6 +4,7 @@ precision mediump float;
 #define PI 3.141592654
 
 uniform sampler2D utexture;
+uniform sampler2D uMaskTexture;
 varying vec2 vTexCoord;
 uniform vec2 resolution;
 uniform float time;
@@ -29,79 +30,79 @@ vec3 getPaletteColor(int index) {
 
 vec3 customColorMap(float t) {
     t = clamp(t, 0.0, 1.0);
-    
+
     float scaledT = t * 11.0;
     int index = int(floor(scaledT));
     float localT = fract(scaledT);
-    
-
 
     if (index < 0) index = 0;
     if (index > 10) index = 10;
-    
+
     vec3 color1 = getPaletteColor(index);
     vec3 color2 = getPaletteColor(index + 1);
-    
+
     return mix(color1, color2, localT);
 }
 
 vec3 warpColor(in vec2 uv, float t) {
     float strength = 0.1;
     vec2 pos = uv * 2.0;
-    
-    for(int i = 1; i < 8; i++) { 
+
+    for(int i = 1; i < 8; i++) {
         pos.x += strength * sin(10.0 * t + float(i) * 0.5 * pos.y);
         pos.y += strength * cos(10.0 * t + float(i) * 0.5 * pos.x);
     }
-    
+
     vec3 col = 0.5 + 0.5 * cos(t + pos.xyx + vec3(1, 2, 5));
     return col;
 }
 
-float smoothCurve(float x) {return sin(x * PI);
+float smoothCurve(float x) {
+    return sin(x * PI);
 }
 
 void main() {
     vec2 uv = vTexCoord;
     uv.y = 1.0 - uv.y;
-    
+
     vec4 texColor = texture2D(utexture, uv);
-    
+
     float cycleDuration = 5.0;
     float cyclePhase = mod(time, cycleDuration) / cycleDuration;
-    
+
     float wavePosition = cyclePhase;
     float waveWidth = 0.4;
-    
+
     float distToWave = abs(uv.x - wavePosition);
     float spatialMask = 1.0 - smoothstep(0.0, waveWidth, distToWave);
     //timecurve
     float timeMask = smoothCurve(cyclePhase);
-    
+
     float mixFactor = spatialMask * timeMask;
-    
+
     float luminance = getLuminance(texColor.rgb);
-    
+
     float breathCycle = sin(time * 2.0) * 0.5 + 0.5;
     float spatialVar = sin(time * 3.0 + uv.x * PI * 4.0) * 0.5 + 0.5;
     // color fun
     vec3 warp = warpColor(uv, time * 0.05);
     float warpInfluence = dot(warp, vec3(0.33)) * 0.3;
-    
+
     float colorValue = luminance 
-                     + breathCycle * 0.5 * mixFactor
-                     + spatialVar * 0.4 * mixFactor
-                     ;
+    + breathCycle * 0.5 * mixFactor
+    + spatialVar * 0.4 * mixFactor
+    ;
     colorValue = clamp(colorValue, 0.0, 1.0);
-    
+
     // vec3 mappedColor = customColorMap(colorValue);
     vec3 mappedColor = (customColorMap(colorValue)+warp)*0.5;
     // vec3 mappedColor = mix(customColorMap(colorValue), warp, mixFactor);
-    
-    
-    vec3 finalColor = mix(texColor.rgb, mappedColor, mixFactor);
-    
+
+    vec4 maskColor = texture2D(uMaskTexture, uv);
+
+    // vec3 finalColor = mix(texColor.rgb, mappedColor, mixFactor);
+    vec3 finalColor = mix(texColor.rgb, mappedColor, maskColor.r);
+
     gl_FragColor = vec4(finalColor, texColor.a);
 }
-
 

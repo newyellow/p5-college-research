@@ -7,7 +7,7 @@ let testTexture;
 async function setup() {
   createCanvas(1080, 1920, WEBGL);
 
-  testTexture = await loadImage("images/test-photo-1.jpg");
+  testTexture = await loadImage("images/test-photo-2.jpg");
   testTexture01 = await loadImage("images/test-photo-5.jpg");
   testTexture02 = await loadImage("images/test-photo-6.jpg");
   uniformsShader = await loadShader(

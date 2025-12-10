@@ -36,31 +36,135 @@ async function setup() {
   imageMode(CENTER);
 
   background(0, 0, 30);
+
+  // draw layer
+  await asyncDraw();
 }
 
-function draw() {
+async function asyncDraw() {
 
-  // print parameters on the screen
-  fill(0, 0, 100);
-  textSize(36); 
-  textFont(fontResource);
-  text(`seed: ${seed}`, -400, -800);
-  text(`p1: ${p1}`, -400, -750);
-  text(`p2: ${p2}`, -400, -700);
-  text(`p3: ${p3}`, -400, -650);
-  text(`p4: ${p4}`, -400, -600);
+  colorMode(HSB);
+  rectMode(CENTER);
+  imageMode(CENTER);
+  background(0, 0, 20);
 
-  let posX = random(-width / 2, width / 2);
-  let posY = random(-height / 2, height / 2);
+  // Initialize Collager
+  let collager = new Collager();
+  await collager.initSystem();
 
-  let sizeX = rectBaseSize * random(1 - sizeVariation, 1 + sizeVariation);
-  let sizeY = rectBaseSize * random(1 - sizeVariation, 1 + sizeVariation);
+  // Add images
+  await collager.addImage('images/sky_01.png', 0.1, 0.6);
+  await collager.addImage('images/sky_02_temp.jpg', 0.1, 0.3);
 
-  let colorHue = (mainHue + random(-30, 30) + 360) % 360;
-  let colorSat = random(40, 60);
-  let colorBri = random(80, 100);
-  fill(colorHue, colorSat, colorBri);
-  rect(posX, posY, sizeX, sizeY);
+  // outline settings
+  collager.cutoutThickness(20);
+  collager.cutoutNoiseScale(0.24);
+  collager.cutoutRatio(0.0, 1.0);
+
+  // collager.outlineWeight(1);
+  collager.outlineWeight(0);
+  collager.outlineRatio(0.1, 0.9);
+  collager.outlineNoiseScale(6.0);
+
+  // rect drawing settings
+  collager.rectEdgeOffset(10);
+  collager.rectRoundness(0);
+  collager.rectNoiseScale(0.03);
+  collager.rectPointCount(24);
+
+  collager.shadow(10, 10, 30, [0, 0, 0], 0.3);
+
+  // Enable debug mode
+  collager.debug(false);
+  collager.debugScale(0.2);
+
+  let skyRotationNoiseScale = random(0.0001, 0.0012);
+  // Draw Rects
+  let flowFieldsCount = 2000;
+  for (let i = 0; i < flowFieldsCount; i++) {
+    let posX = random(-width / 2 - 100, width / 2 + 100);
+    let posY = random(-height / 2 - 100, 200);
+
+    let sizeW = random(120, 240);
+    let sizeH = random(20, 40);
+
+    let angleNoise = noise(posX * skyRotationNoiseScale, posY * skyRotationNoiseScale, 666.0);
+    let angleDegree = lerp(-360, 360, angleNoise);
+
+    collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
+
+    if (i % 10 == 0) {
+      await sleep(1);
+    }
+  }
+
+
+  // draw mountains
+  collager.clearImages();
+  await collager.addImage('images/train_01.jpg', 0.2, 0.6);
+  await collager.addImage('images/train_02.jpg', 0.2, 0.6);
+
+  collager.cutoutThickness(200);
+  collager.cutoutNoiseScale(0.6);
+  collager.cutoutRatio(0.2, 0.8);
+
+  collager.outlineWeight(100);
+  collager.outlineNoiseScale(0.018);
+  collager.outlineRatio(0.3, 0.7);
+
+
+  let mountainLayerCount = 24;
+  let xSamplePoints = 10;
+
+  let mountainHeightRange = [60, 666];
+  let mountainHeightNoiseScaleX = 0.002;
+  let mountainHeightNoiseScaleY = 0.036;
+
+  let mountainLayerOffset = 80;
+
+  let yStart = 0;
+
+  for (let y = 0; y < mountainLayerCount; y++) {
+    yStart += mountainLayerOffset * random(0.2, 1.0);
+
+    let mountainUpperPoints = [];
+    let mountainLowerPoints = [];
+
+    let xStart = -0.6 * width;
+    let xEnd = 0.6 * width;
+
+    let xStep = width / xSamplePoints;
+
+    for (let x = 0; x < xSamplePoints; x++) {
+      let xt = x / (xSamplePoints - 1);
+
+      let xPos = lerp(xStart, xEnd, xt) + random(-0.1, 0.1) * xStep;
+      let yPos = yStart;
+
+      let heightNoiseValue = noise(xPos * mountainHeightNoiseScaleX, yPos * mountainHeightNoiseScaleY, 1234);
+      let mountainAddHeight = lerp(mountainHeightRange[0], mountainHeightRange[1], heightNoiseValue);
+
+      let botXPos = lerp(xStart, xEnd, xt) + random(-0.1, 0.1) * xStep;
+      let botYPos = yStart;
+
+      let botNoiseValue = noise(botXPos * mountainHeightNoiseScaleX, botYPos * mountainHeightNoiseScaleY, 1234);
+      let botAddHeight = lerp(mountainHeightRange[0] * 0.2, mountainHeightRange[1] * 0.2, botNoiseValue);
+
+      yPos -= mountainAddHeight;
+      botYPos += botAddHeight;
+
+      mountainUpperPoints.push(new NYPoint(xPos, yPos));
+      mountainLowerPoints.push(new NYPoint(botXPos, botYPos));
+    }
+
+    // build clockwise array
+    let mountainPoints = [];
+    mountainPoints.push(...mountainUpperPoints);
+    mountainPoints.push(...mountainLowerPoints.reverse());
+
+    collager.drawVertexShape(mountainPoints);
+    await sleep(10);
+  }
 }
 
 function sleep(ms) {

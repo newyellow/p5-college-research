@@ -13,6 +13,7 @@ class Collager {
         this._baseShapeBuffer = createFramebuffer();
         this._outlineGradientBuffer = createFramebuffer();
         this._finalShapeBuffer = createFramebuffer();
+        this._shapeMaskBuffer = createFramebuffer();
         this._collageBuffer = createFramebuffer();
 
         this._resultBuffer = new FrameBufferSet();
@@ -91,26 +92,14 @@ class Collager {
         this._baseShapeBuffer.remove();
         this._outlineGradientBuffer.remove();
         this._finalShapeBuffer.remove();
+        this._shapeMaskBuffer.remove();
         this._collageBuffer.remove();
 
         this._baseShapeBuffer = createFramebuffer();
         this._outlineGradientBuffer = createFramebuffer();
         this._finalShapeBuffer = createFramebuffer();
+        this._shapeMaskBuffer = createFramebuffer();
         this._collageBuffer = createFramebuffer();
-    }
-
-    clearBuffers() {
-        this.imgPieceBuffer.begin();
-        clear();
-        this.imgPieceBuffer.end();
-
-        this.frameBufferA.begin();
-        clear();
-        this.frameBufferA.end();
-
-        this.frameBufferB.begin();
-        clear();
-        this.frameBufferB.end();
     }
 
     clearBufferBindings() {
@@ -136,7 +125,6 @@ class Collager {
         this.images = [];
         this.collageProfiles = [];
     }
-
 
     drawVertexShape(_edgePointsArray) {
         // 1. Build Shape Model
@@ -180,13 +168,27 @@ class Collager {
         else {
             push();
             imageMode(CENTER);
-            image(this._finalShapeBuffer, -width / 2, -height / 2, width, height);
+            image(this._finalShapeBuffer, 0, 0, width, height);
             pop();
         }
 
         if (this._isDebug) {
             this.drawDebug();
         }
+    }
+
+    redrawVertexShape() {
+        push();
+        imageMode(CENTER);
+        image(this._finalShapeBuffer, 0, 0, width, height);
+        pop();
+    }
+
+    redrawVertexShapeMask() {
+        push();
+        imageMode(CENTER);
+        image(this._shapeMaskBuffer, 0, 0, width, height);
+        pop();
     }
 
     drawRect(_x, _y, _w, _h, _rotateDegree = 0) {
@@ -213,7 +215,7 @@ class Collager {
         // 4. Draw to Screen
         if (this._targetGraphics != null) {
             this._targetGraphics.push();
-            
+
             this._targetGraphics.translate(_x, _y);
             this._targetGraphics.rotate(radians(_rotateDegree));
 
@@ -237,6 +239,28 @@ class Collager {
         if (this._isDebug) {
             this.drawDebug();
         }
+    }
+
+    redrawRect(_x, _y, _w, _h, _rotateDegree = 0) {
+        push();
+        translate(_x, _y); // Center of rect
+        rotate(radians(_rotateDegree));
+        
+        imageMode(CENTER);
+        image(this._finalShapeBuffer, 0, 0);
+        pop();
+    }
+
+    redrawRectMask(_x, _y, _w, _h, _rotateDegree = 0) {
+        push();
+        translate(_x, _y); // Center of rect
+        rotate(radians(_rotateDegree));
+
+        // Draw the full buffer centered. 
+        imageMode(CENTER);
+        image(this._shapeMaskBuffer, 0, 0);
+
+        pop();
     }
 
     _setShapeByEdgePoints(_edgePointsArray) {
@@ -273,6 +297,7 @@ class Collager {
         // fill inside
         shader(this._fillShapeShader);
         this._fillShapeShader.setUniform('uFillColor', [0.0, 0.0, 0.0, 1.0]);
+        this._fillShapeShader.setUniform('uUseTextureAlpha', 0);
         model(shapeGeom);
         resetShader();
 
@@ -336,6 +361,17 @@ class Collager {
         model(quadGeom);
         resetShader();
         collageBuffer.end();
+
+        // draw the shape mask to the shape mask buffer
+        this._shapeMaskBuffer.begin();
+        clear();
+        shader(this._fillShapeShader);
+        this._fillShapeShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
+        this._fillShapeShader.setUniform('uMainTexture', collageBuffer);
+        this._fillShapeShader.setUniform('uUseTextureAlpha', 1);
+        model(quadGeom);
+        resetShader();
+        this._shapeMaskBuffer.end();
 
         // Shadow Pass
         finalBuffer.begin();
@@ -560,8 +596,11 @@ class Collager {
         // Draw _collageBuffer
         image(this._collageBuffer, startX, startY + drawH * 2, drawW, drawH);
 
+        // Draw _shapeMaskBuffer
+        image(this._shapeMaskBuffer, startX, startY + drawH * 3, drawW, drawH);
+
         // Draw _finalShapeBuffer
-        image(displayFinalBuffer, startX, startY + drawH * 3, drawW, drawH);
+        image(displayFinalBuffer, startX, startY + drawH * 4, drawW, drawH);
 
         // Add labels
         fill(255);
@@ -571,7 +610,8 @@ class Collager {
         text("Base Shape", startX + 10, startY + 10);
         text("Outline Grad", startX + 10, startY + drawH + 10);
         text("Collage Pass", startX + 10, startY + drawH * 2 + 10);
-        text("Final Shape", startX + 10, startY + drawH * 3 + 10);
+        text("Shape Mask", startX + 10, startY + drawH * 3 + 10);
+        text("Final Shape", startX + 10, startY + drawH * 4 + 10);
 
         pop();
     }
