@@ -4,7 +4,8 @@
   "description": "Exhibition system for p5 college research artworks",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "client": "node client.js"
   },
   "dependencies": {
     "express": "^4.18.2",
