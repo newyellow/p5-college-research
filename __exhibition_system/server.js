@@ -22,6 +22,11 @@ app.use('/artworks', express.static(path.join(__dirname, '../')));
 // Load Artworks dynamically from configs/artworks folder
 const artworks = [];
 const artworksDir = path.join(__dirname, 'configs', 'artworks');
+const SEQUENCE_FILE = path.join(__dirname, '..', '__sequence_queue.json');
+const SHORT_BATCH_SIZE = 10;
+const TOTAL_SEQUENCE_LENGTH = 600;
+let sequenceQueue = [];
+let sequencePosition = 0;
 
 try {
     if (fs.existsSync(artworksDir)) {
@@ -54,6 +59,61 @@ try {
     console.error("Error loading artworks:", e);
 }
 
+const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
+
+const buildShortBatch = (teamIds) => {
+    const base = [];
+    teamIds.forEach(id => {
+        base.push(id, id);
+    });
+    if (base.length === 0) return [];
+
+    const shortBatch = base.slice(0, SHORT_BATCH_SIZE);
+    let fillIndex = 0;
+    while (shortBatch.length < SHORT_BATCH_SIZE) {
+        shortBatch.push(base[fillIndex % base.length]);
+        fillIndex++;
+    }
+
+    return shortBatch;
+};
+
+const generateSequenceQueue = (teamIds) => {
+    const shortBatch = buildShortBatch(teamIds);
+    if (shortBatch.length === 0) return [];
+
+    const queue = [];
+    while (queue.length < TOTAL_SEQUENCE_LENGTH) {
+        const shuffled = shuffleArray([...shortBatch]);
+        queue.push(...shuffled);
+    }
+
+    return queue.slice(0, TOTAL_SEQUENCE_LENGTH);
+};
+
+const persistSequenceQueue = (queue) => {
+    try {
+        fs.writeFileSync(SEQUENCE_FILE, JSON.stringify(queue, null, 2));
+        console.log(`Generated sequence queue (${queue.length}) at ${SEQUENCE_FILE}`);
+    } catch (err) {
+        console.error('Failed to persist sequence queue:', err);
+    }
+};
+
+const teamIds = artworks.map(a => a.id);
+if (teamIds.length > 0) {
+    sequenceQueue = generateSequenceQueue(teamIds);
+    persistSequenceQueue(sequenceQueue);
+} else {
+    console.warn("No artworks available to build sequence queue.");
+}
+
 
 // State to store the previous artwork
 let previousArtworkData = null;
@@ -68,8 +128,20 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const randomIndex = Math.floor(Math.random() * artworks.length);
-        const pickedArtwork = artworks[randomIndex];
+        let pickedArtwork = null;
+        if (sequenceQueue.length > 0) {
+            const nextId = sequenceQueue[sequencePosition];
+            sequencePosition = (sequencePosition + 1) % sequenceQueue.length;
+            pickedArtwork = artworks.find(art => art.id === nextId);
+            if (!pickedArtwork) {
+                console.warn(`Sequence id ${nextId} not found, falling back to random pick.`);
+            }
+        }
+
+        if (!pickedArtwork) {
+            const randomIndex = Math.floor(Math.random() * artworks.length);
+            pickedArtwork = artworks[randomIndex];
+        }
         
         // --- Generate Iteration Record ---
         const timestamp = Date.now();
