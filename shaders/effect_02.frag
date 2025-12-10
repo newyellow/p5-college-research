@@ -80,8 +80,10 @@ float random (vec2 st) {
 
 void main() {
     vec2 uv = vTexCoord;
-    uv.y = 1.0 - uv.y;
-    
+    // uv.y = 1.0 - uv.y;
+    if(flipV) {
+        uv.y = 1.0 - uv.y;
+    }
     vec2 pos = uv * vec2(width, height);
     vec2 center = vec2(width/2., height/2.);
     vec2 distortedPos = pos;
