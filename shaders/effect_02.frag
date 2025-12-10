@@ -125,8 +125,6 @@ void main() {
         uv.y = 1.0 - uv.y;
     }
 
-    vec4 texColor = texture2D(utexture, uv);
-
     float cycleDuration = 5.0;
     float cyclePhase = mod(time, cycleDuration) / cycleDuration;
 
