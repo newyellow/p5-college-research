@@ -1,9 +1,9 @@
 {
     "id": "TeamA",
-    "title": "Lazy Duck's Day Out",
-    "description": "An interactive exploration of laziness and tranquility through the eyes of a duck. Experience the flow of time and water.",
-    "members": "Alice, Bob, Charlie",
-    "topic": "Nature & Relaxation",
+    "title": "蘭陽山海經",
+    "title_en": "Between Mountain and Sea: Generative Landscapes of Lanyang",
+    "description": "《蘭陽山海經》是一場從地景出發的凝視...",
+    "members": "李溋瑞 連秀珊 朱芸鋆 陳惠蘭",
+    "artifact": "墨玉筆山 玉鴨 雕橄欖核舟 蒔繪船形盒 浮邱峯玉山子 鹿角刻鑿蹲坐人形柄形器 魚形金屬編物",
     "path": "/artworks/_TeamA_LazyDuck/index.html"
 }
-

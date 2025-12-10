@@ -89,15 +89,23 @@
         }
 
         .info-card {
-            max-width: 600px;
+            max-width: 800px;
             width: 90%;
             text-align: left;
         }
 
         h2 {
             font-size: 2.5em;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             color: #222;
+        }
+
+        h3.subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: normal;
         }
 
         .meta-info {
@@ -160,17 +168,19 @@
     <div id="displayPanel" class="panel">
         <div class="info-card">
             <h2 id="artTitle">Loading...</h2>
+            <h3 id="artSubtitle" class="subtitle"></h3>
             <div class="meta-info">
                 <p><strong>Team:</strong> <span id="artMembers"></span></p>
-                <p><strong>Topic:</strong> <span id="artTopic"></span></p>
+                <p><strong>Artifact:</strong> <span id="artArtifact"></span></p>
             </div>
-            <p class="description" id="artDesc"></p>
+            <div class="description" id="artDesc"></div>
         </div>
         
         <div id="returnHint">Tap the screen to generate next artwork</div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/node_modules/marked/lib/marked.umd.js"></script>
     <script>
         // --- CONFIGURATION ---
         const PANEL_FADE_DURATION = 800; // ms (Transition between panels)
@@ -198,9 +208,11 @@
         const updateControlPanel = (artwork) => {
             // Populate Data
             document.getElementById('artTitle').textContent = artwork.title;
+            document.getElementById('artSubtitle').textContent = artwork.title_en || '';
             document.getElementById('artMembers').textContent = artwork.members;
-            document.getElementById('artTopic').textContent = artwork.topic;
-            document.getElementById('artDesc').textContent = artwork.description;
+            document.getElementById('artArtifact').textContent = artwork.artifact;
+            // Use marked to parse markdown description
+            document.getElementById('artDesc').innerHTML = marked.parse(artwork.description || '');
 
             // Perform Transition: Setting -> Display
             performTransitionToDisplay();

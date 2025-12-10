@@ -12,6 +12,9 @@ const io = new Server(server);
 // Serve static files from the 'public' directory (control and display pages)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve node_modules to access libraries like marked
+app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
+
 // Serve the entire project root at /artworks so we can access team folders
 // We go up one level from __dirname (__exhibition_system) to get to the project root
 app.use('/artworks', express.static(path.join(__dirname, '../')));
@@ -27,7 +30,17 @@ try {
             if (path.extname(file) === '.json') {
                 const data = fs.readFileSync(path.join(artworksDir, file), 'utf8');
                 try {
-                    artworks.push(JSON.parse(data));
+                    const artworkObj = JSON.parse(data);
+                    
+                    // Check for corresponding .md file for description
+                    const mdFile = path.basename(file, '.json') + '.md';
+                    const mdPath = path.join(artworksDir, mdFile);
+                    if (fs.existsSync(mdPath)) {
+                         artworkObj.description = fs.readFileSync(mdPath, 'utf8');
+                         console.log(`Loaded description from ${mdFile} for ${artworkObj.id}`);
+                    }
+
+                    artworks.push(artworkObj);
                 } catch (e) {
                     console.error(`Error parsing artwork config ${file}:`, e);
                 }

@@ -1,9 +1,9 @@
 {
     "id": "TeamC",
-    "title": "Mountain Sea Man",
-    "description": "Bridging the gap between the majestic mountains and the deep sea. A visual journey through elevation and depth.",
-    "members": "Grace, Heidi, Ivan",
-    "topic": "Landscape & Contrast",
+    "title": "山海人",
+    "title_en": "Mountain, Sea, and Humanity",
+    "description": "Bridging the gap between the majestic mountains...",
+    "members": "(資料表上填 all 需要另外找個別的名字)",
+    "artifact": "墨玉筆山 核桃雕刻",
     "path": "/artworks/_TeamC_MountainSeaMan/index.html"
 }
-
