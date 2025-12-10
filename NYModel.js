@@ -554,13 +554,16 @@ class NYModel {
         for (let i = 0; i < this.triangles.length; i++)
             md.faces.push(this.triangles[i]);
 
+        // CRITICAL FIX: p5.js expects FLAT arrays for uvs and vertexColors
+        // UVs: [u1, v1, u2, v2, ...] not [[u1, v1], [u2, v2], ...]
+        // Colors: [r1, g1, b1, a1, r2, g2, b2, a2, ...] not [[r1, g1, b1, a1], ...]
         md.uvs = [];
         for (let i = 0; i < this.uvs.length; i++)
-            md.uvs.push(this.uvs[i]);
+            md.uvs.push(this.uvs[i][0], this.uvs[i][1]);
 
         md.vertexColors = [];
         for (let i = 0; i < this.vertColors.length; i++)
-            md.vertexColors.push(this.vertColors[i]);
+            md.vertexColors.push(this.vertColors[i][0], this.vertColors[i][1], this.vertColors[i][2], this.vertColors[i][3]);
 
         if (this.customAttributeNames.length > 0) {
             if (_renderer == null) {
