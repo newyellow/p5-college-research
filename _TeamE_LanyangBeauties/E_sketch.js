@@ -221,7 +221,7 @@ async function startBreathingEffect() {
   // do breathing effect
   breathingShader = await loadShader(
     "../shaders/uniform.vert",
-    "../shaders/effect_02.frag"
+    "../shaders/effect_E_01.frag"
   );
 
   startTime = millis();
