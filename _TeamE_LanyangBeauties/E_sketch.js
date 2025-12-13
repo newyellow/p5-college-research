@@ -1,11 +1,11 @@
 // get url parameters
 const urlParams = new URLSearchParams(window.location.search);
 
-const seed = urlParams.get('seed') || Math.random() * 100000000;
-const p1 = urlParams.get('p1') || Math.random();
-const p2 = urlParams.get('p2') || Math.random();
-const p3 = urlParams.get('p3') || Math.random();
-const p4 = urlParams.get('p4') || Math.random();
+const seed = urlParams.get("seed") || Math.random() * 100000000;
+const p1 = urlParams.get("p1") || Math.random();
+const p2 = urlParams.get("p2") || Math.random();
+const p3 = urlParams.get("p3") || Math.random();
+const p4 = urlParams.get("p4") || Math.random();
 
 // this is a p5js v2 script
 let _renderer = null;
@@ -33,10 +33,12 @@ let bufferEffectResult;
 // collager
 let collager;
 
+let windowSetIndex = 0;
+
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
   flex();
-  fontResource = await loadFont('../fonts/Monospace.ttf');
+  fontResource = await loadFont("../fonts/Monospace.ttf");
 
   randomSeed(seed);
   noiseSeed(seed);
@@ -47,7 +49,7 @@ async function setup() {
   imageMode(CENTER);
 
   // load images
-  let windowSetIndex = int(random(0, 3));
+  windowSetIndex = int(random(0, 3));
   await loadWindowImages(windowSetIndex);
 
   // init buffers
@@ -68,12 +70,12 @@ async function setup() {
   collager = new Collager();
   await collager.initSystem();
 
-  await collager.addImage('photoImages/demo-01.png', 0.2, 0.8);
-  await collager.addImage('photoImages/demo-02.png', 0.2, 0.8);
-  await collager.addImage('photoImages/demo-03.png', 0.2, 0.8);
-  await collager.addImage('photoImages/demo-04.png', 0.2, 0.8);
-  await collager.addImage('photoImages/demo-05.png', 0.2, 0.8);
-  await collager.addImage('photoImages/demo-06.png', 0.2, 0.8);
+  await collager.addImage("photoImages/demo-01.png", 0.2, 0.8);
+  await collager.addImage("photoImages/demo-02.png", 0.2, 0.8);
+  await collager.addImage("photoImages/demo-03.png", 0.2, 0.8);
+  await collager.addImage("photoImages/demo-04.png", 0.2, 0.8);
+  await collager.addImage("photoImages/demo-05.png", 0.2, 0.8);
+  await collager.addImage("photoImages/demo-06.png", 0.2, 0.8);
 
   // some settings
   mainHue = lerp(0, 360, p1);
@@ -92,8 +94,6 @@ async function setup() {
   // p3 controls padding?
   let rectPadding = lerp(10, 30, p3);
 
-
-
   background(0, 0, 30);
 
   // Create Subdivision
@@ -111,7 +111,7 @@ async function setup() {
     splitRatioMax: splitMax,
     splitChance: 0.85,
     padding: rectPadding,
-    minSize: 100 // Stop splitting if smaller than this
+    minSize: 100, // Stop splitting if smaller than this
   });
 
   rectList = subdivider.getLeaves();
@@ -132,7 +132,6 @@ async function AsyncDrawOnce() {
   // draw all background
   let pieceCount = random(100, 600);
 
-
   for (let i = 0; i < pieceCount; i++) {
     let posX = random(-width / 2, width / 2);
     let posY = random(-height / 2, height / 2);
@@ -141,7 +140,6 @@ async function AsyncDrawOnce() {
     let sizeH = random(100, 900);
 
     let angleDegree = random(-360, 360);
-
 
     noStroke();
     fill(0, 0, 100);
@@ -162,7 +160,6 @@ async function AsyncDrawOnce() {
     noStroke();
     fill(0, 0, 100);
     r.drawImage(bestData.imageData);
-
 
     // draw on bg mask
     bufferLayerBgMask.draw(() => {
@@ -185,11 +182,10 @@ async function AsyncDrawOnce() {
       let pieceCount = random(6, 12);
 
       for (let i = 0; i < pieceCount; i++) {
-
         // let posX = r.x + random(-r.w / 2, r.w / 2) * 0.66;
         // let posY = r.y + random(-r.h / 2, r.h / 2) * 0.66;
-        let posX = (r.x + r.w / 2) + random(-r.w / 2, r.w / 2);
-        let posY = (r.y + r.h / 2) + random(-r.h / 2, r.h / 2);
+        let posX = r.x + r.w / 2 + random(-r.w / 2, r.w / 2);
+        let posY = r.y + r.h / 2 + random(-r.h / 2, r.h / 2);
 
         let sizeW = random(0.6, 1.2) * r.w;
         let sizeH = random(0.6, 1.2) * r.h;
@@ -212,17 +208,23 @@ async function AsyncDrawOnce() {
   startBreathingEffect();
 }
 
-
 let breathingShader = null;
 let startTime = null;
 let isBreathing = false;
 
 async function startBreathingEffect() {
   // do breathing effect
-  breathingShader = await loadShader(
-    "../shaders/uniform.vert",
-    "../shaders/effect_E_01.frag"
-  );
+  let fragShaderPath = "";
+
+  if (windowSetIndex == 0) {
+    fragShaderPath = "../shaders/effect_E_02.frag";
+  } else if (windowSetIndex == 1) {
+    fragShaderPath = "../shaders/effect_E_02.frag";
+  } else if (windowSetIndex == 2) {
+    fragShaderPath = "../shaders/effect_E_02.frag";
+  }
+
+  breathingShader = await loadShader("../shaders/uniform.vert", fragShaderPath);
 
   startTime = millis();
   isBreathing = true;
@@ -262,32 +264,125 @@ function draw() {
 
 async function loadWindowImages(_windowSetIndex) {
   if (_windowSetIndex == 0) {
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-1-1.png', 'curveData/window-A-1-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-1-2-1.png', 'curveData/window-A-1-2-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-1-2-2.png', 'curveData/window-A-1-2-2.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-1-3-1.png', 'curveData/window-A-1-3-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-1-3-2.png', 'curveData/window-A-1-3-2.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-2-1-2.png', 'curveData/window-A-2-1-2.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-2-1.png', 'curveData/window-A-2-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-3-1-1.png', 'curveData/window-A-3-1-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-3-1-2.png', 'curveData/window-A-3-1-2.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-A-3-1-3.png', 'curveData/window-A-3-1-3.json'));
-  }
-  else if (_windowSetIndex == 1) {
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-B-1-1.png', 'curveData/window-B-1-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-B-1-2-1.png', 'curveData/window-B-1-2-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-B-1-2-2.png', 'curveData/window-B-1-2-2.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-B-1-2-3.png', 'curveData/window-B-1-2-3.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-B-2-1-1.png', 'curveData/window-B-2-1-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-B-2-1-2.png', 'curveData/window-B-2-1-2.json'));
-  }
-  else if (_windowSetIndex == 2) {
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-C-1.png', 'curveData/window-C-1.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-C-2.png', 'curveData/window-C-2.json'));
-    windowDataSetList.push(await WindowDataSet.LoadWindowData('windowImages/window-C-3.png', 'curveData/window-C-3.json'));
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-1-1.png",
+        "curveData/window-A-1-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-1-2-1.png",
+        "curveData/window-A-1-2-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-1-2-2.png",
+        "curveData/window-A-1-2-2.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-1-3-1.png",
+        "curveData/window-A-1-3-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-1-3-2.png",
+        "curveData/window-A-1-3-2.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-2-1-2.png",
+        "curveData/window-A-2-1-2.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-2-1.png",
+        "curveData/window-A-2-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-3-1-1.png",
+        "curveData/window-A-3-1-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-3-1-2.png",
+        "curveData/window-A-3-1-2.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-A-3-1-3.png",
+        "curveData/window-A-3-1-3.json"
+      )
+    );
+  } else if (_windowSetIndex == 1) {
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-B-1-1.png",
+        "curveData/window-B-1-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-B-1-2-1.png",
+        "curveData/window-B-1-2-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-B-1-2-2.png",
+        "curveData/window-B-1-2-2.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-B-1-2-3.png",
+        "curveData/window-B-1-2-3.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-B-2-1-1.png",
+        "curveData/window-B-2-1-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-B-2-1-2.png",
+        "curveData/window-B-2-1-2.json"
+      )
+    );
+  } else if (_windowSetIndex == 2) {
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-C-1.png",
+        "curveData/window-C-1.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-C-2.png",
+        "curveData/window-C-2.json"
+      )
+    );
+    windowDataSetList.push(
+      await WindowDataSet.LoadWindowData(
+        "windowImages/window-C-3.png",
+        "curveData/window-C-3.json"
+      )
+    );
   }
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
