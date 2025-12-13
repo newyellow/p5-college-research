@@ -1,4 +1,6 @@
 
+
+let imgNub = [];
 new p5((sketch) => {
   let uniformsShader;
   let startTime;
@@ -13,11 +15,23 @@ new p5((sketch) => {
     cnv.style('z-index', '1');
     
     sketch.pixelDensity(1);
-    
-    testTexture = await sketch.loadImage("images/test-photo-4.jpg");
-    testTexture01 = await sketch.loadImage("images/test-photo-1.jpg");
-    testTexture02 = await sketch.loadImage("images/test-photo-3.jpg");
-    
+    while (imgNub.length < 4) {
+      let num = Math.floor(Math.random() * 13) + 1; // 1~13
+      if (!imgNub.includes(num)) {
+        imgNub.push(num);
+      }
+    } 
+
+  let pad = (n) => n.toString().padStart(2, '0');
+
+    texture = await sketch.loadImage(`images/layer00_${pad(imgNub[0])}.jpg`);
+    texture01 = await sketch.loadImage(`images/layer00_${pad(imgNub[1])}.jpg`);
+    texture02 = await sketch.loadImage(`images/layer00_${pad(imgNub[2])}.jpg`);
+    texture03 = await sketch.loadImage(`images/layer00_${pad(imgNub[3])}.jpg`);
+    // testTexture = await sketch.loadImage("images/test-photo-4.jpg");
+    // testTexture01 = await sketch.loadImage("images/test-photo-1.jpg");
+    // testTexture02 = await sketch.loadImage("images/test-photo-3.jpg");
+      
     uniformsShader = await sketch.loadShader(
       "../shaders/uniform.vert",
       "../shaders/kaleidoscope.frag"
