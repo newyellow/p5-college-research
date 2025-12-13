@@ -58,6 +58,11 @@ uniform sampler2D utexture2;
 uniform sampler2D utexture3;
 uniform sampler2D utexture4;
 
+uniform float aspect1;
+uniform float aspect2;
+uniform float aspect3;
+uniform float aspect4;
+
 varying vec2 vTexCoord;
 uniform float time;
 uniform float width;
@@ -75,16 +80,34 @@ vec2 kaleido(vec2 uv, float segments, float radialPower) {
 }
 
 // 旋轉和縮放
-vec2 transformLayer(vec2 uv, float angle, float scale, float density) {
+// vec2 transformLayer(vec2 uv, float angle, float scale, float density) {
+//     float c = cos(angle) * scale;
+//     float s = sin(angle) * scale;
+//     vec2 rotated = vec2(
+//         uv.x * c - uv.y * s,
+//         uv.x * s + uv.y * c
+//     );
+//     return fract(rotated * density + 0.5);
+// }
+
+vec2 transformLayer(vec2 uv, float angle, float scale, float density, float aspect) {
+    vec2 correctedUV = uv;
+    if (aspect > 1.0) {
+        //橫
+        correctedUV.y /= aspect;
+    } else {
+        //直
+        correctedUV.x *= aspect;
+    }
+    
     float c = cos(angle) * scale;
     float s = sin(angle) * scale;
     vec2 rotated = vec2(
-        uv.x * c - uv.y * s,
-        uv.x * s + uv.y * c
+        correctedUV.x * c - correctedUV.y * s,
+        correctedUV.x * s + correctedUV.y * c
     );
     return fract(rotated * density + 0.5);
 }
-
 void main() {
     vec2 uv = vTexCoord;
     uv.y = 1.0 - uv.y;
@@ -99,17 +122,17 @@ void main() {
     if (dist < 0.3) {
         // center
         vec2 kaleidoUV = kaleido(uv, 4.5, 0.9);
-        vec2 texUV = transformLayer(kaleidoUV, time * 0.2, 0.5, 3.0);
+        vec2 texUV = transformLayer(kaleidoUV, time * 0.2, 0.5, 3.0,aspect1);
         finalColor = texture2D(utexture, texUV);
         
     } else if (dist < 0.4) {
         // 1-2
         vec2 kaleidoUV1 = kaleido(uv, 4.5, 0.9);
-        vec2 texUV1 = transformLayer(kaleidoUV1, time * 0.15, 0.5, 3.0);
+        vec2 texUV1 = transformLayer(kaleidoUV1, time * 0.15, 0.5, 3.0,aspect1);
         vec4 color1 = texture2D(utexture, texUV1);
         
         vec2 kaleidoUV2 = kaleido(uv, 5.5, 0.7);
-        vec2 texUV2 = transformLayer(kaleidoUV2, time * 0.15, 0.6, 2.5);
+        vec2 texUV2 = transformLayer(kaleidoUV2, time * 0.15, 0.6, 2.5,aspect2);
         vec4 color2 = texture2D(utexture2, texUV2);
         
         float blend = smoothstep(0.3, 0.4, dist);
@@ -118,17 +141,17 @@ void main() {
     } else if (dist < 0.6) {
         // 2
         vec2 kaleidoUV = kaleido(uv, 5.5, 0.7);
-        vec2 texUV = transformLayer(kaleidoUV, time * 0.1, 0.6, 2.5);
+        vec2 texUV = transformLayer(kaleidoUV, time * 0.1, 0.6, 2.5,aspect2);
         finalColor = texture2D(utexture2, texUV);
         
     } else if (dist < 0.7) {
         // 2-3
         vec2 kaleidoUV2 = kaleido(uv, 5.5, 0.7);
-        vec2 texUV2 = transformLayer(kaleidoUV2, time * 0.1, 0.6, 2.5);
+        vec2 texUV2 = transformLayer(kaleidoUV2, time * 0.1, 0.6, 2.5,aspect2);
         vec4 color2 = texture2D(utexture2, texUV2);
         
         vec2 kaleidoUV3 = kaleido(uv, 3.5, 0.5);
-        vec2 texUV3 = transformLayer(kaleidoUV3, time * 0.1, 0.8, 4.0);
+        vec2 texUV3 = transformLayer(kaleidoUV3, time * 0.1, 0.8, 4.0,aspect3);
         vec4 color3 = texture2D(utexture3, texUV3);
         
         float blend = smoothstep(0.6, 0.7, dist);
@@ -137,17 +160,17 @@ void main() {
     } else if (dist < 0.9) {
         // 3
         vec2 kaleidoUV = kaleido(uv, 3.5, 0.5);
-        vec2 texUV = transformLayer(kaleidoUV, time * 0.05, 0.8, 4.0);
+        vec2 texUV = transformLayer(kaleidoUV, time * 0.05, 0.8, 4.0 ,aspect3);
         finalColor = texture2D(utexture3, texUV);
         
     } else if (dist < 1.0) {
         // 3-4
         vec2 kaleidoUV3 = kaleido(uv, 3.5, 0.5);
-        vec2 texUV3 = transformLayer(kaleidoUV3, time * 0.05, 0.8, 4.0);
+        vec2 texUV3 = transformLayer(kaleidoUV3, time * 0.05, 0.8, 4.0 ,aspect3);
         vec4 color3 = texture2D(utexture3, texUV3);
         
         vec2 kaleidoUV4 = kaleido(uv, 6.0, 1.1);
-        vec2 texUV4 = transformLayer(kaleidoUV4, time * 0.05, 0.7, 2.0);
+        vec2 texUV4 = transformLayer(kaleidoUV4, time * 0.05, 0.7, 2.0 ,aspect4);
         vec4 color4 = texture2D(utexture4, texUV4);
         
         float blend = smoothstep(0.9, 1.0, dist);
@@ -156,7 +179,7 @@ void main() {
     } else {
         // 4
         vec2 kaleidoUV = kaleido(uv, 6.0, 1.1);
-        vec2 texUV = transformLayer(kaleidoUV, time * 0.025, 0.5, 2.0);
+        vec2 texUV = transformLayer(kaleidoUV, time * 0.025, 0.5, 2.0 ,aspect3);
         finalColor = texture2D(utexture4, texUV);
     }
     
