@@ -217,11 +217,11 @@ async function startBreathingEffect() {
   let fragShaderPath = "";
 
   if (windowSetIndex == 0) {
-    fragShaderPath = "../shaders/effect_E_02.frag";
+    fragShaderPath = "../shaders/effect_E_01.frag";
   } else if (windowSetIndex == 1) {
     fragShaderPath = "../shaders/effect_E_02.frag";
   } else if (windowSetIndex == 2) {
-    fragShaderPath = "../shaders/effect_E_02.frag";
+    fragShaderPath = "../shaders/effect_E_03.frag";
   }
 
   breathingShader = await loadShader("../shaders/uniform.vert", fragShaderPath);
@@ -232,7 +232,6 @@ async function startBreathingEffect() {
 
 function draw() {
   if (isBreathing) {
-
     bufferEffectResult.draw(() => {
       shader(breathingShader);
       breathingShader.setUniform("width", 1080.0);
@@ -252,7 +251,6 @@ function draw() {
 
     image(bufferEffectResult, 0, 0, width, height);
     image(bufferLayerWindowFrame, 0, 0, width, height);
-
 
     // debug
     // image(bufferLayerWindowColor, 0, 0, 400, 600);
