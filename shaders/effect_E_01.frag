@@ -1,166 +1,127 @@
+#ifdef GL_ES
 precision mediump float;
+#endif
+#define PI 3.141592654
 
-varying vec2 vTexCoord;
-
-uniform float time;
-uniform float width;
-uniform float height;
-uniform sampler2D colorTex;
 uniform sampler2D utexture;
 uniform sampler2D uMaskTexture;
 uniform float uEffectStrength;
 
-const float PI = 3.1415926535897932384626433832795;
+varying vec2 vTexCoord;
+uniform vec2 resolution;
+uniform float time;
+uniform float width;
+uniform float height;
 
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
 }
 
-vec3 sepiaTone(vec3 color) {
-    float r = dot(color, vec3(0.393, 0.769, 0.189));
-    float g = dot(color, vec3(0.349, 0.686, 0.168));
-    float b = dot(color, vec3(0.272, 0.534, 0.131));
-    return vec3(r, g, b);
+struct LensRipple {
+    vec2 center;
+    float maxRadius;
+    float phase;
+    float speed;
+};
+
+LensRipple getLensRipple(int index, float time) {
+    float fi = float(index);
+
+    float seedX = fi * 123.456;
+    float seedY = fi * 789.012;
+
+    float maxScreenRadius = sqrt(width * width + height * height) * 0.5;
+
+    float moveSpeed1 = 0.15 + random(vec2(seedX, 0.0)) * 0.1; // 減慢移動速度
+    float moveSpeed2 = 0.2 + random(vec2(seedY, 1.0)) * 0.1;
+
+    vec2 center = vec2(
+        width * (0.3 + 0.2 * sin(time * moveSpeed1 + fi * 2.0)),
+        height * (0.3 + 0.2 * cos(time * moveSpeed2 + fi * 1.5)));
+
+    float maxRadius = maxScreenRadius * (1.2 + random(vec2(fi, fi * 2.0)) * 0.3);
+
+    float phase = fi * 2.0 + random(vec2(fi * 3.0, fi * 4.0)) * 3.14;
+
+    float speed = 0.3 + random(vec2(fi * 5.0, fi * 6.0)) * 0.2;
+
+    return LensRipple(center, maxRadius, phase, speed);
 }
 
-float vignette(vec2 uv, float intensity, float extent) {
-    vec2 centered = uv - 0.5;
-    float dist = length(centered);
-    return 1.0 - smoothstep(extent, extent + intensity, dist);
-}
-
-float filmGrain(vec2 uv, float time) {
-    vec2 seed = uv * time ;
-    return random(seed) * 0.3 - 0.1;
-}
-
-vec3 vintageContrast(vec3 color, float contrast, float brightness) {
-    color = (color - 0.5) * contrast + 0.5 + brightness;
-    return clamp(color, 0.0, 1.0);
-}
-
-vec3 fadedColor(vec3 color, float fadeAmount) {
-    float luminance = dot(color, vec3(0.299, 0.587, 0.114));
-    return mix(color, vec3(luminance), fadeAmount);
-}
-
-vec3 colorShift(vec3 color, vec3 tint) {
-    return color * tint;
-}
-
-float horizontalNoise(vec2 uv, float time) {
-    float noiseY = floor(uv.y * 80.0);
-    float noise = random(vec2(noiseY, floor(time * 10.0)));
-    float shouldShow = step(0.96, random(vec2(noiseY, floor(time * 5.0))));
-    return shouldShow * noise * 0.3;
-}
-
-float signalWave(vec2 uv, float time) {
-    float wave = sin(uv.y * 50.0 + time * 3.0) * 0.002;
-    return wave;
-}
-
-vec2 getGlitchOffset(vec2 uv, float time, int channel) {
-    float quantizedTime = floor(time * 5.0);
-
-    float stripHeight = 0.5;
-    float stripIndex = floor(uv.y / stripHeight);
-
-    vec2 seed = vec2(stripIndex, quantizedTime + float(channel) * 100.0);
-
-    float shouldGlitch = step(0.95, random(seed));
-
-    float horizontalOffset = (random(seed + 0.5) - 0.5) * 0.03 * shouldGlitch;
-
-    float bigGlitch = step(0.98, random(seed + 1.0));
-    horizontalOffset += (random(seed + 2.0) - 0.5) * 0.08 * bigGlitch;
-
-    return vec2(horizontalOffset, 0.0);
-}
-
-vec2 getGlobalShake(float time, int channel) {
-    float quantizedTime = floor(time * .5);
-    vec2 seed = vec2(quantizedTime, float(channel) * 50.0);
-
-    float shouldShake = step(0.95, random(seed));
-
-    float shakeX = (random(seed + 0.1) - 0.5) * 0.01 * shouldShake;
-    float shakeY = (random(seed + 0.2) - 0.5) * 0.005 * shouldShake;
-
-    return vec2(shakeX, shakeY);
-}
-
-vec3 getRGBSeparation(sampler2D tex, vec2 uv, float time) {
-    vec2 offsetR = getGlitchOffset(uv, time, 0) + getGlobalShake(time, 0);
-    vec2 offsetG = getGlitchOffset(uv, time, 1) + getGlobalShake(time, 1);
-    vec2 offsetB = getGlitchOffset(uv, time, 2) + getGlobalShake(time, 2);
-
-    float baseOffset = 0.002;
-    offsetR.x += baseOffset;
-    offsetB.x -= baseOffset;
-
-    float r = texture2D(tex, uv + offsetR).r;
-    float g = texture2D(tex, uv + offsetG).g;
-    float b = texture2D(tex, uv + offsetB).b;
-
-    return vec3(r, g, b);
-}
-
-float getVerticalGlitch(vec2 uv, float time) {
-    float quantizedTime = floor(time * 4.0);
-
-    float gridY = floor(uv.y * 20.0);
-    float gridX = floor(uv.y * 15.0 + random(vec2(gridY, quantizedTime)) * 2.0);
-
-    vec2 gridPos = vec2(gridY, gridX);
-    vec2 seed = vec2(gridPos.x, gridPos.y + quantizedTime);
-    // glitch ot not
-    float shouldGlitch = step(0.5, random(seed));
-    float horizontalBar = step(0.9, random(vec2(gridY, quantizedTime)));
-
-    float fineGridX = floor(uv.x * 400.0);
-    float fineGridY = floor(uv.y * 200.0);
-
-    float cutout = step(0.3, random(vec2(fineGridX, fineGridY + quantizedTime)));
-
-    float pattern = horizontalBar * cutout * shouldGlitch;
-
-    float brightness = (random(seed + 0.5) - 0.5) * 0.4 * pattern;
-
-    return brightness;
-}
 void main() {
     vec2 uv = vTexCoord;
+
+    // 計算寬高比
+    float aspectRatio = width / height;
+
     vec2 pixelPos = uv * vec2(width, height);
-    vec2 center = vec2(width / 2.0, height / 2.0);
+    vec2 totalLensOffset = vec2(0.0);
+
+    // 三個漣漪 lens
+    const int NUM_LENSES = 5;
+
+    for (int i = 0; i < NUM_LENSES; i++) {
+        LensRipple lens = getLensRipple(i, time);
+
+        vec2 toLens = pixelPos - lens.center;
+        float dist = length(toLens);
+
+        if (dist < lens.maxRadius) {
+            float uniformDist = sqrt(dist / lens.maxRadius); // 壓縮距離，使環間距更均勻
+
+            float ripplePhase = time * lens.speed *0.1 + lens.phase;
+
+            const int NUM_RINGS = 12;
+            for (int ring = 1; ring <= NUM_RINGS; ring++) {
+                float normalizedRing = float(ring) / float(NUM_RINGS);
+                float ringRadius = normalizedRing;
+
+                float expandingRadius = ringRadius + sin(ripplePhase - normalizedRing * 8.0) * 0.03;
+
+                float ringWidth = 0.1 +sin(ripplePhase - normalizedRing * 6.0) * 0.02;
+
+                if (abs(uniformDist - expandingRadius) < ringWidth * 0.5) {
+                    float localDist = abs(uniformDist - expandingRadius);
+                    float ringPct = 1.0 - (localDist / (ringWidth * 0.5));
+
+                    float rippleIntensity = sin(dist * 0.02 - ripplePhase * 2.0) * 0.5 + 0.5;
+
+                    // 0~1~0
+                    float alphaWave = abs(sin(dist * 0.025 - ripplePhase * 1.5));
+
+                    float ringFactor = 1.0 - normalizedRing * 0.3;
+
+                    float lensEffect = sin(ringPct * 25.0 + dist * 0.05 - ripplePhase)* rippleIntensity* alphaWave* ringFactor * 0.025;
+
+                    vec2 lensDir = normalize(toLens);
+                    vec2 lensOffset = lensDir * lensEffect * lens.maxRadius * 0.1;
+
+                    vec2 tangent = vec2(-lensDir.y, lensDir.x);
+                    lensOffset += tangent * lensEffect * lens.maxRadius * 0.05 
+                    * sin(ripplePhase + float(i) * 2.0);
+
+                    totalLensOffset +=lensOffset;
+                    break;
+                }
+            }
+        }
+    }
+
+    vec2 distortedPixelPos = pixelPos + totalLensOffset;
+    vec2 distortedUV = distortedPixelPos / vec2(width, height);
+
+    float edgeFade = smoothstep(0.0, 0.1, distortedUV.x) * 
+    smoothstep(0.0, 0.1, distortedUV.y) *
+    smoothstep(1.0, 0.9, distortedUV.x) * 
+    smoothstep(1.0, 0.9, distortedUV.y);
+    distortedUV = mix(uv, distortedUV, edgeFade);
+
+    vec4 distortedColor = texture2D(utexture, distortedUV);
 
     vec4 maskColor = texture2D(uMaskTexture, uv);
     vec4 originalColor = texture2D(utexture, uv);
+    vec3 finalColor = mix(originalColor.rgb, distortedColor.rgb, maskColor.r);
 
-    vec3 glitchedColor = getRGBSeparation(utexture, uv, time);
-
-    float verticalGlitch = getVerticalGlitch(uv, time);
-    glitchedColor += vec3(verticalGlitch);
-    vec3 finalColor = mix(originalColor.rgb, glitchedColor, maskColor.r);
-
-    vec3 sepiaColor = sepiaTone(finalColor);
-    finalColor = mix(finalColor, sepiaColor, 0.5);
-
-    finalColor = fadedColor(finalColor, 0.4);
-
-    finalColor = vintageContrast(finalColor, 0.9, -0.05);
-
-    vec3 warmTint = vec3(1.05, 1.0, 0.9);
-    finalColor = colorShift(finalColor, warmTint);
-
-    float grain = filmGrain(vTexCoord, time * 0.5);
-    finalColor += grain;
-
-    float vignetteEffect = vignette(vTexCoord, 0.5, 0.35);
-    finalColor *= vignetteEffect;
-
-    finalColor = clamp(finalColor, 0.0, 1.0);
     finalColor = mix(originalColor.rgb, finalColor, uEffectStrength);
-
     gl_FragColor = vec4(finalColor, 1.0);
 }
