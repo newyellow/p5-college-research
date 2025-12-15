@@ -33,11 +33,11 @@ class WindowObject {
         this.systemStartTime = null; // set when system starts (for delay calculation)
         
         // Auto image change properties
-        this.imageChangeIntervalMin = 6000; // min time between changes
+        this.imageChangeIntervalMin = 3600; // min time between changes
         this.imageChangeIntervalMax = 12000; // max time between changes
-        this.imageChangeTimer = -6000; // accumulator, increments with deltaTime
+        this.imageChangeTimer = random(1000, 2000) - this.fadeInDelay;
         // start low for fading
-        this.currentImageChangeInterval = this._randomizeImageChangeInterval(); // current target time
+        this.currentImageChangeInterval = this._randomizeImageChangeInterval();
         this.canChangeImage = false; // true when timer has elapsed and ready for new image
     }
 
@@ -87,6 +87,8 @@ class WindowObject {
             this.isTransitioning = true;
             this.transitionStartTime = millis();
             this.transitionT = 0;
+
+            this.canChangeImage = false;
         }
     }
 
@@ -158,8 +160,8 @@ class WindowObject {
         }
         
         // Update image change timer
-        // Only start counting after the first image is set and fade-in is complete
-        if (this.currentImage && this.isFadedIn && !this.isTransitioning) {
+        // also counting while fading, it is easier to control the temple
+        if (!this.isTransitioning) {
             // Increment timer with _deltaTime
             this.imageChangeTimer += _deltaTime;
             

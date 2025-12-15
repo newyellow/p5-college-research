@@ -255,6 +255,7 @@ function draw() {
       windowObject.drawObject();
 
       if (windowObject.canChangeImage) {
+        
         let imgIndex = int(random(0, 5));
         let randomAngleDegree = random(-30, 30);
         let randomScale = random(1.0, 3.0);
