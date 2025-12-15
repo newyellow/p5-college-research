@@ -93,7 +93,11 @@ function maskBottleHole() {
 
 // drawCurveStroke
 function drawCurveStroke(_thickness = 5, _noiseThickness = 10, _noiseScale = 0.01, _sampleCount = 2000) {
-    let _reader = curveReaders[0];
+    drawTargetCurveStroke(curveReaders[0], _thickness, _noiseThickness, _noiseScale, _sampleCount);
+}
+
+function drawTargetCurveStroke(_targetCurveReader, _thickness = 5, _noiseThickness = 10, _noiseScale = 0.01, _sampleCount = 2000) {
+    let _reader = _targetCurveReader;
 
     // Step 1: Collect all curve points
     let curvePoints = [];
@@ -129,7 +133,12 @@ function drawCurveStroke(_thickness = 5, _noiseThickness = 10, _noiseScale = 0.0
         let normal = normals[i];
 
         // Calculate noise-based thickness variation
-        let noiseValue = noise(i * _noiseScale);
+        // Sample noise in a circular pattern for seamless looping
+        let angle = (i / _sampleCount) * TWO_PI;
+        let noiseRadius = 100; // Radius of the circular sampling path
+        let nx = cos(angle) * noiseRadius;
+        let ny = sin(angle) * noiseRadius;
+        let noiseValue = noise(nx * _noiseScale, ny * _noiseScale);
         let noiseThickness = _noiseThickness * noiseValue;
         let totalThickness = _thickness + noiseThickness;
 
