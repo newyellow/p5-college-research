@@ -1,6 +1,11 @@
 // get url parameters
 const urlParams = new URLSearchParams(window.location.search);
 
+// const seed = 1234567890;
+// const p1 = 0.5;
+// const p2 = 0.5;
+// const p3 = 0.5;
+// const p4 = 0.5;
 const seed = urlParams.get("seed") || Math.random() * 100000000;
 const p1 = urlParams.get("p1") || Math.random();
 const p2 = urlParams.get("p2") || Math.random();
@@ -22,7 +27,7 @@ let rectList = [];
 let windowDataSetList = [];
 
 // layer buffers
-let bufferColorBg;
+let bufferBGLayer;
 
 let bufferLayerBgMask;
 let bufferLayerWindowFrame;
@@ -32,8 +37,8 @@ let bufferEffectResult;
 
 // collager
 let collager;
-
 let windowSetIndex = 0;
+let windowObjects = [];
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
@@ -53,7 +58,7 @@ async function setup() {
   await loadWindowImages(windowSetIndex);
 
   // init buffers
-  bufferColorBg = createFramebuffer();
+  bufferBGLayer = createFramebuffer();
   bufferLayerBgMask = createFramebuffer();
   bufferLayerBgMask.draw(() => {
     background(0, 0, 100);
@@ -115,6 +120,15 @@ async function setup() {
   });
 
   rectList = subdivider.getLeaves();
+
+  // prepare window
+  for (let i = 0; i < rectList.length; i++) {
+    let rectData = rectList[i];
+    let bestFitWindowData = getClosestWindowData(rectData.w / rectData.h);
+    let windowObject = new WindowObject(rectData, bestFitWindowData);
+
+    windowObjects.push(windowObject);
+  }
   AsyncDrawOnce();
 }
 
@@ -129,79 +143,53 @@ async function AsyncDrawOnce() {
   stroke(mainHue, 80, 100);
   strokeWeight(2);
 
-  // draw all background
-  let pieceCount = random(100, 600);
+  // init window objectData
+  // init window objectData
+  // init window objectData
+  for (let i = 0; i < windowObjects.length; i++) {
+    let windowObject = windowObjects[i];
+    let imgIndex = int(random(0, 5));
+    let randomAngleDegree = random(-30, 30);
+    let randomScale = random(1.0, 3.0);
+    windowObject.setInsideImage(collager.images[imgIndex], randomScale, randomAngleDegree);
+    windowObject.drawObject();
+  }
+
+  // draw background
+  // draw background
+  // draw background
+  let pieceCount = random(200, 600);
 
   for (let i = 0; i < pieceCount; i++) {
     let posX = random(-width / 2, width / 2);
     let posY = random(-height / 2, height / 2);
 
-    let sizeW = random(100, 900);
-    let sizeH = random(100, 900);
+    let t = i / 600;
+    let drawSizeMultiplier = lerp(1.0, 0.2, t);
+
+    let sizeW = random(100, 900) * drawSizeMultiplier;
+    let sizeH = random(100, 900) * drawSizeMultiplier;
 
     let angleDegree = random(-360, 360);
 
-    noStroke();
-    fill(0, 0, 100);
-    collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
+    // color bg layer
+    bufferBGLayer.draw(() => {
+      noStroke();
+      fill(0, 0, 100);
+      collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
+    });
 
+    // show bg
+    image(bufferBGLayer, 0, 0, width, height);
     await sleep(16);
   }
 
-  // Draw all rectangles
-  for (let r of rectList) {
-    rectMode(CENTER);
-
-    // Find best image
-    let rectAspectRatio = r.w / r.h; // Note: w and h are full size, aspect ratio is same regardless of padding usually, but image draw will respect padding
-    let bestData = getClosestWindowData(rectAspectRatio);
-
-    // draw window frame
-    noStroke();
-    fill(0, 0, 100);
-    r.drawImage(bestData.imageData);
-
-    // draw on bg mask
-    bufferLayerBgMask.draw(() => {
-      erase();
-      r.drawCurve(bestData.curveReader);
-      noErase();
-    });
-
-    // draw on window inside mask
-    bufferLayerWindowMask.draw(() => {
-      noStroke();
-      fill(0, 0, 100);
-      r.drawCurve(bestData.curveReader);
-    });
-
-    // draw window frame on layer
-    bufferLayerWindowColor.draw(() => {
-      noStroke();
-
-      let pieceCount = random(6, 12);
-
-      for (let i = 0; i < pieceCount; i++) {
-        // let posX = r.x + random(-r.w / 2, r.w / 2) * 0.66;
-        // let posY = r.y + random(-r.h / 2, r.h / 2) * 0.66;
-        let posX = r.x + r.w / 2 + random(-r.w / 2, r.w / 2);
-        let posY = r.y + r.h / 2 + random(-r.h / 2, r.h / 2);
-
-        let sizeW = random(0.6, 1.2) * r.w;
-        let sizeH = random(0.6, 1.2) * r.h;
-
-        let angleDegree = random(-20, 20);
-
-        collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
-      }
-    });
-
-    bufferLayerWindowFrame.draw(() => {
-      noStroke();
-
-      r.drawImage(bestData.imageData);
-    });
-
+  // draw window one by one
+  // draw window one by one
+  // draw window one by one
+  for (let i = 0; i < windowObjects.length; i++) {
+    let windowObject = windowObjects[i];
+    windowObject.drawObject();
     await sleep(16);
   }
 
@@ -211,6 +199,8 @@ async function AsyncDrawOnce() {
 let breathingShader = null;
 let startTime = null;
 let isBreathing = false;
+let effectStrength = 0.0;
+let effectTimeCounter = 0.0;
 
 async function startBreathingEffect() {
   // do breathing effect
@@ -239,8 +229,9 @@ function draw() {
       breathingShader.setUniform("time", (millis() - startTime) / 1000.0);
       breathingShader.setUniform("uresolution", [width, height]);
 
-      breathingShader.setUniform("utexture", bufferLayerWindowColor);
+      breathingShader.setUniform("utexture", bufferBGLayer);
       breathingShader.setUniform("uMaskTexture", bufferLayerBgMask);
+      breathingShader.setUniform("uEffectStrength", effectStrength);
 
       noStroke();
       fill(0, 0, 100);
@@ -249,14 +240,28 @@ function draw() {
       resetShader();
     });
 
-    image(bufferEffectResult, 0, 0, width, height);
-    image(bufferLayerWindowFrame, 0, 0, width, height);
+    // slowly apply the effect
+    effectTimeCounter += deltaTime / 3600.0;
+    effectStrength = easeInOutSine(constrain(effectTimeCounter, 0.0, 1.0));
 
-    // debug
-    // image(bufferLayerWindowColor, 0, 0, 400, 600);
-    // image(bufferLayerWindowMask, 400, 0, 400, 600);
-    // image(bufferLayerWindowFrame, 0, 600, 400, 600);
-    // image(bufferEffectResult, 400, 600, 400, 600);
+    image(bufferEffectResult, 0, 0, width, height);
+
+
+    // draw and update window objects
+    for (let i = 0; i < windowObjects.length; i++) {
+      let windowObject = windowObjects[i];
+      windowObject.update();
+      windowObject.drawObject();
+
+      if (windowObject.isTransitioning == false) {
+        if (random(0.0, 1.0) < 0.01) {
+          let imgIndex = int(random(0, 5));
+          let randomAngleDegree = random(-30, 30);
+          let randomScale = random(1.0, 3.0);
+          windowObject.setInsideImage(collager.images[imgIndex], randomScale, randomAngleDegree);
+        }
+      }
+    }
   }
 }
 
