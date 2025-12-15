@@ -1,5 +1,5 @@
 class WindowObject {
-    constructor(_subRect, _windowDataSet) {
+    constructor(_subRect, _windowDataSet, fadeInDelay = 0, fadeInDuration = 1000) {
         this.windowData = _windowDataSet;
         this.rect = _subRect;
         
@@ -22,9 +22,27 @@ class WindowObject {
         this.nextImageRotation = 0;
         this.nextImageOffsetX = 0;
         this.nextImageOffsetY = 0;
+        
+        // Fade-in properties
+        this.fadeInDelay = fadeInDelay; // milliseconds to wait before starting fade-in
+        this.fadeInDuration = fadeInDuration; // milliseconds for fade-in animation
+        this.fadeInStartTime = null; // set when fade-in begins
+        this.fadeInT = 0; // 0-1, fade-in progress
+        this.fadeInAlpha = 0; // 0-1, current alpha for drawing
+        this.isFadedIn = false; // true when fade-in is complete
+        this.systemStartTime = null; // set when system starts (for delay calculation)
+        
+        // Auto image change properties
+        this.imageChangeIntervalMin = 6000; // min time between changes
+        this.imageChangeIntervalMax = 12000; // max time between changes
+        this.imageChangeTimer = -6000; // accumulator, increments with deltaTime
+        // start low for fading
+        this.currentImageChangeInterval = this._randomizeImageChangeInterval(); // current target time
+        this.canChangeImage = false; // true when timer has elapsed and ready for new image
     }
 
     drawWindowFrameImage() {
+        // Note: tint is applied in drawObject(), so this draws with current tint
         noStroke();
         fill(0, 0, 100);
         this.rect.drawImage(this.windowData.imageData);
@@ -55,6 +73,7 @@ class WindowObject {
             this.currentImageOffsetY = offsets.y;
             this.isTransitioning = false;
             this.transitionT = 0;
+            
         } else if (this.currentImage !== targetImage) {
             // Start transition to new image
             // Store the new image's scale and rotation separately
@@ -72,42 +91,122 @@ class WindowObject {
     }
 
     /**
-     * Update the transition state
-     * Call this every frame to animate the transition
+     * Start the fade-in system timer
+     * Call this once when the system begins
      */
-    update() {
-        if (!this.isTransitioning) return;
-        
-        let elapsed = millis() - this.transitionStartTime;
-        this.transitionT = constrain(elapsed / this.transitionTime, 0, 1);
-        
-        // Transition complete
-        if (this.transitionT >= 1.0) {
-            // Transfer next image properties to current
-            this.currentImage = this.nextImage;
-            this.currentImageScale = this.nextImageScale;
-            this.currentImageRotation = this.nextImageRotation;
-            this.currentImageOffsetX = this.nextImageOffsetX;
-            this.currentImageOffsetY = this.nextImageOffsetY;
-            
-            // Clear next image properties
-            this.nextImage = null;
-            this.nextImageScale = 1.0;
-            this.nextImageRotation = 0;
-            this.nextImageOffsetX = 0;
-            this.nextImageOffsetY = 0;
-            
-            this.isTransitioning = false;
-            this.transitionT = 0;
+    startFadeIn() {
+        if (this.systemStartTime === null) {
+            this.systemStartTime = millis();
         }
+    }
+
+    update(_deltaTime = 16) {
+        // Update fade-in state
+        if (!this.isFadedIn && this.systemStartTime !== null) {
+            let timeSinceStart = millis() - this.systemStartTime;
+            
+            // Check if delay period has passed
+            if (timeSinceStart >= this.fadeInDelay) {
+                // Start fade-in if not started
+                if (this.fadeInStartTime === null) {
+                    this.fadeInStartTime = millis();
+                }
+                
+                // Calculate fade-in progress
+                let fadeInElapsed = millis() - this.fadeInStartTime;
+                this.fadeInT = constrain(fadeInElapsed / this.fadeInDuration, 0, 1);
+                
+                // Apply easing to fade-in (optional - can use linear or eased)
+                // Using ease-in-out for smooth fade
+                this.fadeInAlpha = this._easeInOutCubic(this.fadeInT);
+                
+                // Check if fade-in complete
+                if (this.fadeInT >= 1.0) {
+                    this.isFadedIn = true;
+                    this.fadeInAlpha = 1.0;
+                }
+            } else {
+                // Still in delay period
+                this.fadeInAlpha = 0;
+            }
+        }
+        
+        // Update image transition state
+        if (this.isTransitioning) {
+            let elapsed = millis() - this.transitionStartTime;
+            this.transitionT = constrain(elapsed / this.transitionTime, 0, 1);
+            
+            // Transition complete
+            if (this.transitionT >= 1.0) {
+                // Transfer next image properties to current
+                this.currentImage = this.nextImage;
+                this.currentImageScale = this.nextImageScale;
+                this.currentImageRotation = this.nextImageRotation;
+                this.currentImageOffsetX = this.nextImageOffsetX;
+                this.currentImageOffsetY = this.nextImageOffsetY;
+                
+                // Clear next image properties
+                this.nextImage = null;
+                this.nextImageScale = 1.0;
+                this.nextImageRotation = 0;
+                this.nextImageOffsetX = 0;
+                this.nextImageOffsetY = 0;
+                
+                this.isTransitioning = false;
+                this.transitionT = 0;
+            }
+        }
+        
+        // Update image change timer
+        // Only start counting after the first image is set and fade-in is complete
+        if (this.currentImage && this.isFadedIn && !this.isTransitioning) {
+            // Increment timer with _deltaTime
+            this.imageChangeTimer += _deltaTime;
+            
+            // Check if interval has passed
+            if (this.imageChangeTimer >= this.currentImageChangeInterval) {
+                this.canChangeImage = true;
+
+                // randomize next interval
+                this.currentImageChangeInterval = this._randomizeImageChangeInterval();
+                this.imageChangeTimer = 0;
+            }
+        }
+    }
+
+    /**
+     * Randomize the image change interval
+     * @returns {Number} Random interval in milliseconds
+     */
+    _randomizeImageChangeInterval() {
+        return random(this.imageChangeIntervalMin, this.imageChangeIntervalMax);
+    }
+
+    /**
+     * Easing function for smooth fade-in
+     */
+    _easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
     
     /**
      * Draw the complete window object (inside image + frame)
+     * Applies fade-in alpha to the entire object
      */
     drawObject() {
+        // Don't draw if fade-in hasn't started yet
+        if (this.fadeInAlpha <= 0) return;
+        
+        push();
+        
+        // Apply fade-in alpha to everything
+        tint(255, this.fadeInAlpha * 255);
+        
         this.drawInsideImage();
         this.drawWindowFrameImage();
+        
+        noTint();
+        pop();
     }
 
     /**
@@ -375,6 +474,8 @@ class WindowObject {
         rotate(angleRad);
 
         // Draw the image with opacity
+        // Note: fade-in alpha is already applied by drawObject()
+        // We multiply it with the transition opacity here
         imageMode(CENTER);
         tint(255, opacity * 255);
         image(targetImage, offsetX, offsetY, finalImgW, finalImgH);

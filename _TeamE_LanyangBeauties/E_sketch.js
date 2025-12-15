@@ -125,7 +125,11 @@ async function setup() {
   for (let i = 0; i < rectList.length; i++) {
     let rectData = rectList[i];
     let bestFitWindowData = getClosestWindowData(rectData.w / rectData.h);
-    let windowObject = new WindowObject(rectData, bestFitWindowData);
+
+    let randomFadeInDelay = random(0, 2000);
+    let randomFadeInTime = 6000;
+
+    let windowObject = new WindowObject(rectData, bestFitWindowData, randomFadeInDelay, randomFadeInTime);
 
     windowObjects.push(windowObject);
   }
@@ -184,13 +188,10 @@ async function AsyncDrawOnce() {
     await sleep(16);
   }
 
-  // draw window one by one
-  // draw window one by one
-  // draw window one by one
+  // start fading
   for (let i = 0; i < windowObjects.length; i++) {
     let windowObject = windowObjects[i];
-    windowObject.drawObject();
-    await sleep(16);
+    windowObject.startFadeIn();
   }
 
   startBreathingEffect();
@@ -250,16 +251,14 @@ function draw() {
     // draw and update window objects
     for (let i = 0; i < windowObjects.length; i++) {
       let windowObject = windowObjects[i];
-      windowObject.update();
+      windowObject.update(deltaTime);
       windowObject.drawObject();
 
-      if (windowObject.isTransitioning == false) {
-        if (random(0.0, 1.0) < 0.01) {
-          let imgIndex = int(random(0, 5));
-          let randomAngleDegree = random(-30, 30);
-          let randomScale = random(1.0, 3.0);
-          windowObject.setInsideImage(collager.images[imgIndex], randomScale, randomAngleDegree);
-        }
+      if (windowObject.canChangeImage) {
+        let imgIndex = int(random(0, 5));
+        let randomAngleDegree = random(-30, 30);
+        let randomScale = random(1.0, 3.0);
+        windowObject.setInsideImage(collager.images[imgIndex], randomScale, randomAngleDegree);
       }
     }
   }
