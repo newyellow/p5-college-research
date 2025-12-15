@@ -13,7 +13,8 @@ class Collager {
         this._baseShapeBuffer = createFramebuffer();
         this._outlineGradientBuffer = createFramebuffer();
         this._finalShapeBuffer = createFramebuffer();
-        this._shapeMaskBuffer = createFramebuffer();
+        this._insideShapeMaskBuffer = createFramebuffer();
+        this._outlineShapeMaskBuffer = createFramebuffer();
         this._collageBuffer = createFramebuffer();
 
         this._resultBuffer = new FrameBufferSet();
@@ -46,9 +47,6 @@ class Collager {
         this._rectEdgeOffset = 10;
         this._rectPointCount = 120;
         this._rectRoundness = 0;
-
-        // for drawing effect mask
-        this._includeOutlineInMask = false;
 
         // debug features
         this._isDebug = false;
@@ -95,13 +93,15 @@ class Collager {
         this._baseShapeBuffer.remove();
         this._outlineGradientBuffer.remove();
         this._finalShapeBuffer.remove();
-        this._shapeMaskBuffer.remove();
+        this._insideShapeMaskBuffer.remove();
+        this._outlineShapeMaskBuffer.remove();
         this._collageBuffer.remove();
 
         this._baseShapeBuffer = createFramebuffer();
         this._outlineGradientBuffer = createFramebuffer();
         this._finalShapeBuffer = createFramebuffer();
-        this._shapeMaskBuffer = createFramebuffer();
+        this._insideShapeMaskBuffer = createFramebuffer();
+        this._outlineShapeMaskBuffer = createFramebuffer();
         this._collageBuffer = createFramebuffer();
     }
 
@@ -187,10 +187,17 @@ class Collager {
         pop();
     }
 
-    redrawVertexShapeMask() {
+    redrawVertexShapeInsideMask() {
         push();
         imageMode(CENTER);
-        image(this._shapeMaskBuffer, 0, 0, width, height);
+        image(this._insideShapeMaskBuffer, 0, 0, width, height);
+        pop();
+    }
+
+    redrawVertexShapeOutlineMask() {
+        push();
+        imageMode(CENTER);
+        image(this._outlineShapeMaskBuffer, 0, 0, width, height);
         pop();
     }
 
@@ -254,14 +261,26 @@ class Collager {
         pop();
     }
 
-    redrawRectMask(_x, _y, _w, _h, _rotateDegree = 0) {
+    redrawRectInsideMask(_x, _y, _w, _h, _rotateDegree = 0) {
         push();
         translate(_x, _y); // Center of rect
         rotate(radians(_rotateDegree));
 
         // Draw the full buffer centered. 
         imageMode(CENTER);
-        image(this._shapeMaskBuffer, 0, 0);
+        image(this._insideShapeMaskBuffer, 0, 0);
+
+        pop();
+    }
+
+    redrawRectOutlineMask(_x, _y, _w, _h, _rotateDegree = 0) {
+        push();
+        translate(_x, _y); // Center of rect
+        rotate(radians(_rotateDegree));
+
+        // Draw the full buffer centered. 
+        imageMode(CENTER);
+        image(this._outlineShapeMaskBuffer, 0, 0);
 
         pop();
     }
@@ -373,56 +392,53 @@ class Collager {
         resetShader();
         collageBuffer.end();
 
-        // include outline in mask
-        if (this._includeOutlineInMask) {
-            // draw the shape mask to the shape mask buffer
-            this._shapeMaskBuffer.begin();
-            clear();
-            shader(this._fillShapeShader);
-            this._fillShapeShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
-            this._fillShapeShader.setUniform('uMainTexture', collageBuffer);
-            this._fillShapeShader.setUniform('uUseTextureAlpha', 1);
-            model(quadGeom);
-            resetShader();
-            this._shapeMaskBuffer.end();
-        }
-        else {
-            this._shapeMaskBuffer.begin();
-            clear();
+        // Generate inside shape mask (without outline)
+        this._insideShapeMaskBuffer.begin();
+        clear();
 
+        shader(this._shapeMaskShader);
+        this._shapeMaskShader.setUniform('uMainTexture', baseBuffer);
+        this._shapeMaskShader.setUniform('uGradientTexture', outlineBuffer);
 
-            shader(this._shapeMaskShader);
-            this._shapeMaskShader.setUniform('uMainTexture', baseBuffer);
-            this._shapeMaskShader.setUniform('uGradientTexture', outlineBuffer);
+        this._shapeMaskShader.setUniform('uDoFillColor', true);
+        this._shapeMaskShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
 
-            this._shapeMaskShader.setUniform('uDoFillColor', true);
-            this._shapeMaskShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
+        this.setTextureWrap(this.noiseImage, REPEAT);
+        this.setTextureWrap(this.noiseImage, REPEAT);
+        this._shapeMaskShader.setUniform('uCutoutNoiseTexture', this.noiseImage);
+        this._shapeMaskShader.setUniform('uOutlineNoiseTexture', this.noiseImage);
 
-            this.setTextureWrap(this.noiseImage, REPEAT);
-            this.setTextureWrap(this.noiseImage, REPEAT);
-            this._shapeMaskShader.setUniform('uCutoutNoiseTexture', this.noiseImage);
-            this._shapeMaskShader.setUniform('uOutlineNoiseTexture', this.noiseImage);
+        this._shapeMaskShader.setUniform('uCutoutNoiseScale', [this._cutoutNoiseScale, this._cutoutNoiseScale]);
+        this._shapeMaskShader.setUniform('uOutlineNoiseScale', [this._outlineNoiseScale, this._outlineNoiseScale]);
 
-            this._shapeMaskShader.setUniform('uCutoutNoiseScale', [this._cutoutNoiseScale, this._cutoutNoiseScale]);
-            this._shapeMaskShader.setUniform('uOutlineNoiseScale', [this._outlineNoiseScale, this._outlineNoiseScale]);
+        this._shapeMaskShader.setUniform('uCutoutNoiseOffset', [cutoutNoiseOffsetX, cutoutNoiseOffsetY]);
+        this._shapeMaskShader.setUniform('uOutlineNoiseOffset', [outlineNoiseOffsetX, outlineNoiseOffsetY]);
 
-            this._shapeMaskShader.setUniform('uCutoutNoiseOffset', [cutoutNoiseOffsetX, cutoutNoiseOffsetY]);
-            this._shapeMaskShader.setUniform('uOutlineNoiseOffset', [outlineNoiseOffsetX, outlineNoiseOffsetY]);
+        this._shapeMaskShader.setUniform('uCutoutRatio', this._baseCutoutRatio);
+        this._shapeMaskShader.setUniform('uNoiseCutoutRatio', this._noiseCutoutRatio);
 
-            this._shapeMaskShader.setUniform('uCutoutRatio', this._baseCutoutRatio);
-            this._shapeMaskShader.setUniform('uNoiseCutoutRatio', this._noiseCutoutRatio);
+        // no outline
+        this._shapeMaskShader.setUniform('uOutlineRatio', 0.0);
+        this._shapeMaskShader.setUniform('uNoiseOutlineRatio', 0.0);
 
-            // no outline
-            this._shapeMaskShader.setUniform('uOutlineRatio', 0.0);
-            this._shapeMaskShader.setUniform('uNoiseOutlineRatio', 0.0);
+        this._shapeMaskShader.setUniform('uOutlineColor', [1.0, 1.0, 1.0]);
+        this._shapeMaskShader.setUniform('uEdgeSharpness', 0.95);
 
-            this._shapeMaskShader.setUniform('uOutlineColor', [1.0, 1.0, 1.0]);
-            this._shapeMaskShader.setUniform('uEdgeSharpness', 0.95);
+        model(quadGeom);
+        resetShader();
+        this._insideShapeMaskBuffer.end();
 
-            model(quadGeom);
-            resetShader();
-            this._shapeMaskBuffer.end();
-        }
+        // Generate outline shape mask (with outline)
+        this._outlineShapeMaskBuffer.begin();
+        clear();
+        
+        shader(this._fillShapeShader);
+        this._fillShapeShader.setUniform('uFillColor', [1.0, 1.0, 1.0, 1.0]);
+        this._fillShapeShader.setUniform('uMainTexture', collageBuffer);
+        this._fillShapeShader.setUniform('uUseTextureAlpha', 1);
+        model(quadGeom);
+        resetShader();
+        this._outlineShapeMaskBuffer.end();
 
         // Shadow Pass
         finalBuffer.begin();
@@ -497,10 +513,6 @@ class Collager {
         if (p5Tex) {
             p5Tex.setWrapMode(_wrapS, _wrapT);
         }
-    }
-
-    outlineInMask(_include = true) {
-        this._includeOutlineInMask = _include;
     }
 
     cutoutRatio(_baseRatio, _noiseRatio) {
@@ -631,42 +643,47 @@ class Collager {
         drawW = width * this._debugScale;
         drawH = height * this._debugScale;
 
+        // Calculate how many debug views can fit per column
+        let totalDebugViews = 6;
+        let maxRowsPerColumn = max(1, floor(height / drawH));
+        let columnsNeeded = ceil(totalDebugViews / maxRowsPerColumn);
+
+        // Array of buffers and their labels
+        let debugItems = [
+            { buffer: displayBaseBuffer, label: "Base Shape" },
+            { buffer: displayOutlineBuffer, label: "Outline Grad" },
+            { buffer: this._collageBuffer, label: "Collage Pass" },
+            { buffer: this._insideShapeMaskBuffer, label: "Inside Mask" },
+            { buffer: this._outlineShapeMaskBuffer, label: "Outline Mask" },
+            { buffer: displayFinalBuffer, label: "Final Shape" }
+        ];
+
         // Draw background for debug area to make it visible
         noStroke();
         fill(0, 0, 0, 0.5); // semi-transparent black
         rectMode(CORNER);
-        rect(startX, startY, drawW, drawH * 4);
+        rect(startX, startY, drawW * columnsNeeded, min(height, drawH * totalDebugViews));
 
-        // Draw _baseShapeBuffer
+        // Draw each debug view
         imageMode(CORNER);
-        // We need to flip Y because typically framebuffers are flipped? 
-        // Or just standard image draw.
-        // P5 images are usually fine.
-
-        image(displayBaseBuffer, startX, startY, drawW, drawH);
-
-        // Draw _outlineGradientBuffer
-        image(displayOutlineBuffer, startX, startY + drawH, drawW, drawH);
-
-        // Draw _collageBuffer
-        image(this._collageBuffer, startX, startY + drawH * 2, drawW, drawH);
-
-        // Draw _shapeMaskBuffer
-        image(this._shapeMaskBuffer, startX, startY + drawH * 3, drawW, drawH);
-
-        // Draw _finalShapeBuffer
-        image(displayFinalBuffer, startX, startY + drawH * 4, drawW, drawH);
-
-        // Add labels
         fill(255);
         textSize(16);
         textFont(this.fontResource);
         textAlign(LEFT, TOP);
-        text("Base Shape", startX + 10, startY + 10);
-        text("Outline Grad", startX + 10, startY + drawH + 10);
-        text("Collage Pass", startX + 10, startY + drawH * 2 + 10);
-        text("Shape Mask", startX + 10, startY + drawH * 3 + 10);
-        text("Final Shape", startX + 10, startY + drawH * 4 + 10);
+
+        for (let i = 0; i < debugItems.length; i++) {
+            let col = floor(i / maxRowsPerColumn);
+            let row = i % maxRowsPerColumn;
+            
+            let x = startX + col * drawW;
+            let y = startY + row * drawH;
+
+            // Draw the buffer
+            image(debugItems[i].buffer, x, y, drawW, drawH);
+
+            // Draw the label
+            text(debugItems[i].label, x + 10, y + 10);
+        }
 
         pop();
     }

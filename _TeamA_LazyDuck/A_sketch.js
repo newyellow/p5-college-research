@@ -86,8 +86,8 @@ async function asyncDraw() {
   collager.shadow(10, 10, 30, [0, 0, 0], 0.3);
 
   // Enable debug mode
-  collager.debug(false);
-  collager.debugScale(0.2);
+  collager.debug(true);
+  collager.debugScale(0.25);
 
   let skyRotationNoiseScale = random(0.0001, 0.0012);
   // Draw Rects
@@ -102,8 +102,6 @@ async function asyncDraw() {
     let angleNoise = noise(posX * skyRotationNoiseScale, posY * skyRotationNoiseScale, 666.0);
     let angleDegree = lerp(-360, 360, angleNoise);
 
-    let drawInMask = random(0, 1) < 0.3;
-    collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
 
     collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
 
@@ -112,22 +110,21 @@ async function asyncDraw() {
       collager.redrawRect(posX, posY, sizeW, sizeH, angleDegree);
     });
 
-    // draw on mask
-    if (drawInMask) {
-      bufferLayerMask.draw(() => {
-        tint(0, 0, 100);
-        collager.redrawRectMask(posX, posY, sizeW, sizeH, angleDegree);
-      });
-    }
-    else {
-      bufferLayerMask.draw(() => {
-        tint(0, 0, 0);
-        collager.redrawRectMask(posX, posY, sizeW, sizeH, angleDegree);
-      });
-    }
+    bufferLayerMask.draw(() => {
+      colorMode(RGB);
+      tint(0, 0, 0);
+      collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angleDegree);
+
+      let drawInMask = random(0, 1) < 0.12;
+      if (drawInMask) {
+        tint(255, random(0, 255), 255);
+        collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angleDegree);
+      }
+    });
+
 
     if (i % 10 == 0) {
-      await sleep(1);
+      await sleep(16);
     }
   }
 
@@ -195,8 +192,8 @@ async function asyncDraw() {
     mountainPoints.push(...mountainUpperPoints);
     mountainPoints.push(...mountainLowerPoints.reverse());
 
-    let drawInMask = random(0, 1) < 0.3;
-    collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
+    // let drawInMask = random(0, 1) < 0.3;
+    // collager.outlineInMask(!drawInMask || INCLUDE_OUTLINE_IN_MASK);
 
     collager.drawVertexShape(mountainPoints);
 
@@ -205,21 +202,20 @@ async function asyncDraw() {
       collager.redrawVertexShape();
     });
 
-    // draw on mask
-    if (drawInMask) {
-      bufferLayerMask.draw(() => {
-        tint(0, 0, 100);
-        collager.redrawVertexShapeMask();
-      });
-    }
-    else {
-      bufferLayerMask.draw(() => {
-        tint(0, 0, 0);
-        collager.redrawVertexShapeMask();
-      });
-    }
+    bufferLayerMask.draw(() => {
+      colorMode(RGB);
+      tint(0, 0, 0);
+      collager.redrawVertexShapeOutlineMask();
 
-    await sleep(10);
+      let drawInMask = random(0, 1) < 0.48;
+
+      if (drawInMask) {
+        tint(255, random(0, 255), 255);
+        collager.redrawVertexShapeInsideMask();
+      }
+    })
+
+    await sleep(100);
   }
 
   // do breathing effect
@@ -230,8 +226,12 @@ async function asyncDraw() {
 
   let startTime = millis();
 
+  let effectTimeCounter = 0;
+  let effectStrength = 0.0;
+
   // loop draw
   while (true) {
+    push();
     shader(breathingShader);
     breathingShader.setUniform("width", 1080.0);
     breathingShader.setUniform("height", 1920.0);
@@ -241,9 +241,16 @@ async function asyncDraw() {
     breathingShader.setUniform("utexture", bufferLayerColorful);
     breathingShader.setUniform("uMaskTexture", bufferLayerMask);
     breathingShader.setUniform("flipV", true);
+    breathingShader.setUniform("effectStrength", effectStrength);
 
     noStroke();
     rect(0, 0, width, height);
+    resetShader();
+    pop();
+
+
+    effectStrength = easeInOutSine(constrain(effectTimeCounter, 0.0, 1.0));
+    effectTimeCounter += 0.016;
 
     await sleep(16);
   }

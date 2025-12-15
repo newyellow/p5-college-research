@@ -12,6 +12,7 @@ uniform float width;
 uniform float height;
 
 uniform bool flipV;
+uniform float effectStrength;
 
 uniform vec3 customPalette[12];
 
@@ -84,22 +85,27 @@ void main() {
     if(flipV) {
         uv.y = 1.0 - uv.y;
     }
+
+    // use mask color to make the time apply differently on the layer
+    vec4 maskColor = texture2D(uMaskTexture, uv);
+    float maskedTime = time * mix(-1.2, 1.2, maskColor.g);
+
     vec2 pos = uv * vec2(width, height);
     vec2 center = vec2(width/2., height/2.);
     vec2 distortedPos = pos;
 
-    distortedPos.x += sin(distortedPos.y*0.1 + time*0.01) * 0.02;
-    distortedPos.y += sin(distortedPos.x*0.1 + time*0.01) * 0.02;
+    distortedPos.x += sin(distortedPos.y*0.1 + maskedTime*0.01) * 0.02;
+    distortedPos.y += sin(distortedPos.x*0.1 + maskedTime*0.01) * 0.02;
 
     // lens
     for (int i = 0; i < 5; i++) {
         float ii = float(i);
 
-        float angle = ii * 2.0 + time * 0.03;
-        float radius = width * 0.3 * (0.5 + sin(time * 0.02 + ii) * 0.5);
+        float angle = ii * 2.0 + maskedTime * 0.03;
+        float radius = width * 0.3 * (0.5 + sin(maskedTime * 0.02 + ii) * 0.5);
         vec2 lensCenter = center + vec2(cos(angle), sin(angle)) * radius;
 
-        float lensSize = width * 0.15 * (0.8 + sin(ii + time*0.01) * 0.2);
+        float lensSize = width * 0.15 * (0.8 + sin(ii + maskedTime*0.01) * 0.2);
         float pct;
         bool inLens = false;
 
@@ -123,7 +129,7 @@ void main() {
     vec4 texColor = texture2D(utexture, distortedUV);
 
     float cycleDuration = 5.0;
-    float cyclePhase = mod(time, cycleDuration) / cycleDuration;
+    float cyclePhase = mod(maskedTime, cycleDuration) / cycleDuration;
 
     float wavePosition = cyclePhase;
     float waveWidth = 0.4;
@@ -137,10 +143,10 @@ void main() {
 
     float luminance = getLuminance(texColor.rgb);
 
-    float breathCycle = sin(time * 2.0) * 0.5 + 0.5;
-    float spatialVar = sin(time * 3.0 + uv.x * PI * 4.0) * 0.5 + 0.5;
+    float breathCycle = sin(maskedTime * 2.0) * 0.5 + 0.5;
+    float spatialVar = sin(maskedTime * 3.0 + uv.x * PI * 4.0) * 0.5 + 0.5;
 
-    vec3 warp = warpColor(uv, time * 0.05);
+    vec3 warp = warpColor(uv, maskedTime * 0.05);
 
     float colorValue = luminance 
     + breathCycle * 0.5 * mixFactor
@@ -149,11 +155,10 @@ void main() {
     colorValue = clamp(colorValue, 0.0, 1.0);
 
     vec3 mappedColor = mix(texColor.rgb, (customColorMap(colorValue)+warp)*0.5, 0.6);
-    vec4 maskColor = texture2D(uMaskTexture, uv);
 
     vec4 originalColor = texture2D(utexture, uv);
 
-    vec3 finalColor = mix(originalColor.rgb, mappedColor, maskColor.r);
+    vec3 finalColor = mix(originalColor.rgb, mappedColor, maskColor.r * effectStrength);
 
     gl_FragColor = vec4(finalColor, texColor.a);
 }
