@@ -285,11 +285,165 @@ class Collager {
         pop();
     }
 
+    /**
+     * Draw an image with a curve-based mask and tearing effect
+     * @param {p5.Image} _imageData - The image to draw
+     * @param {Object} _curveData - The curve data JSON (compatible with CurveReader)
+     * @param {number} _x - X position to draw at
+     * @param {number} _y - Y position to draw at
+     * @param {number} _scale - Scale factor for the curve/image (default 1.0)
+     * @param {number} _rotateDegree - Rotation in degrees (default 0)
+     * @param {number} _sampleCount - Number of points to sample from the curve (default 100)
+     */
+    drawMaskedImage(_imageData, _curveData, _x, _y, _drawSize = 1000.0, _rotateDegree = 0, _sampleCount = 100) {
+
+        let _scale = _drawSize / max(_imageData.width, _imageData.height);
+
+        // 1. Parse curve data using CurveReader
+        const curveReader = new CurveReader(_curveData);
+        
+        // 2. Sample points along the curve to create edge points
+        const edgePoints = [];
+        for (let i = 0; i < _sampleCount; i++) {
+            const t = i / _sampleCount;
+            const point = curveReader.evaluateCurve(t);
+            edgePoints.push({
+                x: (point.x - 0.5 * _imageData.width) * _scale,
+                y: (point.y - 0.5 * _imageData.height) * _scale
+            });
+        }
+
+        // check if the points are in clockwise order
+        if (!this._isClockwise(edgePoints)) {
+            edgePoints.reverse();
+        }
+
+        this._setShapeByEdgePoints(edgePoints);
+        this.shapeModel.normalizeUVByImageSize(_imageData.width, _imageData.height);
+
+        let uvInfos = {
+            uvOffsetX: 0.5,
+            uvOffsetY: 0.5,
+            uvScaleX: 1 / _scale,
+            uvScaleY: 1 / _scale
+        };
+        
+        // 7. Apply tearing effect
+        this._processTearingEffect(_imageData, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
+        
+        // 8. Draw to screen at specified position and rotation
+        if (this._targetGraphics != null) {
+            this._targetGraphics.push();
+            this._targetGraphics.translate(_x, _y);
+            this._targetGraphics.rotate(radians(_rotateDegree));
+            this._targetGraphics.imageMode(CENTER);
+            this._targetGraphics.image(this._finalShapeBuffer, 0, 0);
+            this._targetGraphics.pop();
+        } else {
+            push();
+            translate(_x, _y);
+            rotate(radians(_rotateDegree));
+            imageMode(CENTER);
+            image(this._finalShapeBuffer, 0, 0);
+            pop();
+        }
+        
+        if (this._isDebug) {
+            this.drawDebug();
+        }
+    }
+
+    /**
+     * Redraw the last masked image result
+     * @param {number} _x - X position
+     * @param {number} _y - Y position
+     * @param {number} _rotateDegree - Rotation in degrees (default 0)
+     */
+    redrawMaskedImage(_x, _y, _rotateDegree = 0) {
+        push();
+        translate(_x, _y);
+        rotate(radians(_rotateDegree));
+        imageMode(CENTER);
+        image(this._finalShapeBuffer, 0, 0);
+        pop();
+    }
+
+    /**
+     * Redraw the inside mask of the last masked image
+     * @param {number} _x - X position
+     * @param {number} _y - Y position
+     * @param {number} _rotateDegree - Rotation in degrees (default 0)
+     */
+    redrawMaskedImageInsideMask(_x, _y, _rotateDegree = 0) {
+        push();
+        translate(_x, _y);
+        rotate(radians(_rotateDegree));
+        imageMode(CENTER);
+        image(this._insideShapeMaskBuffer, 0, 0);
+        pop();
+    }
+
+    /**
+     * Redraw the outline mask of the last masked image
+     * @param {number} _x - X position
+     * @param {number} _y - Y position
+     * @param {number} _rotateDegree - Rotation in degrees (default 0)
+     */
+    redrawMaskedImageOutlineMask(_x, _y, _rotateDegree = 0) {
+        push();
+        translate(_x, _y);
+        rotate(radians(_rotateDegree));
+        imageMode(CENTER);
+        image(this._outlineShapeMaskBuffer, 0, 0);
+        pop();
+    }
+
     _setShapeByEdgePoints(_edgePointsArray) {
         this.shapeModel.clear();
         this.shapeModel = new NYModel('shape_' + this._drawModelIndex++);
         this.shapeModel.addTrianglesByEdgePoints(_edgePointsArray);
         this.shapeModel.normalizeUV();
+    }
+
+    /**
+     * Calculate UV mapping for image-space coordinates
+     * When curve data is in image coordinate space, this maps the centered shape back to the image UVs
+     * @param {number} imageWidth - Width of the source image
+     * @param {number} imageHeight - Height of the source image
+     * @param {number} centerX - The center X of the shape in image space (before centering)
+     * @param {number} centerY - The center Y of the shape in image space (before centering)
+     * @param {number} shapeW - Width of the shape bounding box
+     * @param {number} shapeH - Height of the shape bounding box
+     * @returns {Object} - Object with uvOffsetX, uvOffsetY, uvScaleX, uvScaleY
+     */
+    _calculateUVFromImageSpace(imageWidth, imageHeight, centerX, centerY, shapeW, shapeH) {
+        return {
+            uvOffsetX: 0,
+            uvOffsetY: 0,
+            uvScaleX: 1,
+            uvScaleY: 1
+        };
+    }
+
+    /**
+     * Check if a polygon's points are in clockwise order
+     * Uses the shoelace formula to calculate signed area
+     * @param {Array} points - Array of points with x, y properties
+     * @returns {boolean} - True if clockwise, false if counter-clockwise
+     */
+    _isClockwise(points) {
+        if (points.length < 3) return true;
+        
+        let sum = 0;
+        for (let i = 0; i < points.length; i++) {
+            const p1 = points[i];
+            const p2 = points[(i + 1) % points.length];
+            sum += (p2.x - p1.x) * (p2.y + p1.y);
+        }
+        
+        // Negative sum means clockwise in standard coordinates
+        // (positive Y points down in canvas/screen coordinates)
+        return sum < 0;
     }
 
     _processTearingEffect(_imageData, _uvOffset = [0.0, 0.0], _uvScale = [1.0, 1.0]) {

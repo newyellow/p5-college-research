@@ -471,6 +471,17 @@ class NYModel {
         }
     }
 
+    normalizeUVByImageSize (_imageWidth, _imageHeight) {
+        for(let i=0; i<this.verts.length; i++) {
+            let vx = this.verts[i][0];
+            let vy = this.verts[i][1];
+
+            let u = vx / _imageWidth;
+            let v = vy / _imageHeight;
+
+            this.uvs[i] = [u, v];
+        }
+    }
     normalizeUV (_customAttributeName = null) {
         if (this.verts.length == 0) return;
 
