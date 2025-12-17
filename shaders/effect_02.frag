@@ -12,7 +12,7 @@ uniform float width;
 uniform float height;
 
 uniform bool flipV;
-uniform float effectStrength;
+uniform float uEffectStrength;
 
 uniform vec3 customPalette[12];
 
@@ -158,7 +158,7 @@ void main() {
 
     vec4 originalColor = texture2D(utexture, uv);
 
-    vec3 finalColor = mix(originalColor.rgb, mappedColor, maskColor.r * effectStrength);
+    vec3 finalColor = mix(originalColor.rgb, mappedColor, maskColor.r * uEffectStrength);
 
     gl_FragColor = vec4(finalColor, texColor.a);
 }

@@ -75,6 +75,10 @@ async function setup() {
   collager = new Collager();
   await collager.initSystem();
 
+  let lutTexture = await loadImage("../lut_textures/08-color-fx.png");
+  collager.setLutTexture(lutTexture);
+  collager.setLutIntensity(1.0);
+
   await collager.addImage("photoImages/demo-01.png", 0.2, 0.8);
   await collager.addImage("photoImages/demo-02.png", 0.2, 0.8);
   await collager.addImage("photoImages/demo-03.png", 0.2, 0.8);

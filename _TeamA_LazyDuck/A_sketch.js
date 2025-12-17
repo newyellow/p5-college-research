@@ -241,7 +241,7 @@ async function asyncDraw() {
     breathingShader.setUniform("utexture", bufferLayerColorful);
     breathingShader.setUniform("uMaskTexture", bufferLayerMask);
     breathingShader.setUniform("flipV", true);
-    breathingShader.setUniform("effectStrength", effectStrength);
+    breathingShader.setUniform("uEffectStrength", effectStrength);
 
     noStroke();
     rect(0, 0, width, height);

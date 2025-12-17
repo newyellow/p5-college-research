@@ -424,7 +424,7 @@ async function startBreathingEffect() {
       breathingShader.setUniform("utexture", bufferLayerBG);
       breathingShader.setUniform("uMaskTexture", bufferLayerEffectMask);
       breathingShader.setUniform("flipV", false);
-      breathingShader.setUniform("effectStrength", effectStrength);
+      breathingShader.setUniform("uEffectStrength", effectStrength);
 
       effectStrength = easeInOutSine(constrain(effectTimeCounter, 0.0, 1.0));
       effectTimeCounter += deltaTime / 3600.0;

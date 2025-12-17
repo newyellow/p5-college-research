@@ -48,6 +48,11 @@ class Collager {
         this._rectPointCount = 120;
         this._rectRoundness = 0;
 
+        // LUT settings
+        this._doLut = false;
+        this._lutTexture = null;
+        this._lutIntensity = 1.0;
+
         // debug features
         this._isDebug = false;
         this._debugScale = 0.25;
@@ -64,15 +69,14 @@ class Collager {
         this.debugShader = await loadShader(`${basePath}/shaders/debug.vert`, `${basePath}/shaders/debug.frag`);
 
         this.shadowShader = await loadShader(`${basePath}/shaders/shadow.vert`, `${basePath}/shaders/shadow.frag`);
-        this.lutShader = await loadShader(`${basePath}/shaders/lut.vert`, `${basePath}/shaders/lut.frag`);
 
         this.textureShader = await loadShader(`${basePath}/shaders/texture.vert`, `${basePath}/shaders/texture.frag`);
+        this.textureLutShader = await loadShader(`${basePath}/shaders/texture.vert`, `${basePath}/shaders/texture_lut.frag`);
 
         this.noiseImageShape = await loadImage(`${basePath}/textures/T_Noise_18.PNG`);
         this.noiseImage = await loadImage(`${basePath}/textures/TilingNoise05.PNG`);
 
-        this.lutTexture = await loadImage(`${basePath}/lut_textures/800T Night 03.png`);
-
+        // this.lutTexture = await loadImage(`${basePath}/lut_textures/800T Night 03.png`);
         // this.noiseImage = await loadImage(`${basePath}/textures/T_Noise_18.PNG`);
 
         this.fontResource = await loadFont(`${basePath}/fonts/Monospace.ttf`);
@@ -488,11 +492,21 @@ class Collager {
         baseBuffer.begin();
         clear();
 
-        shader(this.textureShader);
-        // shader(this.debugShader);
-        this.textureShader.setUniform('uMainTexture', _imageData);
-        this.textureShader.setUniform('uTextureOffset', _uvOffset);
-        this.textureShader.setUniform('uTextureScale', _uvScale);
+        // Use texture shader with or without LUT
+        shader(this.textureLutShader);
+        
+        this.textureLutShader.setUniform('uMainTexture', _imageData);
+        this.textureLutShader.setUniform('uTextureOffset', _uvOffset);
+        this.textureLutShader.setUniform('uTextureScale', _uvScale);
+        
+        // Set LUT uniforms if enabled
+        if (this._doLut && this._lutTexture) {
+            this.textureLutShader.setUniform('uDoLut', 1);
+            this.textureLutShader.setUniform('uLutTexture', this._lutTexture);
+            this.textureLutShader.setUniform('uLutIntensity', this._lutIntensity);
+        } else if (this._doLut) {
+            this.textureLutShader.setUniform('uDoLut', 0);
+        }
 
         model(shapeGeom);
 
@@ -768,6 +782,21 @@ class Collager {
 
     noShadow() {
         this._doShadow = false;
+    }
+
+    // LUT Settings
+    setLutTexture(_lutTexture) {
+        this._lutTexture = _lutTexture;
+        this._doLut = true;
+    }
+
+    setLutIntensity(_intensity) {
+        this._lutIntensity = _intensity;
+        this._doLut = true;
+    }
+
+    noLut() {
+        this._doLut = false;
     }
 
     debug(_isDebug = true) {
