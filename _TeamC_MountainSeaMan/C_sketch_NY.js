@@ -1,16 +1,15 @@
 // get url parameters
 const urlParams = new URLSearchParams(window.location.search);
 
-const seed = urlParams.get('seed') || Math.random() * 100000000;
-const p1 = urlParams.get('p1') || Math.random();
-const p2 = urlParams.get('p2') || Math.random();
-const p3 = urlParams.get('p3') || Math.random();
-const p4 = urlParams.get('p4') || Math.random();
+const seed = urlParams.get("seed") || Math.random() * 100000000;
+const p1 = urlParams.get("p1") || Math.random();
+const p2 = urlParams.get("p2") || Math.random();
+const p3 = urlParams.get("p3") || Math.random();
+const p4 = urlParams.get("p4") || Math.random();
 
 // this is a p5js v2 script
 let _renderer = null;
 let fontResource = null;
-
 
 // buffers
 let tempAssetLayer; // use as effect layer later
@@ -28,11 +27,13 @@ let textIndex = 0;
 let collager;
 let croppedImageContainer = null;
 
+let randonclrpos = [];
+let randomGauss = [];
+
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
   flex();
-  fontResource = await loadFont('../fonts/Monospace.ttf');
-
+  fontResource = await loadFont("../fonts/Monospace.ttf");
 
   // init buffers
   tempAssetLayer = createFramebuffer();
@@ -50,6 +51,17 @@ async function setup() {
   sizeVariation = lerp(0.1, 0.6, p4);
 
   textIndex = int(random(0, 3));
+
+    for (let i = 0; i < 6; i++) {
+      randonclrpos.push(Math.floor(Math.random() * 3));
+    }
+    
+    for (let i = 0; i < 3; i++) {
+      let sign = Math.random() > 0.5 ? 1 : -1;
+      let strength = 0.1 + Math.random() * 0.9;
+      randomGauss.push(sign * strength);
+    }
+
 
   // set to orthographic projection
   colorMode(HSB);
@@ -72,7 +84,6 @@ async function setup() {
 }
 
 async function asyncDraw() {
-
   await prepareMainTextLayer();
   await prepareTextBGLayer();
 
@@ -102,11 +113,9 @@ async function asyncDraw() {
   // collager.setLutTexture(greenLut);
   // collager.setLutIntensity(1.0);
 
-
   // // await collager.addImage('images/artifacts/boat_01.png', 0.2, 0.8);
   // let imgData = await loadImage('images/artifacts/mountain_01.png');
   // let imgPathData = await loadJSON('images/artifacts/mountain_01.json');
-
 
   // collager.drawMaskedImage(imgData, imgPathData, 0, 0, 800, 10);;
   // collager.drawRect(0, 0, 300, 300);
@@ -114,9 +123,9 @@ async function asyncDraw() {
 
 async function prepareMainTextLayer() {
   let textImagePaths = [
-    'images/text_mask_0.png',
-    'images/text_mask_1.png',
-    'images/text_mask_2.png',
+    "images/text_mask_0.png",
+    "images/text_mask_1.png",
+    "images/text_mask_2.png",
   ];
 
   let pickedImagePath = textImagePaths[textIndex];
@@ -164,7 +173,14 @@ async function prepareMainTextLayer() {
     let drawAngle = random(-180, 180);
 
     tempAssetLayer.draw(() => {
-      collager.drawMaskedImage(croppedImgSet.imageData, croppedImgSet.curveData, drawPosX, drawPosY, drawSize, drawAngle);
+      collager.drawMaskedImage(
+        croppedImgSet.imageData,
+        croppedImgSet.curveData,
+        drawPosX,
+        drawPosY,
+        drawSize,
+        drawAngle
+      );
     });
 
     image(tempAssetLayer, 0, 0);
@@ -173,19 +189,25 @@ async function prepareMainTextLayer() {
   }
 
   // draw onto the final layer
-  let maskTextureShader = await loadShader('../shaders/texture.vert', '../shaders/texture_text_mask.frag');
+  let maskTextureShader = await loadShader(
+    "../shaders/texture.vert",
+    "../shaders/texture_text_mask.frag"
+  );
 
   textLayer.draw(() => {
     shader(maskTextureShader);
-    maskTextureShader.setUniform('uMainTexture', tempAssetLayer);
-    maskTextureShader.setUniform('uMaskTexture', tempMaskLayer);
-    maskTextureShader.setUniform('uTextureScale', [1.0, 1.0]);
-    maskTextureShader.setUniform('uTextureOffset', [0.0, 0.0]);
+    maskTextureShader.setUniform("uMainTexture", tempAssetLayer);
+    maskTextureShader.setUniform("uMaskTexture", tempMaskLayer);
+    maskTextureShader.setUniform("uTextureScale", [1.0, 1.0]);
+    maskTextureShader.setUniform("uTextureOffset", [0.0, 0.0]);
 
-    maskTextureShader.setUniform('uDoInnerShadow', 1);
-    maskTextureShader.setUniform('uInnerShadowDistance', 360);
-    maskTextureShader.setUniform('uInnerShadowIntensity', 0.66);
-    maskTextureShader.setUniform('uMaskTextureSize', [tempMaskLayer.width, tempMaskLayer.height]);
+    maskTextureShader.setUniform("uDoInnerShadow", 1);
+    maskTextureShader.setUniform("uInnerShadowDistance", 360);
+    maskTextureShader.setUniform("uInnerShadowIntensity", 0.66);
+    maskTextureShader.setUniform("uMaskTextureSize", [
+      tempMaskLayer.width,
+      tempMaskLayer.height,
+    ]);
 
     noStroke();
     fill(0, 0, 100);
@@ -212,7 +234,6 @@ async function prepareMainTextLayer() {
 }
 
 async function prepareTextBGLayer() {
-
   collager.clearImages();
 
   textBGLayer.draw(() => {
@@ -224,12 +245,12 @@ async function prepareTextBGLayer() {
   });
 
   let bookImgPaths = [
-    'images/book_01.png',
-    'images/book_02.png',
-    'images/book_03.png',
-    'images/book_04.png',
-    'images/book_05.png',
-    'images/book_06.png',
+    "images/book_01.png",
+    "images/book_02.png",
+    "images/book_03.png",
+    "images/book_04.png",
+    "images/book_05.png",
+    "images/book_06.png",
   ];
 
   // random pick 3
@@ -282,25 +303,23 @@ async function prepareTextBGLayer() {
 
     await sleep(16);
   }
-
 }
 
 async function drawSeaWaveLayer() {
-
   collager.clearImages();
 
   let texturePaths = [
-    'images/wave_textures/sea-paper-1.png',
-    'images/wave_textures/sea-paper-2.png',
-    'images/wave_textures/sea-paper-3.png',
-    'images/wave_textures/sea-paper-4.png',
-    'images/wave_textures/sea-paper-5.png',
-    'images/wave_textures/sea-paper-6.png',
-    'images/wave_textures/sea-paper-7.png',
-    'images/wave_textures/sea-paper-8.png',
-    'images/wave_textures/sea-paper-9.png',
-    'images/wave_textures/sea-paper-10.png',
-    'images/wave_textures/sea-paper-11.png',
+    "images/wave_textures/sea-paper-1.png",
+    "images/wave_textures/sea-paper-2.png",
+    "images/wave_textures/sea-paper-3.png",
+    "images/wave_textures/sea-paper-4.png",
+    "images/wave_textures/sea-paper-5.png",
+    "images/wave_textures/sea-paper-6.png",
+    "images/wave_textures/sea-paper-7.png",
+    "images/wave_textures/sea-paper-8.png",
+    "images/wave_textures/sea-paper-9.png",
+    "images/wave_textures/sea-paper-10.png",
+    "images/wave_textures/sea-paper-11.png",
   ];
 
   // randomly pick 3
@@ -336,7 +355,6 @@ async function drawSeaWaveLayer() {
       collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, rotationDegree);
     });
 
-
     // draw all
     background(0, 0, 100);
     image(textBGLayer, 0, 0);
@@ -347,9 +365,9 @@ async function drawSeaWaveLayer() {
 
 async function setupLut(colorIndex, intensity) {
   let lutPaths = [
-    'images/luts/C_lut_green.png',
-    'images/luts/C_lut_blue.png',
-    'images/luts/C_lut_yellow.png',
+    "images/luts/C_lut_green.png",
+    "images/luts/C_lut_blue.png",
+    "images/luts/C_lut_yellow.png",
   ];
 
   let pickedLutPath = lutPaths[colorIndex];
@@ -369,7 +387,7 @@ let effectTimeCounter = 0.0;
 async function startBreathingEffect() {
   // do breathing effect
   let fragShaderPath = "";
-  fragShaderPath = "../shaders/effect_E_01.frag";
+  fragShaderPath = "../shaders/effect_C.frag";
 
   breathingShader = await loadShader("../shaders/uniform.vert", fragShaderPath);
 
@@ -390,6 +408,10 @@ function draw() {
       breathingShader.setUniform("uMaskTexture", tempMaskLayer);
       breathingShader.setUniform("uEffectStrength", effectStrength);
 
+      breathingShader.setUniform("uColorMode", textIndex);
+      breathingShader.setUniform("rand", randonclrpos);
+      breathingShader.setUniform("gauss", randomGauss);
+      
       noStroke();
       fill(0, 0, 100);
       rect(0, 0, width, height);
@@ -406,31 +428,60 @@ function draw() {
   }
 }
 
-
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-
 async function loadTextImageSetData(_textIndex) {
-  if (_textIndex == 0) // mountain
-  {
-    await croppedImageContainer.addImage('images/artifacts/stone_01.png', 'images/artifacts/stone_01.json');
-    await croppedImageContainer.addImage('images/artifacts/stone_02.png', 'images/artifacts/stone_02.json');
-    await croppedImageContainer.addImage('images/artifacts/stone_03.png', 'images/artifacts/stone_03.json');
-    await croppedImageContainer.addImage('images/artifacts/stone_04.png', 'images/artifacts/stone_04.json');
-  }
-  else if (_textIndex == 1) // sea
-  {
-    await croppedImageContainer.addImage('images/artifacts/blue_artifact_01.png', 'images/artifacts/blue_artifact_01.json');
-    await croppedImageContainer.addImage('images/artifacts/blue_artifact_02.png', 'images/artifacts/blue_artifact_02.json');
-    await croppedImageContainer.addImage('images/artifacts/blue_artifact_03.png', 'images/artifacts/blue_artifact_03.json');
-  }
-  else if (_textIndex == 2) // human
-  {
-    await croppedImageContainer.addImage('images/artifacts/skeleton_01.png', 'images/artifacts/skeleton_01.json');
-    await croppedImageContainer.addImage('images/artifacts/skeleton_02.png', 'images/artifacts/skeleton_02.json');
-    await croppedImageContainer.addImage('images/artifacts/skeleton_03.png', 'images/artifacts/skeleton_03.json');
-    await croppedImageContainer.addImage('images/artifacts/skeleton_04.png', 'images/artifacts/skeleton_04.json');
+  if (_textIndex == 0) {
+    // mountain
+    await croppedImageContainer.addImage(
+      "images/artifacts/stone_01.png",
+      "images/artifacts/stone_01.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/stone_02.png",
+      "images/artifacts/stone_02.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/stone_03.png",
+      "images/artifacts/stone_03.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/stone_04.png",
+      "images/artifacts/stone_04.json"
+    );
+  } else if (_textIndex == 1) {
+    // sea
+    await croppedImageContainer.addImage(
+      "images/artifacts/blue_artifact_01.png",
+      "images/artifacts/blue_artifact_01.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/blue_artifact_02.png",
+      "images/artifacts/blue_artifact_02.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/blue_artifact_03.png",
+      "images/artifacts/blue_artifact_03.json"
+    );
+  } else if (_textIndex == 2) {
+    // human
+    await croppedImageContainer.addImage(
+      "images/artifacts/skeleton_01.png",
+      "images/artifacts/skeleton_01.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/skeleton_02.png",
+      "images/artifacts/skeleton_02.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/skeleton_03.png",
+      "images/artifacts/skeleton_03.json"
+    );
+    await croppedImageContainer.addImage(
+      "images/artifacts/skeleton_04.png",
+      "images/artifacts/skeleton_04.json"
+    );
   }
 }
