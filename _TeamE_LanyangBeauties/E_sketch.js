@@ -25,6 +25,7 @@ let rectList = [];
 
 // image settings
 let windowDataSetList = [];
+let imageLoadLimit = 4; // limit loading image count
 
 // layer buffers
 let bufferBGLayer;
@@ -45,11 +46,20 @@ async function setup() {
   flex();
   fontResource = await loadFont("../fonts/Monospace.ttf");
 
+  // Show loading text
+  colorMode(HSB);
+  background(0, 0, 0);
+  fill(0, 0, 100);
+  noStroke();
+  textFont(fontResource);
+  textSize(32);
+  textAlign(CENTER, CENTER);
+  text("loading images ...", 0, 0);
+
   randomSeed(seed);
   noiseSeed(seed);
 
   // set to orthographic projection
-  colorMode(HSB);
   rectMode(CENTER);
   imageMode(CENTER);
 
@@ -98,7 +108,7 @@ async function setup() {
   // p3 controls padding?
   let rectPadding = lerp(10, 30, p3);
 
-  background(0, 0, 30);
+  background(0, 0, 0);
 
   // Create Subdivision
   // Start with a rectangle that fills the canvas (or slightly smaller with margin)
@@ -140,7 +150,7 @@ function draw() {
 }
 
 async function AsyncDrawOnce() {
-  background(0, 0, 30);
+  background(0, 0, 0);
 
   noFill();
   stroke(mainHue, 80, 100);
@@ -151,7 +161,7 @@ async function AsyncDrawOnce() {
   // init window objectData
   for (let i = 0; i < windowObjects.length; i++) {
     let windowObject = windowObjects[i];
-    let imgIndex = int(random(0, 5));
+    let imgIndex = int(random(0, collager.images.length));
     let randomAngleDegree = random(-30, 30);
     let randomScale = random(1.0, 3.0);
     windowObject.setInsideImage(collager.images[imgIndex], randomScale, randomAngleDegree);
@@ -258,7 +268,7 @@ function draw() {
 
       if (windowObject.canChangeImage) {
         
-        let imgIndex = int(random(0, 5));
+        let imgIndex = int(random(0, collager.images.length));
         let randomAngleDegree = random(-30, 30);
         let randomScale = random(1.0, 3.0);
         windowObject.setInsideImage(collager.images[imgIndex], randomScale, randomAngleDegree);
@@ -268,77 +278,99 @@ function draw() {
 }
 
 async function loadBackgroundImages(_setIndex) {
-  if(_setIndex == 0) // good old times
+  let imagePool = [];
+  if (_setIndex == 0) // good old times
   {
-    await collager.addImage('photoImages/village_01.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_02.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_03.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_04.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_05.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_06.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_07.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_08.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_09.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_10.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/village_11.jpeg', 0.3, 0.6);
+    imagePool = [
+      'photoImages/village_01.jpeg',
+      'photoImages/village_02.jpeg',
+      'photoImages/village_03.jpeg',
+      'photoImages/village_04.jpeg',
+      'photoImages/village_05.jpeg',
+      'photoImages/village_06.jpeg',
+      'photoImages/village_07.jpeg',
+      'photoImages/village_08.jpeg',
+      'photoImages/village_09.jpeg',
+      'photoImages/village_10.jpeg',
+      'photoImages/village_11.jpeg'
+    ];
   }
-  else if(_setIndex == 1) // modern times
+  else if (_setIndex == 1) // modern times
   {
-    await collager.addImage('photoImages/road_01.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/road_02.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/road_04.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/road_05.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/road_06.jpeg', 0.3, 0.6);
+    imagePool = [
+      'photoImages/road_01.jpeg',
+      'photoImages/road_02.jpeg',
+      'photoImages/road_04.jpeg',
+      'photoImages/road_05.jpeg',
+      'photoImages/road_06.jpeg'
+    ];
   }
-  else if(_setIndex == 2) // future times
+  else if (_setIndex == 2) // future times
   {
-    await collager.addImage('photoImages/tech_01.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/tech_02.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/tech_03.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/tech_04.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/tech_05.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/tech_06.jpeg', 0.3, 0.6);
+    imagePool = [
+      'photoImages/tech_01.jpeg',
+      'photoImages/tech_02.jpeg',
+      'photoImages/tech_03.jpeg',
+      'photoImages/tech_04.jpeg',
+      'photoImages/tech_05.jpeg',
+      'photoImages/tech_06.jpeg'
+    ];
   }
 
+  let selectedImages = shuffle(imagePool).slice(0, imageLoadLimit);
+  for (let img of selectedImages) {
+    await collager.addImage(img, 0.3, 0.6);
+  }
 }
 
 async function loadWindowInsideImages(_setIndex) {
-  if(_setIndex == 0) // good old times
+  let imagePool = [];
+  if (_setIndex == 0) // good old times
   {
-    await collager.addImage('photoImages/old_01.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_02.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_03.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_04.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_05.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_06.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_07.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_08.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/old_09.jpeg', 0.3, 0.6);
+    imagePool = [
+      'photoImages/old_01.jpeg',
+      'photoImages/old_02.jpeg',
+      'photoImages/old_03.jpeg',
+      'photoImages/old_04.jpeg',
+      'photoImages/old_05.jpeg',
+      'photoImages/old_06.jpeg',
+      'photoImages/old_07.jpeg',
+      'photoImages/old_08.jpeg',
+      'photoImages/old_09.jpeg'
+    ];
   }
-  else if(_setIndex == 1) // modern times
+  else if (_setIndex == 1) // modern times
   {
-    await collager.addImage('photoImages/now_01.png', 0.3, 0.6);
-    await collager.addImage('photoImages/now_02.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/now_03.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/now_04.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/now_05.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/now_06.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/now_07.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/now_08.jpeg', 0.3, 0.6);
+    imagePool = [
+      'photoImages/now_01.png',
+      'photoImages/now_02.jpeg',
+      'photoImages/now_03.jpeg',
+      'photoImages/now_04.jpeg',
+      'photoImages/now_05.jpeg',
+      'photoImages/now_06.jpeg',
+      'photoImages/now_07.jpeg',
+      'photoImages/now_08.jpeg'
+    ];
   }
-  else if(_setIndex == 2) // future times
+  else if (_setIndex == 2) // future times
   {
-    await collager.addImage('photoImages/future_01.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_02.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_03.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_04.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_05.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_06.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_07.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_08.jpeg', 0.3, 0.6);
-    await collager.addImage('photoImages/future_09.jpeg', 0.3, 0.6);
+    imagePool = [
+      'photoImages/future_01.jpeg',
+      'photoImages/future_02.jpeg',
+      'photoImages/future_03.jpeg',
+      'photoImages/future_04.jpeg',
+      'photoImages/future_05.jpeg',
+      'photoImages/future_06.jpeg',
+      'photoImages/future_07.jpeg',
+      'photoImages/future_08.jpeg',
+      'photoImages/future_09.jpeg'
+    ];
   }
 
+  let selectedImages = shuffle(imagePool).slice(0, imageLoadLimit);
+  for (let img of selectedImages) {
+    await collager.addImage(img, 0.3, 0.6);
+  }
 }
 
 async function loadWindowImages(_windowSetIndex) {
