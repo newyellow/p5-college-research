@@ -79,12 +79,7 @@ async function setup() {
   collager.setLutTexture(lutTexture);
   collager.setLutIntensity(1.0);
 
-  await collager.addImage("photoImages/demo-01.png", 0.2, 0.8);
-  await collager.addImage("photoImages/demo-02.png", 0.2, 0.8);
-  await collager.addImage("photoImages/demo-03.png", 0.2, 0.8);
-  await collager.addImage("photoImages/demo-04.png", 0.2, 0.8);
-  await collager.addImage("photoImages/demo-05.png", 0.2, 0.8);
-  await collager.addImage("photoImages/demo-06.png", 0.2, 0.8);
+
 
   // some settings
   mainHue = lerp(0, 360, p1);
@@ -166,6 +161,8 @@ async function AsyncDrawOnce() {
   // draw background
   // draw background
   // draw background
+  await loadBackgroundImages(windowSetIndex);
+
   let pieceCount = random(200, 600);
 
   for (let i = 0; i < pieceCount; i++) {
@@ -191,6 +188,8 @@ async function AsyncDrawOnce() {
     image(bufferBGLayer, 0, 0, width, height);
     await sleep(16);
   }
+
+  await loadWindowInsideImages(windowSetIndex);
 
   // start fading
   for (let i = 0; i < windowObjects.length; i++) {
@@ -251,7 +250,6 @@ function draw() {
 
     image(bufferEffectResult, 0, 0, width, height);
 
-
     // draw and update window objects
     for (let i = 0; i < windowObjects.length; i++) {
       let windowObject = windowObjects[i];
@@ -267,6 +265,80 @@ function draw() {
       }
     }
   }
+}
+
+async function loadBackgroundImages(_setIndex) {
+  if(_setIndex == 0) // good old times
+  {
+    await collager.addImage('photoImages/village_01.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_02.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_03.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_04.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_05.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_06.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_07.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_08.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_09.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_10.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/village_11.jpeg', 0.3, 0.6);
+  }
+  else if(_setIndex == 1) // modern times
+  {
+    await collager.addImage('photoImages/road_01.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/road_02.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/road_04.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/road_05.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/road_06.jpeg', 0.3, 0.6);
+  }
+  else if(_setIndex == 2) // future times
+  {
+    await collager.addImage('photoImages/tech_01.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/tech_02.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/tech_03.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/tech_04.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/tech_05.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/tech_06.jpeg', 0.3, 0.6);
+  }
+
+}
+
+async function loadWindowInsideImages(_setIndex) {
+  if(_setIndex == 0) // good old times
+  {
+    await collager.addImage('photoImages/old_01.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_02.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_03.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_04.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_05.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_06.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_07.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_08.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/old_09.jpeg', 0.3, 0.6);
+  }
+  else if(_setIndex == 1) // modern times
+  {
+    await collager.addImage('photoImages/now_01.png', 0.3, 0.6);
+    await collager.addImage('photoImages/now_02.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/now_03.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/now_04.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/now_05.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/now_06.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/now_07.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/now_08.jpeg', 0.3, 0.6);
+  }
+  else if(_setIndex == 2) // future times
+  {
+    await collager.addImage('photoImages/future_01.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_02.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_03.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_04.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_05.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_06.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_07.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_08.jpeg', 0.3, 0.6);
+    await collager.addImage('photoImages/future_09.jpeg', 0.3, 0.6);
+  }
+
 }
 
 async function loadWindowImages(_windowSetIndex) {
