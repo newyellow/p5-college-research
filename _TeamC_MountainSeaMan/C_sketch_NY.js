@@ -122,6 +122,12 @@ async function prepareMainTextLayer() {
   let pickedImagePath = textImagePaths[textIndex];
   let textImageData = await loadImage(pickedImagePath);
 
+  // setup lut first
+  let lutPath = getLUTPath(p1);
+  let lutTexture = await loadImage("../" + lutPath);
+  collager.setLutTexture(lutTexture);
+  collager.setLutIntensity(1.0);
+
   // text data
   let textPosX = random(-360, 360);
   let textPosY = random(-360, 100);
@@ -135,7 +141,6 @@ async function prepareMainTextLayer() {
   image(tempMaskLayer, 0, 0);
 
   // cancel lut
-  collager.noLut();
   collager.cutoutThickness(0.01);
   collager.cutoutNoiseScale(0.1);
   collager.cutoutRatio(0.1, 0.9);

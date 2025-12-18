@@ -2,10 +2,10 @@
 const urlParams = new URLSearchParams(window.location.search);
 
 const seed = urlParams.get('seed') || Math.random() * 100000000;
-const p1 = urlParams.get('p1') || Math.random();
-const p2 = urlParams.get('p2') || Math.random();
-const p3 = urlParams.get('p3') || Math.random();
-const p4 = urlParams.get('p4') || Math.random();
+const p1 = parseFloat(urlParams.get('p1') || Math.random());
+const p2 = parseFloat(urlParams.get('p2') || Math.random());
+const p3 = parseFloat(urlParams.get('p3') || Math.random());
+const p4 = parseFloat(urlParams.get('p4') || Math.random());
 
 // this is a p5js v2 script
 let _renderer = null;
@@ -63,6 +63,12 @@ async function asyncDraw() {
   let collager = new Collager();
   await collager.initSystem();
 
+  // set lut according to p1
+  let lutPath = getLUTPath(p1);
+  let lutTexture = await loadImage("../" + lutPath);
+  collager.setLutTexture(lutTexture);
+  collager.setLutIntensity(1.0);
+
   // Add images
   await collager.addImage('images/sky_01.png', 0.1, 0.6);
   await collager.addImage('images/sky_02_temp.jpg', 0.1, 0.3);
@@ -86,7 +92,7 @@ async function asyncDraw() {
   collager.shadow(10, 10, 30, [0, 0, 0], 0.3);
 
   // Enable debug mode
-  collager.debug(true);
+  collager.debug(false);
   collager.debugScale(0.25);
 
   let skyRotationNoiseScale = random(0.0001, 0.0012);

@@ -208,7 +208,7 @@
         <div class="sliders-container">
             <div class="slider-group">
                 <label>顏色種子</label>
-                <input type="range" id="param1" min="0" max="1000000" value="500000">
+                <input type="range" id="param1" min="0" max="92" value="46" step="1">
             </div>
             <div class="slider-group">
                 <label>密度種子</label>
@@ -374,7 +374,7 @@
 
             // Collect Slider Values (Normalize to 0-1)
             const params = {
-                p1: document.getElementById('param1').value / 1000000,
+                p1: document.getElementById('param1').value / 92,
                 p2: document.getElementById('param2').value / 1000000,
                 p3: document.getElementById('param3').value / 1000000
             };

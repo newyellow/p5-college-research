@@ -7,10 +7,10 @@ const urlParams = new URLSearchParams(window.location.search);
 // const p3 = 0.5;
 // const p4 = 0.5;
 const seed = urlParams.get("seed") || Math.random() * 100000000;
-const p1 = urlParams.get("p1") || Math.random();
-const p2 = urlParams.get("p2") || Math.random();
-const p3 = urlParams.get("p3") || Math.random();
-const p4 = urlParams.get("p4") || Math.random();
+const p1 = parseFloat(urlParams.get("p1") || Math.random());
+const p2 = parseFloat(urlParams.get("p2") || Math.random());
+const p3 = parseFloat(urlParams.get("p3") || Math.random());
+const p4 = parseFloat(urlParams.get("p4") || Math.random());
 
 // this is a p5js v2 script
 let _renderer = null;
@@ -85,7 +85,8 @@ async function setup() {
   collager = new Collager();
   await collager.initSystem();
 
-  let lutTexture = await loadImage("../lut_textures/08-color-fx.png");
+  let lutPath = getLUTPath(p1);
+  let lutTexture = await loadImage("../" + lutPath);
   collager.setLutTexture(lutTexture);
   collager.setLutIntensity(1.0);
 
@@ -343,7 +344,6 @@ async function loadWindowInsideImages(_setIndex) {
   {
     imagePool = [
       'photoImages/now_01.png',
-      'photoImages/now_02.jpeg',
       'photoImages/now_03.jpeg',
       'photoImages/now_04.jpeg',
       'photoImages/now_05.jpeg',
