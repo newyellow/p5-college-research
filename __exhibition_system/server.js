@@ -30,25 +30,51 @@ let sequencePosition = 0;
 
 try {
     if (fs.existsSync(artworksDir)) {
-        const files = fs.readdirSync(artworksDir);
-        files.forEach(file => {
-            if (path.extname(file) === '.json') {
-                const data = fs.readFileSync(path.join(artworksDir, file), 'utf8');
-                try {
-                    const artworkObj = JSON.parse(data);
-                    
-                    // Check for corresponding .md file for description
-                    const mdFile = path.basename(file, '.json') + '.md';
-                    const mdPath = path.join(artworksDir, mdFile);
-                    if (fs.existsSync(mdPath)) {
-                         artworkObj.description = fs.readFileSync(mdPath, 'utf8');
-                         console.log(`Loaded description from ${mdFile} for ${artworkObj.id}`);
-                    }
+        // Look into subfolders for .json files
+        const folders = fs.readdirSync(artworksDir);
+        folders.forEach(folder => {
+            const folderPath = path.join(artworksDir, folder);
+            if (fs.statSync(folderPath).isDirectory()) {
+                const files = fs.readdirSync(folderPath);
+                files.forEach(file => {
+                    if (path.extname(file) === '.json') {
+                        const data = fs.readFileSync(path.join(folderPath, file), 'utf8');
+                        try {
+                            const artworkObj = JSON.parse(data);
+                            
+                            // Check for corresponding .md file for description
+                            const mdFile = path.basename(file, '.json') + '.md';
+                            const mdPath = path.join(folderPath, mdFile);
+                            if (fs.existsSync(mdPath)) {
+                                 artworkObj.description = fs.readFileSync(mdPath, 'utf8');
+                                 console.log(`Loaded description from ${mdFile} for ${artworkObj.id}`);
+                            }
 
-                    artworks.push(artworkObj);
-                } catch (e) {
-                    console.error(`Error parsing artwork config ${file}:`, e);
-                }
+                            // Standardize paths for both control and display
+                            // infoUrl: The description page in the config folder
+                            // artworkUrl: The actual p5.js sketch
+                            
+                            // infoUrl is always in the same folder as the JSON
+                            artworkObj.infoUrl = `/artworks/__exhibition_system/configs/artworks/${folder}/index.html`;
+                            artworkObj.resultUrl = `/result.html`;
+                            
+                            // artworkUrl is what was previously in 'path' (for B-E)
+                            // or it can be inferred for A if 'path' is 'index.html'
+                            if (artworkObj.path && artworkObj.path.startsWith('/artworks/')) {
+                                artworkObj.artworkUrl = artworkObj.path;
+                            } else if (artworkObj.id === 'TeamA') {
+                                artworkObj.artworkUrl = '/artworks/_TeamA_LazyDuck/index.html';
+                            } else {
+                                // Fallback or use existing path if it looks like a full path
+                                artworkObj.artworkUrl = artworkObj.path;
+                            }
+
+                            artworks.push(artworkObj);
+                        } catch (e) {
+                            console.error(`Error parsing artwork config ${file} in ${folder}:`, e);
+                        }
+                    }
+                });
             }
         });
         console.log(`Loaded ${artworks.length} artworks.`);

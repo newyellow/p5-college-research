@@ -133,31 +133,7 @@
         letter-spacing: 3px;
         border: none;
         border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-      }
-
-      .back-button {
-        background-color: white;
-        color: #2c3e50;
-        border: 3px solid #2c3e50;
-      }
-
-      .back-button:hover {
-        background-color: #f0f0f0;
-        transform: translateY(-2px);
-      }
-
-      .regenerate-button {
-        background-color: #e74c3c;
-        color: white;
-      }
-
-      .regenerate-button:hover {
-        background-color: #c0392b;
-        transform: translateY(-2px);
       }
 
       .action-button:active {
@@ -195,26 +171,9 @@
         </div>
       </div>
 
-      <!-- 按鈕區塊 -->
-      <div class="button-container">
-        <button class="action-button back-button" onclick="goToInfo()">
-          返回說明
-        </button>
-        <button class="action-button regenerate-button" onclick="goToControl()">
-          重新生成
-        </button>
-      </div>
     </div>
 
     <script>
-      function goToInfo() {
-        window.location.href = "index.html";
-      }
-
-      function goToControl() {
-        window.location.href = "../../../public/control.html";
-      }
-
       function displayParams() {
         const params = new URLSearchParams(window.location.search);
 
@@ -223,17 +182,14 @@
         const p3 = params.get("p3");
         const p4 = params.get("p4");
 
-        if (p1) document.getElementById("param1Value").textContent = p1;
-        if (p2) document.getElementById("param2Value").textContent = p2;
-        if (p3) document.getElementById("param3Value").textContent = p3;
-        if (p4) document.getElementById("param4Value").textContent = p4;
-
-        setTimeout(() => {
-          document.querySelector(".button-container").classList.add("show");
-        }, 6000);
+        if (p1) document.getElementById("param1Value").textContent = Number(p1).toFixed(4);
+        if (p2) document.getElementById("param2Value").textContent = Number(p2).toFixed(4);
+        if (p3) document.getElementById("param3Value").textContent = Number(p3).toFixed(4);
+        if (p4) document.getElementById("param4Value").textContent = Number(p4).toFixed(4);
       }
 
       window.addEventListener("DOMContentLoaded", displayParams);
     </script>
   </body>
 </html>
+

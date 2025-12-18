@@ -84,56 +84,66 @@
 
         /* Display Panel Styles */
         #displayPanel {
-            background-color: #ffffff;
+            background-color: #000;
             text-align: center;
+            padding: 0;
+            overflow: hidden;
         }
 
-        .info-card {
-            max-width: 800px;
-            width: 90%;
-            text-align: left;
+        #artworkIframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #fff;
         }
 
-        h2 {
-            font-size: 2.5em;
-            margin-bottom: 5px;
-            color: #222;
-        }
-
-        h3.subtitle {
-            font-size: 1.2em;
-            color: #666;
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-weight: normal;
-        }
-
-        .meta-info {
-            color: #666;
-            margin-bottom: 20px;
-            font-size: 1.1em;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
-        }
-
-        .description {
-            font-size: 1.2em;
-            line-height: 1.6;
-            color: #444;
-        }
-
-        #returnHint {
+        .control-buttons-overlay {
             position: absolute;
-            bottom: 50px;
-            font-size: 1.2em;
-            color: #888;
-            opacity: 0;
-            transition: opacity ease-in-out;
-            padding: 15px 30px;
-            background: #f9f9f9;
-            border-radius: 30px;
+            bottom: 40px;
+            right: 40px;
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
         }
 
+        .overlay-button {
+            padding: 15px 35px;
+            font-size: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: opacity 0.5s ease-in, transform 0.2s, background-color 0.2s;
+            opacity: 0;
+            pointer-events: none;
+            font-family: inherit;
+        }
+
+        .overlay-button.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .overlay-button:active {
+            transform: scale(0.95);
+        }
+
+        .next-btn {
+            background-color: #2c3e50;
+            color: white;
+        }
+
+        .back-btn {
+            background-color: #f8f8f8;
+            color: #2c3e50;
+            border: 2px solid #2c3e50;
+        }
+
+        .regenerate-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -164,18 +174,16 @@
         <button id="generateBtn" class="action-button">Generate Artwork</button>
     </div>
 
-    <!-- Layout 2: Description Display -->
+    <!-- Layout 2: Description Display (now using Iframe) -->
     <div id="displayPanel" class="panel">
-        <div class="info-card">
-            <h2 id="artTitle">Loading...</h2>
-            <h3 id="artSubtitle" class="subtitle"></h3>
-            <div class="meta-info">
-                <p><strong>Team:</strong> <span id="artMembers"></span></p>
-                <p><strong>Artifact:</strong> <span id="artArtifact"></span></p>
-            </div>
-            <div class="description" id="artDesc"></div>
-        </div>
+        <iframe id="artworkIframe" src=""></iframe>
         
+        <div class="control-buttons-overlay">
+            <button id="overlayBackBtn" class="overlay-button back-btn">返回說明</button>
+            <button id="overlayNextBtn" class="overlay-button next-btn">下一頁</button>
+            <button id="overlayRegenBtn" class="overlay-button regenerate-btn">重新生成</button>
+        </div>
+
         <div id="returnHint">Tap the screen to generate next artwork</div>
     </div>
 
@@ -184,7 +192,8 @@
     <script>
         // --- CONFIGURATION ---
         const PANEL_FADE_DURATION = 800; // ms (Transition between panels)
-        const HINT_REVEAL_DELAY = 6000;  // ms (Wait time before showing "Tap to return")
+        const BUTTON_REVEAL_DELAY = 6000; // ms (Wait time before showing buttons)
+        const HINT_REVEAL_DELAY = 12000;  // ms (Wait time before showing "Tap to return" hint)
         const HINT_FADE_DURATION = 1000; // ms (Fade in time for the hint)
         // ---------------------
 
@@ -195,10 +204,18 @@
         const displayPanel = document.getElementById('displayPanel');
         const generateBtn = document.getElementById('generateBtn');
         const returnHint = document.getElementById('returnHint');
+        const artworkIframe = document.getElementById('artworkIframe');
+        
+        const overlayNextBtn = document.getElementById('overlayNextBtn');
+        const overlayBackBtn = document.getElementById('overlayBackBtn');
+        const overlayRegenBtn = document.getElementById('overlayRegenBtn');
 
         // State
         let isAnimating = false;
         let isWaitingForReturn = false;
+        let currentArtwork = null;
+        let currentViewState = 'info'; // 'info' or 'result'
+        let hasInitialRevealHappened = false;
 
         // Init Styles
         settingPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
@@ -206,22 +223,98 @@
         returnHint.style.transitionDuration = `${HINT_FADE_DURATION}ms`;
 
         const updateControlPanel = (artwork) => {
-            // Populate Data
-            document.getElementById('artTitle').textContent = artwork.title;
-            document.getElementById('artSubtitle').textContent = artwork.title_en || '';
-            document.getElementById('artMembers').textContent = artwork.members;
-            document.getElementById('artArtifact').textContent = artwork.artifact;
-            // Use marked to parse markdown description
-            document.getElementById('artDesc').innerHTML = marked.parse(artwork.description || '');
+            currentArtwork = artwork;
+            currentViewState = 'info';
+            hasInitialRevealHappened = false;
+            
+            // Hide buttons initially
+            hideAllOverlayButtons();
+
+            // Use standardized infoUrl from server
+            const baseUrl = artwork.infoUrl;
+            const jsonFile = artwork.id + '.json'; // Still need this for the 'data' param
+            const params = new URLSearchParams();
+            params.append('data', jsonFile);
+            
+            artworkIframe.src = `${baseUrl}?${params.toString()}`;
 
             // Perform Transition: Setting -> Display
             performTransitionToDisplay();
+
+            // Show "Next" button after delay
+            setTimeout(() => {
+                if (currentViewState === 'info' && currentArtwork === artwork) {
+                    hasInitialRevealHappened = true;
+                    showButtonsForState('info');
+                }
+            }, BUTTON_REVEAL_DELAY);
         };
+
+        function hideAllOverlayButtons() {
+            overlayNextBtn.classList.remove('show');
+            overlayBackBtn.classList.remove('show');
+            overlayRegenBtn.classList.remove('show');
+        }
+
+        function showButtonsForState(state) {
+            hideAllOverlayButtons();
+            if (state === 'info') {
+                overlayNextBtn.classList.add('show');
+            } else if (state === 'result') {
+                overlayBackBtn.classList.add('show');
+                overlayRegenBtn.classList.add('show');
+            }
+        }
+
+        // Overlay Button Events
+        overlayNextBtn.addEventListener('click', () => {
+            if (!currentArtwork) return;
+            currentViewState = 'result';
+            
+            // Switch buttons immediately if reveal happened
+            if (hasInitialRevealHappened) {
+                showButtonsForState('result');
+            }
+
+            const teamFolder = currentArtwork.id.toLowerCase();
+            const baseUrl = currentArtwork.resultUrl;
+            
+            // Pass parameters if available
+            const params = new URLSearchParams();
+            if (currentArtwork.iteration && currentArtwork.iteration.parameters) {
+                for (const [key, value] of Object.entries(currentArtwork.iteration.parameters)) {
+                    params.append(key, value);
+                }
+            }
+            
+            artworkIframe.src = `${baseUrl}?${params.toString()}`;
+        });
+
+        overlayBackBtn.addEventListener('click', () => {
+            if (!currentArtwork) return;
+            currentViewState = 'info';
+            
+            // Switch buttons immediately
+            if (hasInitialRevealHappened) {
+                showButtonsForState('info');
+            }
+
+            const baseUrl = currentArtwork.infoUrl;
+            const jsonFile = currentArtwork.id + '.json';
+            const params = new URLSearchParams();
+            params.append('data', jsonFile);
+            
+            artworkIframe.src = `${baseUrl}?${params.toString()}`;
+        });
+
+        overlayRegenBtn.addEventListener('click', () => {
+            performTransitionToSettings();
+        });
 
         // Listen for 'artwork-current' (new explicit event for local update)
         socket.on('artwork-current', updateControlPanel);
         
-        // Also listen for 'artwork-selected' (legacy fallback, though server mostly sends current now)
+        // Also listen for 'artwork-selected' (legacy fallback)
         socket.on('artwork-selected', updateControlPanel);
 
         // Event: Generate Button Click
@@ -242,15 +335,14 @@
             socket.emit('pick-random', params);
             
             // The actual transition happens when we get data back (in socket.on)
-            // Let's fade out immediately to give feedback.
             settingPanel.classList.remove('active');
         });
 
         // Event: Screen Tap (Return)
-        // We attach this to document but only act if we are in the right state
+        // Only allow tap to return if we are in result state or after a long timeout
         document.addEventListener('click', (e) => {
-            // Ignore clicks on the generate button itself (handled above)
             if (e.target === generateBtn || generateBtn.contains(e.target)) return;
+            if (e.target.closest('.control-buttons-overlay')) return;
 
             if (isWaitingForReturn && !isAnimating) {
                 performTransitionToSettings();
@@ -258,41 +350,37 @@
         });
 
         function performTransitionToDisplay() {
-            // Ensure Setting is hidden (in case we didn't hide it earlier)
             settingPanel.classList.remove('active');
 
             setTimeout(() => {
-                // Show Display
                 displayPanel.classList.add('active');
                 
-                // Wait for transition to finish
                 setTimeout(() => {
-                    isAnimating = false; // Unlock for safety, though user can't click much yet
+                    isAnimating = false;
                     
-                    // Start Timer for Return Hint
                     setTimeout(() => {
                         returnHint.style.opacity = '1';
                         isWaitingForReturn = true;
                     }, HINT_REVEAL_DELAY);
 
                 }, PANEL_FADE_DURATION);
-            }, PANEL_FADE_DURATION); // Wait for fade out to finish
+            }, PANEL_FADE_DURATION);
         }
 
         function performTransitionToSettings() {
             isAnimating = true;
             isWaitingForReturn = false;
+            hideAllOverlayButtons();
 
-            // Hide Display
             displayPanel.classList.remove('active');
-            returnHint.style.opacity = '0'; // Reset hint
+            returnHint.style.opacity = '0';
 
             setTimeout(() => {
-                // Show Settings
                 settingPanel.classList.add('active');
+                artworkIframe.src = "about:blank"; // Clear iframe
                 
                 setTimeout(() => {
-                    isAnimating = false; // Unlock
+                    isAnimating = false;
                 }, PANEL_FADE_DURATION);
 
             }, PANEL_FADE_DURATION);
