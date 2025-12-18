@@ -133,23 +133,19 @@
 
         <!-- 參數顯示區 -->
         <div class="params-container">
-          <div class="params-title">生成參數</div>
-          <div class="param-item">
-            <span class="param-label">Parameter 1</span>
-            <span class="param-value" id="param1Value">-</span>
-          </div>
-          <div class="param-item">
-            <span class="param-label">Parameter 2</span>
-            <span class="param-value" id="param2Value">-</span>
-          </div>
-          <div class="param-item">
-            <span class="param-label">Parameter 3</span>
-            <span class="param-value" id="param3Value">-</span>
-          </div>
-          <div class="param-item">
-            <span class="param-label">Parameter 4</span>
-            <span class="param-value" id="param4Value">-</span>
-          </div>
+            <div class="params-title">生成參數</div>
+            <div class="param-item">
+                <span class="param-label">顏色種子</span>
+                <span class="param-value" id="param1Value">-</span>
+            </div>
+            <div class="param-item">
+                <span class="param-label">密度種子</span>
+                <span class="param-value" id="param2Value">-</span>
+            </div>
+            <div class="param-item">
+                <span class="param-label">混亂種子</span>
+                <span class="param-value" id="param3Value">-</span>
+            </div>
         </div>
       </div>
     </div>
@@ -161,12 +157,10 @@
         const p1 = params.get("p1");
         const p2 = params.get("p2");
         const p3 = params.get("p3");
-        const p4 = params.get("p4");
 
         if (p1) document.getElementById("param1Value").textContent = Number(p1).toFixed(4);
         if (p2) document.getElementById("param2Value").textContent = Number(p2).toFixed(4);
         if (p3) document.getElementById("param3Value").textContent = Number(p3).toFixed(4);
-        if (p4) document.getElementById("param4Value").textContent = Number(p4).toFixed(4);
       }
 
       window.addEventListener("DOMContentLoaded", displayParams);
