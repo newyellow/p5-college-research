@@ -44,21 +44,34 @@ async function startClient() {
                 return res.status(404).json({ error: "No records found" });
             }
             
-            const randomFile = files[Math.floor(Math.random() * files.length)];
-            const recordData = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, randomFile), 'utf8'));
+            const pickedTeamId = recordData.pickedTeamId;
+            // Find the JSON in subfolders
+            const folders = fs.readdirSync(ARTWORKS_CONFIG_DIR);
+            let artworkConfigPath = null;
+            let folderName = null;
             
-            // We need to match the record's TeamID to an artwork path
-            // The record has 'pickedTeamId' (e.g. "TeamA")
-            // We need to look up the artwork config to get the path
-            const artworkConfigPath = path.join(ARTWORKS_CONFIG_DIR, `${recordData.pickedTeamId}.json`);
+            for (const folder of folders) {
+                const checkPath = path.join(ARTWORKS_CONFIG_DIR, folder, `${pickedTeamId}.json`);
+                if (fs.existsSync(checkPath)) {
+                    artworkConfigPath = checkPath;
+                    folderName = folder;
+                    break;
+                }
+            }
             
-            if (fs.existsSync(artworkConfigPath)) {
+            if (artworkConfigPath) {
                 const artworkConfig = JSON.parse(fs.readFileSync(artworkConfigPath, 'utf8'));
                 
+                // Construct URLs similarly to server.js
+                const artworkUrl = (artworkConfig.path && artworkConfig.path.startsWith('/artworks/')) 
+                    ? artworkConfig.path 
+                    : (pickedTeamId === 'TeamA' ? '/artworks/_TeamA_LazyDuck/index.html' : artworkConfig.path);
+
                 // Construct the full object expected by display page
                 const responseData = {
                     title: artworkConfig.title,
-                    path: artworkConfig.path,
+                    artworkUrl: artworkUrl,
+                    infoUrl: `/artworks/__exhibition_system/configs/artworks/${folderName}/index.html`,
                     iteration: recordData
                 };
                 return res.json(responseData);

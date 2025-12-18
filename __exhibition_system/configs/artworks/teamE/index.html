@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>作品說明</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
+        background-color: #f5f5f5;
+        overflow: hidden;
+        width: 1920px;
+        height: 1080px;
+      }
+
+      .exhibition-container {
+        width: 1920px;
+        height: 1080px;
+        display: flex;
+        background: white;
+      }
+
+      /* 左側資訊區 */
+      .info-section {
+        flex: 0 0 50%;
+        background: #f8f8f8;
+        padding: 80px 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .title-block {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #2c3e50;
+      }
+
+      .artwork-title {
+        font-size: 56px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 15px;
+        margin-top: 25px;
+        letter-spacing: 8px;
+      }
+
+      .artist-name {
+        font-size: 28px;
+        color: #666;
+        font-weight: 400;
+        letter-spacing: 2px;
+      }
+
+      .info-block {
+        margin-bottom: 15px;
+      }
+
+      .info-label {
+        font-size: 26px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        display: block;
+        letter-spacing: 2px;
+      }
+
+      .info-content {
+        font-size: 24px;
+        line-height: 2;
+        color: #333;
+        text-align: justify;
+        letter-spacing: 1px;
+      }
+
+      .artifacts-list {
+        font-size: 23px;
+        line-height: 2;
+        color: #444;
+        letter-spacing: 1px;
+      }
+
+      /* 右側元素展示區 */
+      .element-section {
+        flex: 0 0 50%;
+        background: linear-gradient(135deg, #3d5266 0%, #2c3e50 100%);
+        padding: 80px 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+      }
+
+      .element-image-container {
+        background: white;
+        border-radius: 0px;
+        padding: 10px;
+        margin-bottom: 50px;
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .element-image-container img {
+        width: 100%;
+        height: auto;
+        max-height: 550px;
+        object-fit: contain;
+        display: block;
+      }
+
+      .element-info {
+        color: white;
+        width: 100%;
+        max-width: 600px;
+      }
+
+      .element-label {
+        font-size: 26px;
+        font-weight: 600;
+        color: #b8c5d6;
+        margin-bottom: 15px;
+        display: block;
+        letter-spacing: 2px;
+      }
+
+      .element-content {
+        font-size: 24px;
+        line-height: 2;
+        color: #e8eef5;
+        letter-spacing: 1px;
+      }
+
+      /* 載入中提示 */
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-size: 32px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading">載入中...</div>
+
+    <div class="exhibition-container" style="display: none">
+      <!-- 左側資訊區 -->
+      <div class="info-section">
+        <div class="title-block">
+          <h1 class="artwork-title" id="title"></h1>
+          <p class="artist-name" id="members"></p>
+        </div>
+
+        <div class="info-block">
+          <span class="info-label">♦︎ 作品論述</span>
+          <p class="info-content" id="description"></p>
+        </div>
+
+        <div class="info-block">
+          <span class="info-label">♦︎ 結合文物</span>
+          <p class="artifacts-list" id="artifact"></p>
+        </div>
+      </div>
+
+      <!-- 右側元素展示區 -->
+      <div class="element-section">
+        <div
+          class="element-image-container"
+          id="imageContainer"
+          style="display: none"
+        >
+          <img id="elementImage" src="" alt="文物圖片" />
+        </div>
+
+        <div class="element-info">
+          <span class="element-label" id="elementLabel">♦︎ 元素介紹 ♦︎</span>
+          <p class="element-content" id="elementContent"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function getJsonPath() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("data") || "TeamE.json";
+      }
+
+      async function loadExhibitionData() {
+        const jsonPath = getJsonPath();
+        const response = await fetch(jsonPath);
+        const data = await response.json();
+        displayExhibitionData(data);
+      }
+
+      function displayExhibitionData(data) {
+        document.getElementById("title").textContent = data.title || "";
+        document.getElementById("members").textContent = data.members
+          ? `作者:${data.members}`
+          : "";
+
+        document.getElementById("description").innerHTML =
+          data.description || "";
+
+        document.getElementById("artifact").textContent = data.artifact || "";
+
+        if (data.element) {
+          document.getElementById("elementLabel").textContent =
+            data.element.label || "♦︎ 元素介紹 ♦︎";
+          document.getElementById("elementContent").innerHTML =
+            data.element.content || "";
+
+          if (data.element.image) {
+            document.getElementById("imageContainer").style.display = "flex";
+            document.getElementById("elementImage").src = data.element.image;
+            document.getElementById("elementImage").alt =
+              data.element.imageAlt || "元素圖片";
+          }
+        }
+
+        document.querySelector(".loading").style.display = "none";
+        document.querySelector(".exhibition-container").style.display = "flex";
+      }
+
+      window.addEventListener("DOMContentLoaded", loadExhibitionData);
+    </script>
+  </body>
+</html>
