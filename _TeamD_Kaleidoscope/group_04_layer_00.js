@@ -5,7 +5,12 @@ new p5((sketch) => {
   let uniformsShader;
   let startTime;
   let texture, texture01, texture02, texture03;
+  let lutTexture;
   
+  // get url parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const p1 = parseFloat(urlParams.get('p1') || Math.random());
+
   sketch.setup = async () => {
     let cnv = sketch.createCanvas(1080, 1920, sketch.WEBGL);
     cnv.style('position', 'fixed');
@@ -28,6 +33,11 @@ new p5((sketch) => {
     texture01 = await sketch.loadImage(`images/layer00_${pad(imgNub[1])}.jpg`);
     texture02 = await sketch.loadImage(`images/layer00_${pad(imgNub[2])}.jpg`);
     texture03 = await sketch.loadImage(`images/layer00_${pad(imgNub[3])}.jpg`);
+    
+    // load lut according to p1
+    let lutPath = getLUTPath(p1);
+    lutTexture = await sketch.loadImage("../" + lutPath);
+
     // testTexture = await sketch.loadImage("images/test-photo-4.jpg");
     // testTexture01 = await sketch.loadImage("images/test-photo-1.jpg");
     // testTexture02 = await sketch.loadImage("images/test-photo-3.jpg");
@@ -66,6 +76,15 @@ new p5((sketch) => {
   uniformsShader.setUniform("aspect3", window.textureAspects[2]);
   uniformsShader.setUniform("aspect4", window.textureAspects[3]);
     
+    // Set LUT uniforms
+    if (lutTexture) {
+      uniformsShader.setUniform("uLutTexture", lutTexture);
+      uniformsShader.setUniform("uLutIntensity", 1.0);
+      uniformsShader.setUniform("uDoLut", 1);
+    } else {
+      uniformsShader.setUniform("uDoLut", 0);
+    }
+
     sketch.noStroke();
     sketch.rect(0, 0, sketch.width, sketch.height);
   };
