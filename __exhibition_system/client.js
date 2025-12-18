@@ -44,18 +44,25 @@ async function startClient() {
                 return res.status(404).json({ error: "No records found" });
             }
             
+            // Pick a random record file
+            const randomFile = files[Math.floor(Math.random() * files.length)];
+            const recordData = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, randomFile), 'utf8'));
             const pickedTeamId = recordData.pickedTeamId;
-            // Find the JSON in subfolders
+            
+            // Find the JSON in subfolders of configs/artworks
             const folders = fs.readdirSync(ARTWORKS_CONFIG_DIR);
             let artworkConfigPath = null;
             let folderName = null;
             
             for (const folder of folders) {
-                const checkPath = path.join(ARTWORKS_CONFIG_DIR, folder, `${pickedTeamId}.json`);
-                if (fs.existsSync(checkPath)) {
-                    artworkConfigPath = checkPath;
-                    folderName = folder;
-                    break;
+                const folderPath = path.join(ARTWORKS_CONFIG_DIR, folder);
+                if (fs.statSync(folderPath).isDirectory()) {
+                    const checkPath = path.join(folderPath, `${pickedTeamId}.json`);
+                    if (fs.existsSync(checkPath)) {
+                        artworkConfigPath = checkPath;
+                        folderName = folder;
+                        break;
+                    }
                 }
             }
             
@@ -63,20 +70,23 @@ async function startClient() {
                 const artworkConfig = JSON.parse(fs.readFileSync(artworkConfigPath, 'utf8'));
                 
                 // Construct URLs similarly to server.js
-                const artworkUrl = (artworkConfig.path && artworkConfig.path.startsWith('/artworks/')) 
-                    ? artworkConfig.path 
-                    : (pickedTeamId === 'TeamA' ? '/artworks/_TeamA_LazyDuck/index.html' : artworkConfig.path);
+                let artworkUrl = artworkConfig.path;
+                
+                if (artworkConfig.path && artworkConfig.path.startsWith('/artworks/')) {
+                    artworkUrl = artworkConfig.path;
+                } else if (pickedTeamId === 'TeamA') {
+                    artworkUrl = '/artworks/_TeamA_LazyDuck/index.html';
+                }
 
-                // Construct the full object expected by display page
+                // Construct the minimal object expected by client-display.html
                 const responseData = {
                     title: artworkConfig.title,
                     artworkUrl: artworkUrl,
-                    infoUrl: `/artworks/__exhibition_system/configs/artworks/${folderName}/index.html`,
                     iteration: recordData
                 };
                 return res.json(responseData);
             } else {
-                 return res.status(500).json({ error: "Artwork config missing for record" });
+                 return res.status(500).json({ error: `Artwork config missing for team ${pickedTeamId}` });
             }
 
         } catch (e) {
