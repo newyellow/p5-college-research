@@ -150,8 +150,8 @@
         color: #666;
       }
 
-      /* 返回按鈕 */
-      .back-button {
+      /* 下一頁按鈕 */
+      .next-button {
         position: fixed;
         bottom: 50px;
         right: 30px;
@@ -170,15 +170,15 @@
         font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
       }
 
-      .back-button.show {
+      .next-button.show {
         opacity: 1;
       }
 
-      .back-button:hover {
-        background-color: #3d5266;
+      .next-button:hover {
+        background-color: #2c3e50;
       }
 
-      .back-button:active {
+      .next-button:active {
         background-color: #1a2633;
         transform: scale(0.98);
       }
@@ -223,8 +223,8 @@
       </div>
     </div>
 
-    <!-- 返回按鈕 -->
-    <button class="back-button" id="backButton">返回</button>
+    <!-- 下一頁按鈕 -->
+    <button class="next-button" id="nextButton">下一頁</button>
 
     <script>
       function getJsonPath() {
@@ -268,13 +268,16 @@
         document.querySelector(".exhibition-container").style.display = "flex";
 
         setTimeout(() => {
-          document.getElementById("backButton").classList.add("show");
-        }, 8000); //8s
+          document.getElementById("nextButton").classList.add("show");
+        }, 6000);
       }
 
-      //返回事件
-      document.getElementById("backButton").addEventListener("click", () => {
-        window.history.back();
+      // 下一頁事件 - 前往結果展示頁面
+      document.getElementById("nextButton").addEventListener("click", () => {
+        // 傳遞當前的 data 參數到結果頁面
+        const params = new URLSearchParams(window.location.search);
+        const dataParam = params.get("data") || "TeamA.json";
+        window.location.href = `result.html`;
       });
 
       window.addEventListener("DOMContentLoaded", loadExhibitionData);

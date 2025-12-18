@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>生成結果</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
+        background: linear-gradient(135deg, #3d5266 0%, #2c3e50 100%);
+        overflow: hidden;
+        width: 1920px;
+        height: 1080px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .result-container {
+        width: 1920px;
+        height: 1080px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 60px;
+        padding: 60px 40px;
+      }
+
+      .info-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 60px;
+      }
+
+      .qr-container {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        width: 420px;
+      }
+
+      .qr-code {
+        width: 320px;
+        height: 320px;
+        background: #f5f5f5;
+        border: 3px dashed #ccc;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        font-size: 18px;
+      }
+
+      .qr-text {
+        font-size: 20px;
+        color: #333;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-align: center;
+      }
+
+      /* 參數顯示區 */
+      .params-container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 25px 35px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        width: 420px;
+      }
+
+      .params-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        text-align: center;
+        letter-spacing: 2px;
+      }
+
+      .param-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 18px;
+      }
+
+      .param-item:last-child {
+        border-bottom: none;
+      }
+
+      .param-label {
+        color: #555;
+        font-weight: 600;
+      }
+
+      .param-value {
+        color: #2c3e50;
+        font-weight: 700;
+        font-family: "Courier New", monospace;
+      }
+
+      .button-container {
+        display: flex;
+        gap: 50px;
+        opacity: 0;
+        transition: opacity 1s ease-in;
+      }
+
+      .button-container.show {
+        opacity: 1;
+      }
+
+      .action-button {
+        padding: 15px 50px;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .back-button {
+        background-color: white;
+        color: #2c3e50;
+        border: 3px solid #2c3e50;
+      }
+
+      .back-button:hover {
+        background-color: #f0f0f0;
+        transform: translateY(-2px);
+      }
+
+      .regenerate-button {
+        background-color: #e74c3c;
+        color: white;
+      }
+
+      .regenerate-button:hover {
+        background-color: #c0392b;
+        transform: translateY(-2px);
+      }
+
+      .action-button:active {
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="result-container">
+      <div class="info-section">
+        <div class="qr-container">
+          <p class="qr-text">掃描下載作品圖片</p>
+          <div class="qr-code" id="qrCode">QR Code 區域</div>
+        </div>
+
+        <!-- 參數顯示區 -->
+        <div class="params-container">
+          <div class="params-title">生成參數</div>
+          <div class="param-item">
+            <span class="param-label">Parameter 1</span>
+            <span class="param-value" id="param1Value">-</span>
+          </div>
+          <div class="param-item">
+            <span class="param-label">Parameter 2</span>
+            <span class="param-value" id="param2Value">-</span>
+          </div>
+          <div class="param-item">
+            <span class="param-label">Parameter 3</span>
+            <span class="param-value" id="param3Value">-</span>
+          </div>
+          <div class="param-item">
+            <span class="param-label">Parameter 4</span>
+            <span class="param-value" id="param4Value">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 按鈕區塊 -->
+      <div class="button-container">
+        <button class="action-button back-button" onclick="goToInfo()">
+          返回說明
+        </button>
+        <button class="action-button regenerate-button" onclick="goToControl()">
+          重新生成
+        </button>
+      </div>
+    </div>
+
+    <script>
+      function goToInfo() {
+        window.location.href = "index.html";
+      }
+
+      function goToControl() {
+        window.location.href = "../../../public/control.html";
+      }
+
+      function displayParams() {
+        const params = new URLSearchParams(window.location.search);
+
+        const p1 = params.get("p1");
+        const p2 = params.get("p2");
+        const p3 = params.get("p3");
+        const p4 = params.get("p4");
+
+        if (p1) document.getElementById("param1Value").textContent = p1;
+        if (p2) document.getElementById("param2Value").textContent = p2;
+        if (p3) document.getElementById("param3Value").textContent = p3;
+        if (p4) document.getElementById("param4Value").textContent = p4;
+
+        setTimeout(() => {
+          document.querySelector(".button-container").classList.add("show");
+        }, 6000);
+      }
+
+      window.addEventListener("DOMContentLoaded", displayParams);
+    </script>
+  </body>
+</html>
