@@ -330,9 +330,16 @@
             
             // Pass parameters if available
             const params = new URLSearchParams();
-            if (currentArtwork.iteration && currentArtwork.iteration.parameters) {
-                for (const [key, value] of Object.entries(currentArtwork.iteration.parameters)) {
-                    params.append(key, value);
+            if (currentArtwork.iteration) {
+                // Add seed and team ID
+                if (currentArtwork.iteration.seed) params.append('seed', currentArtwork.iteration.seed);
+                if (currentArtwork.iteration.pickedTeamId) params.append('id', currentArtwork.iteration.pickedTeamId);
+
+                // Add slider parameters
+                if (currentArtwork.iteration.parameters) {
+                    for (const [key, value] of Object.entries(currentArtwork.iteration.parameters)) {
+                        params.append(key, value);
+                    }
                 }
             }
             
@@ -372,11 +379,11 @@
             
             isAnimating = true; // Lock interaction
 
-            // Collect Slider Values (Normalize to 0-1)
+            // Collect Slider Values (Normalize to 0-1 and fix length to 0.0000)
             const params = {
-                p1: document.getElementById('param1').value / 92,
-                p2: document.getElementById('param2').value / 1000000,
-                p3: document.getElementById('param3').value / 1000000
+                p1: (document.getElementById('param1').value / 92).toFixed(4),
+                p2: (document.getElementById('param2').value / 1000000).toFixed(4),
+                p3: (document.getElementById('param3').value / 1000000).toFixed(4)
             };
             
             // 1. Send Request

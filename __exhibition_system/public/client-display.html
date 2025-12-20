@@ -123,7 +123,11 @@
                         params.append('seed', artwork.iteration.seed);
                     }
                     if (artwork.iteration.parameters) {
-                        for (const [key, value] of Object.entries(artwork.iteration.parameters)) {
+                        for (let [key, value] of Object.entries(artwork.iteration.parameters)) {
+                            // Ensure slider parameters (p1, p2, p3) are formatted to 4 decimal places
+                            if (['p1', 'p2', 'p3'].includes(key)) {
+                                value = Number(value).toFixed(4);
+                            }
                             params.append(key, value);
                         }
                     }
