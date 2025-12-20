@@ -116,34 +116,41 @@ async function startClient() {
         const monitorConfig = config.monitors[i];
         const screenId = monitorConfig.screenId;
         
-        let x = 0, y = 0;
+        let x = 0, y = 0, width = 1920, height = 1080;
         
-        if (config.debugMode) {
-             if (screenId < systemScreens.length) {
-                 x = systemScreens[screenId].Bounds.X + (i * 50);
-                 y = systemScreens[screenId].Bounds.Y + (i * 50);
-             } else {
-                 x = i * 50; y = i * 50;
-             }
-        } else {
-            if (screenId < systemScreens.length) {
-                x = systemScreens[screenId].Bounds.X;
-                y = systemScreens[screenId].Bounds.Y;
+        if (screenId < systemScreens.length) {
+            const screen = systemScreens[screenId];
+            x = screen.Bounds.X;
+            y = screen.Bounds.Y;
+            width = screen.Bounds.Width;
+            height = screen.Bounds.Height;
+            
+            if (config.debugMode) {
+                x += (i * 50);
+                y += (i * 50);
+                width = 800;
+                height = 600;
             }
+        } else {
+            x = i * 50; 
+            y = i * 50;
         }
 
-        console.log(`Launching Window ${i} at ${x},${y}`);
+        console.log(`Launching Window ${i} on Screen ${screenId} at ${x},${y} (${width}x${height})`);
 
         const browser = await puppeteer.launch({
             headless: false,
+            defaultViewport: null, // Allow window size to define viewport
             ignoreDefaultArgs: ['--enable-automation'],
             args: [
                 `--window-position=${x},${y}`,
-                `--window-size=800,600`, 
+                `--window-size=${width},${height}`, 
                 config.debugMode ? '' : '--kiosk', 
-                // Point to LOCAL server
+                // Use --app style but with local server URL
                 `--app=http://localhost:${CLIENT_PORT}/client-display.html`, 
                 '--no-first-run',
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
                 `--user-data-dir=${path.join(__dirname, 'temp_client_data', 'win_' + i)}`
             ].filter(arg => arg !== '')
         });
