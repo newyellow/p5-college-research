@@ -56,6 +56,8 @@ class Collager {
         // debug features
         this._isDebug = false;
         this._debugScale = 0.25;
+
+        this._lastBufferScale = 1.0;
     }
 
     async initSystem() {
@@ -286,6 +288,104 @@ class Collager {
         imageMode(CENTER);
         image(this._outlineShapeMaskBuffer, 0, 0);
 
+        pop();
+    }
+
+    drawCustomShape(_edgePointsArray, _x, _y, _rotateDegree = 0) {
+        // 1. Calculate bounding box and center
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (let p of _edgePointsArray) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+        }
+        let centerX = (minX + maxX) / 2;
+        let centerY = (minY + maxY) / 2;
+        let shapeW = maxX - minX;
+        let shapeH = maxY - minY;
+
+        // Determine buffer scale for better resolution on small shapes
+        let bufferScale = 1.0;
+        if (shapeW < 400 || shapeH < 400) {
+            bufferScale = min(4.0, 800 / max(shapeW, shapeH));
+        }
+        this._lastBufferScale = bufferScale;
+
+        // 2. Shift and scale points
+        let processedPoints = _edgePointsArray.map(p => ({
+            x: (p.x - centerX) * bufferScale,
+            y: (p.y - centerY) * bufferScale
+        }));
+
+        // 3. Build Shape Model
+        this._setShapeByEdgePoints(processedPoints);
+
+        // 4. Prepare Image
+        let imageIndex = floor(random(0, this.images.length));
+        let targetImg = this.images[imageIndex];
+        let targetProfile = this.collageProfiles[imageIndex];
+
+        let drawScale = random(targetProfile.minRatio, targetProfile.maxRatio);
+        // Use scaled dimensions for UV calculation so the image doesn't look stretched
+        let uvInfos = calculateUVInfosCoverMode(shapeW * bufferScale, shapeH * bufferScale, targetImg.width, targetImg.height, drawScale);
+
+        // 5. Draw to Buffer
+        this._processTearingEffect(targetImg, [uvInfos.uvOffsetX, uvInfos.uvOffsetY], [uvInfos.uvScaleX, uvInfos.uvScaleY]);
+
+        // 6. Draw to Screen
+        let drawW = width / bufferScale;
+        let drawH = height / bufferScale;
+
+        if (this._targetGraphics != null) {
+            this._targetGraphics.push();
+            this._targetGraphics.translate(_x, _y);
+            this._targetGraphics.rotate(radians(_rotateDegree));
+            this._targetGraphics.imageMode(CENTER);
+            this._targetGraphics.image(this._finalShapeBuffer, 0, 0, drawW, drawH);
+            this._targetGraphics.pop();
+        }
+        else {
+            push();
+            translate(_x, _y);
+            rotate(radians(_rotateDegree));
+            imageMode(CENTER);
+            image(this._finalShapeBuffer, 0, 0, drawW, drawH);
+            pop();
+        }
+
+        if (this._isDebug) {
+            this.drawDebug();
+        }
+    }
+
+    redrawCustomShape(_x, _y, _rotateDegree = 0) {
+        let bufferScale = this._lastBufferScale || 1.0;
+        push();
+        translate(_x, _y);
+        rotate(radians(_rotateDegree));
+        imageMode(CENTER);
+        image(this._finalShapeBuffer, 0, 0, width / bufferScale, height / bufferScale);
+        pop();
+    }
+
+    redrawCustomShapeInsideMask(_x, _y, _rotateDegree = 0) {
+        let bufferScale = this._lastBufferScale || 1.0;
+        push();
+        translate(_x, _y);
+        rotate(radians(_rotateDegree));
+        imageMode(CENTER);
+        image(this._insideShapeMaskBuffer, 0, 0, width / bufferScale, height / bufferScale);
+        pop();
+    }
+
+    redrawCustomShapeOutlineMask(_x, _y, _rotateDegree = 0) {
+        let bufferScale = this._lastBufferScale || 1.0;
+        push();
+        translate(_x, _y);
+        rotate(radians(_rotateDegree));
+        imageMode(CENTER);
+        image(this._outlineShapeMaskBuffer, 0, 0, width / bufferScale, height / bufferScale);
         pop();
     }
 

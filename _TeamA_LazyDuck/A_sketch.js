@@ -216,61 +216,87 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
     });
 
     // 2. Draw 4 borders
-    let edges = [[p00, p10], [p10, p11], [p11, p01], [p01, p00]];
-    for (let edge of edges) {
-      let pt1 = edge[0];
-      let pt2 = edge[1];
-      let posX = (pt1.x + pt2.x) / 2;
-      let posY = (pt1.y + pt2.y) / 2;
-      let sizeW = dist(pt1.x, pt1.y, pt2.x, pt2.y) + 2;
-      let sizeH = random(10, 25);
-      let angle = degrees(atan2(pt2.y - pt1.y, pt2.x - pt1.x));
+    let edges = [[p00, p10, p01, p11], [p10, p11, p00, p01], [p11, p01, p10, p00], [p01, p00, p11, p10]];
+    for (let i = 0; i < 4; i++) {
+      let pt1 = edges[i][0];
+      let pt2 = edges[i][1];
+      let ptOpp1 = edges[i][2];
+      let ptOpp2 = edges[i][3];
+
+      let thickness = random(10, 25);
+      
+      // Calculate a small parallelogram for the border
+      // We shift pt1 and pt2 towards the center of the field by thickness
+      let dirX = (ptOpp1.x + ptOpp2.x) / 2 - (pt1.x + pt2.x) / 2;
+      let dirY = (ptOpp1.y + ptOpp2.y) / 2 - (pt1.y + pt2.y) / 2;
+      let distToCenter = dist(0, 0, dirX, dirY);
+      let ratio = thickness / distToCenter;
+      
+      let v1 = pt1;
+      let v2 = pt2;
+      let v3 = { x: pt2.x + dirX * ratio, y: pt2.y + dirY * ratio };
+      let v4 = { x: pt1.x + dirX * ratio, y: pt1.y + dirY * ratio };
+
+      let borderPoints = [v1, v2, v3, v4].map(v => new NYPoint(v.x, v.y));
+      let centerX = (v1.x + v2.x + v3.x + v4.x) / 4;
+      let centerY = (v1.y + v2.y + v3.y + v4.y) / 4;
 
       push();
       rotate(radians(_angle));
-      collager.drawRect(posX, posY, sizeW, sizeH, angle);
+      collager.drawCustomShape(borderPoints, centerX, centerY, 0);
       pop();
 
       bufferLayerColorful.draw(() => {
         push();
         rotate(radians(_angle));
-        collager.redrawRect(posX, posY, sizeW, sizeH, angle);
+        collager.redrawCustomShape(centerX, centerY, 0);
         pop();
       });
     }
   } else {
     // Existing hatch line logic
-    let lineThickness = random(12, 60);
-    let fieldDimension = isVertical ? dist(p00.x, p00.y, p01.x, p01.y) : dist(p00.x, p00.y, p10.x, p10.y);
-    let density = floor(fieldDimension / (lineThickness * 0.7)); 
+    let density = floor(random(6, 15)); 
+
+    collager.cutoutThickness(3);
+    collager.cutoutNoiseScale(0.3);
+    collager.cutoutRatio(0.2, 0.8);
+  
+    collager.outlineWeight(random(24, 60));
+    collager.outlineRatio(0.2, 0.8);
+    collager.outlineNoiseScale(0.6);
+
+    collager.debug(false);
     
     for (let i = 0; i < density; i++) {
-      let t = i / (density - 1);
+      let t1 = (i - 0.2) / density;
+      let t2 = (i + 1.2) / density;
       
-      let startP, endP;
+      let v1, v2, v3, v4;
       if (isVertical) {
-        startP = { x: lerp(p00.x, p01.x, t), y: lerp(p00.y, p01.y, t) };
-        endP = { x: lerp(p10.x, p11.x, t), y: lerp(p10.y, p11.y, t) };
+        v1 = { x: lerp(p00.x, p01.x, t1), y: lerp(p00.y, p01.y, t1) };
+        v2 = { x: lerp(p10.x, p11.x, t1), y: lerp(p10.y, p11.y, t1) };
+        v3 = { x: lerp(p10.x, p11.x, t2), y: lerp(p10.y, p11.y, t2) };
+        v4 = { x: lerp(p00.x, p01.x, t2), y: lerp(p00.y, p01.y, t2) };
       } else {
-        startP = { x: lerp(p00.x, p10.x, t), y: lerp(p00.y, p10.y, t) };
-        endP = { x: lerp(p01.x, p11.x, t), y: lerp(p01.y, p11.y, t) };
+        v1 = { x: lerp(p00.x, p10.x, t1), y: lerp(p00.y, p10.y, t1) };
+        v2 = { x: lerp(p01.x, p11.x, t1), y: lerp(p01.y, p11.y, t1) };
+        v3 = { x: lerp(p01.x, p11.x, t2), y: lerp(p01.y, p11.y, t2) };
+        v4 = { x: lerp(p00.x, p10.x, t2), y: lerp(p00.y, p10.y, t2) };
       }
 
-      let posX = (startP.x + endP.x) / 2;
-      let posY = (startP.y + endP.y) / 2;
-      let sizeW = dist(startP.x, startP.y, endP.x, endP.y) + 2;
-      let sizeH = lineThickness * random(0.8, 1.2);
-      let angle = degrees(atan2(endP.y - startP.y, endP.x - startP.x));
+      let linePoints = [v1, v2, v3, v4].map(v => new NYPoint(v.x, v.y));
+      let centerX = (v1.x + v2.x + v3.x + v4.x) / 4;
+      let centerY = (v1.y + v2.y + v3.y + v4.y) / 4;
 
       push();
       rotate(radians(_angle));
-      collager.drawRect(posX, posY, sizeW, sizeH, angle);
+      collager.drawCustomShape(linePoints, centerX, centerY, 0);
       pop();
 
       bufferLayerColorful.draw(() => {
         push();
         rotate(radians(_angle));
-        collager.redrawRect(posX, posY, sizeW, sizeH, angle);
+        collager.redrawCustomShape(centerX, centerY, 0);
         pop();
       });
 
@@ -279,12 +305,12 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
         rotate(radians(_angle));
         colorMode(RGB);
         tint(0, 0, 0);
-        collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angle);
+        collager.redrawCustomShapeOutlineMask(centerX, centerY, 0);
 
         let drawInMask = random(0, 1) < 0.2;
         if (drawInMask) {
           tint(255, random(0, 255), 255);
-          collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angle);
+          collager.redrawCustomShapeInsideMask(centerX, centerY, 0);
         }
         pop();
       });
