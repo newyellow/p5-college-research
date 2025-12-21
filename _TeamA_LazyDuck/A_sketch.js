@@ -238,55 +238,84 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
   collager.rectNoiseScale(0.05);
   collager.rectPointCount(20);
 
-  let waveCount = 800;
-  let waveAmplitude = random(20, 60);
-  let waveFrequency = random(0.005, 0.02);
+  let lines = 24;
+  let stepsPerLine = 40;
+  let seaWidth = width * 1.5; 
+  let xStart = -seaWidth / 2;
+  let xStep = seaWidth / stepsPerLine;
+  
+  // Base wave parameters
+  let baseWaveAmplitude = random(40, 100);
+  let baseWaveFrequency = random(0.003, 0.01);
+  let baseNoise2DScale = random(0.002, 0.006);
 
-  for (let i = 0; i < waveCount; i++) {
-    let posX = random(-width / 2 - 200, width / 2 + 200);
-    let posYBase = random(_fromHeight, _toHeight);
+  for (let l = 0; l < lines; l++) {
+    let yProgress = l / (lines - 1);
+    let posYBase = lerp(_fromHeight, _toHeight, yProgress);
     
-    // Sine wave offset
-    let waveOffset = sin(posX * waveFrequency) * waveAmplitude;
-    let posY = posYBase + waveOffset;
+    // Per-line wave variation
+    let lineSeed = random(1000);
+    let localWaveFrequency = baseWaveFrequency * random(0.9, 1.1);
+    let localPhaseShift = random(TWO_PI * 0.3); // Different "starting point" for sine wave
+    let localWaveAmplitude = baseWaveAmplitude * random(0.9, 1.1);
+    let localNoiseScale = baseNoise2DScale * random(0.8, 1.2);
+    
+    // Pick entire line for mask
+    let isLineInMask = random() < 0.2; 
 
-    let sizeW = random(80, 160);
-    let sizeH = random(6, 12);
+    for (let s = 0; s < stepsPerLine; s++) {
+      let posX = xStart + s * xStep + random(-10, 10);
+      
+      // Calculate wave height using dynamic Sine + 2D Noise
+      // Adding localPhaseShift makes each line "offset" in the sine cycle
+      let sinePart = sin(posX * localWaveFrequency + localPhaseShift) * localWaveAmplitude;
+      let noisePart = (noise(posX * localNoiseScale, posYBase * localNoiseScale, lineSeed) - 0.5) * localWaveAmplitude * 1.5;
+      
+      let posY = posYBase + sinePart + noisePart;
 
-    // Angle follows the slope of the sine wave
-    let angleRad = cos(posX * waveFrequency) * waveFrequency * waveAmplitude;
-    let angleDegree = degrees(atan(angleRad));
+      let sizeW = random(80, 180);
+      let sizeH = random(8, 16);
 
-    push();
-    rotate(radians(_angle));
-    collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
-    pop();
+      // Estimate slope for angle calculation
+      let sampleNextX = posX + 5;
+      let nextSinePart = sin(sampleNextX * localWaveFrequency + localPhaseShift) * localWaveAmplitude;
+      let nextNoisePart = (noise(sampleNextX * localNoiseScale, posYBase * localNoiseScale, lineSeed) - 0.5) * localWaveAmplitude * 1.5;
+      let nextPosY = posYBase + nextSinePart + nextNoisePart;
+      
+      let angleRad = atan2(nextPosY - posY, sampleNextX - posX);
+      let angleDegree = degrees(angleRad);
 
-    bufferLayerColorful.draw(() => {
       push();
       rotate(radians(_angle));
-      collager.redrawRect(posX, posY, sizeW, sizeH, angleDegree);
+      collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
       pop();
-    });
 
-    bufferLayerMask.draw(() => {
-      push();
-      rotate(radians(_angle));
-      colorMode(RGB);
-      tint(0, 0, 0);
-      collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angleDegree);
+      bufferLayerColorful.draw(() => {
+        push();
+        rotate(radians(_angle));
+        collager.redrawRect(posX, posY, sizeW, sizeH, angleDegree);
+        pop();
+      });
 
-      let drawInMask = random(0, 1) < 0.15;
-      if (drawInMask) {
-        tint(255, random(0, 255), 255);
-        collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angleDegree);
-      }
-      pop();
-    });
+      bufferLayerMask.draw(() => {
+        push();
+        rotate(radians(_angle));
+        colorMode(RGB);
+        
+        // Always clear mask for this rect first
+        tint(0, 0, 0);
+        collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angleDegree);
 
-    if (i % 20 == 0) {
-      await sleep(16);
+        // If line is selected, draw into the mask
+        if (isLineInMask) {
+          tint(255, random(0, 255), 255);
+          collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angleDegree);
+        }
+        pop();
+      });
     }
+    
+    await sleep(50); // Draw line by line
   }
 }
 
