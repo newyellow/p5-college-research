@@ -30,8 +30,10 @@ async function startClient() {
     
     // Serve static files
     app.use(express.static(path.join(__dirname, 'public')));
-    // Serve project root for artworks
-    app.use('/artworks', express.static(path.join(__dirname, '../')));
+    // Serve artworks folder
+    app.use('/artworks', express.static(path.join(__dirname, '../_artworks')));
+    // Serve artwork configurations
+    app.use('/artwork-configs', express.static(path.join(__dirname, 'configs', 'artworks')));
 
     // API to get random record locally
     app.get('/api/random-record', (req, res) => {
@@ -76,6 +78,11 @@ async function startClient() {
                     artworkUrl = artworkConfig.path;
                 } else if (pickedTeamId === 'TeamA') {
                     artworkUrl = '/artworks/_TeamA_LazyDuck/index.html';
+                } else {
+                    // Fallback or prepend /artworks/ if it's a relative path within _artworks
+                    if (artworkConfig.path && !artworkConfig.path.startsWith('/')) {
+                        artworkUrl = `/artworks/${artworkConfig.path}`;
+                    }
                 }
 
                 // Construct the minimal object expected by client-display.html

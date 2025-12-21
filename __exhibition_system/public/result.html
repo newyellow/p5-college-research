@@ -185,7 +185,7 @@
             try {
                 // Folder is lowercase version of ID (TeamA -> teamA)
                 const folder = id.toLowerCase();
-                const configUrl = `/artworks/__exhibition_system/configs/artworks/${folder}/${id}.json`;
+                const configUrl = `/artwork-configs/${folder}/${id}.json`;
                 const response = await fetch(configUrl);
                 if (response.ok) {
                     const config = await response.json();
