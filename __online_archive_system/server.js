@@ -40,14 +40,46 @@ function getNextIterationId() {
     return config.lastIterationId.toString();
 }
 
-// Map team IDs to titles and folder names
-const TEAM_DATA = {
-    'TeamA': { title: 'Lazy Duck', folder: '_TeamA_LazyDuck' },
-    'TeamB': { title: 'Little Duck Bottle', folder: '_TeamB_LittleDuckBottle' },
-    'TeamC': { title: 'Mountain Sea Man', folder: '_TeamC_MountainSeaMan' },
-    'TeamD': { title: 'Kaleidoscope', folder: '_TeamD_Kaleidoscope' },
-    'TeamE': { title: 'Lanyang Beauties', folder: '_TeamE_LanyangBeauties' }
-};
+// Load artwork metadata dynamically from the exhibition system
+function getTeamData() {
+    const teamData = {};
+    const artworksDir = path.join(__dirname, '..', '__exhibition_system', 'configs', 'artworks');
+    
+    if (fs.existsSync(artworksDir)) {
+        const folders = fs.readdirSync(artworksDir);
+        folders.forEach(folder => {
+            const folderPath = path.join(artworksDir, folder);
+            if (fs.statSync(folderPath).isDirectory()) {
+                const files = fs.readdirSync(folderPath);
+                files.forEach(file => {
+                    if (path.extname(file) === '.json') {
+                        try {
+                            const config = JSON.parse(fs.readFileSync(path.join(folderPath, file), 'utf8'));
+                            if (config.id) {
+                                // Extract folder name from path or fallback
+                                let folderName = folder;
+                                if (config.path && config.path.startsWith('/artworks/')) {
+                                    const parts = config.path.split('/');
+                                    folderName = parts[2]; // e.g., "_TeamB_LittleDuckBottle"
+                                } else if (config.id === 'TeamA') {
+                                    folderName = '_TeamA_LazyDuck';
+                                }
+                                
+                                teamData[config.id] = {
+                                    title: config.title,
+                                    folder: folderName
+                                };
+                            }
+                        } catch (e) {
+                            console.error(`Error loading artwork config ${file}:`, e);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    return teamData;
+}
 
 // API: Save artwork parameters
 app.post('/api/save', (req, res) => {
@@ -57,9 +89,11 @@ app.post('/api/save', (req, res) => {
         return res.status(400).json({ error: 'Missing artwork ID' });
     }
 
+    const teamData = getTeamData();
+    const teamInfo = teamData[id] || { title: id, folder: id };
+
     // Generate a unique sequential ID for this iteration
     const iterationId = getNextIterationId();
-    const teamInfo = TEAM_DATA[id] || { title: id, folder: id };
     
     const data = {
         iterationId,
@@ -86,8 +120,16 @@ app.get('/api/load/:iterationId', (req, res) => {
     const filePath = path.join(DATA_DIR, `${iterationId}.json`);
 
     if (fs.existsSync(filePath)) {
-        const data = fs.readFileSync(filePath, 'utf8');
-        res.json(JSON.parse(data));
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        
+        // Ensure we use the latest title and folder from the dynamic config
+        const teamData = getTeamData();
+        if (teamData[data.artworkId]) {
+            data.title = teamData[data.artworkId].title;
+            data.folder = teamData[data.artworkId].folder;
+        }
+        
+        res.json(data);
     } else {
         res.status(404).json({ error: 'Artwork not found' });
     }
