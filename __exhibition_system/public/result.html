@@ -158,7 +158,7 @@
     <script src="/js/QRCodeManager.js"></script>
     <script>
       // Configuration for the separate host where artworks can be viewed
-      const ARTWORK_VIEW_BASE_URL = "https://your-exhibition-website.com"; // Change this to your actual URL
+      const ARTWORK_VIEW_BASE_URL = "http://localhost:3600/"; // Change this to your actual URL
 
       async function displayParamsAndQRCode() {
         const params = new URLSearchParams(window.location.search);
@@ -217,6 +217,7 @@
         if (fp3) qrParams.p3 = fp3;
 
         const shareURL = QRCodeManager.constructURL(ARTWORK_VIEW_BASE_URL, qrParams);
+        console.log("QR Code URL:", shareURL);
         qrManager.generate(shareURL);
       }
 
