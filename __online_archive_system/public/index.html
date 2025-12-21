@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Archive - Artwork Result</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #artwork-frame {
+            flex: 1;
+            border: none;
+            background-color: #000;
+        }
+
+        .info-panel {
+            width: 400px;
+            padding: 40px;
+            background-color: #262626;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #444;
+            padding-bottom: 10px;
+            color: #fff;
+        }
+
+        .param-group {
+            margin-bottom: 20px;
+        }
+
+        .param-label {
+            display: block;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .param-value {
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            background: #333;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+
+        .share-section {
+            margin-top: auto;
+            padding-top: 30px;
+            border-top: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .share-url {
+            font-size: 12px;
+            color: #aaa;
+            word-break: break-all;
+            background: #111;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .copy-btn {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #555;
+        }
+
+        .copy-btn.success {
+            background: #27ae60;
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+            }
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            #artwork-frame {
+                width: 100%;
+                height: 60vh;
+                position: sticky;
+                top: 0;
+            }
+            .info-panel {
+                width: 100%;
+                padding: 30px 20px;
+                box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading-overlay">Loading artwork...</div>
+
+    <div class="container">
+        <iframe id="artwork-frame"></iframe>
+        
+        <div class="info-panel">
+            <h1 id="artwork-title">Artwork Title</h1>
+            
+            <div class="param-group">
+                <span class="param-label">Iteration ID</span>
+                <div class="param-value" id="iter-id">-</div>
+            </div>
+
+            <div class="param-group">
+                <span class="param-label">Subtype</span>
+                <div class="param-value" id="val-subtype">-</div>
+            </div>
+
+            <div class="param-group">
+                <span class="param-label">Seed</span>
+                <div class="param-value" id="val-seed">-</div>
+            </div>
+
+            <div class="param-group">
+                <span class="param-label">Color Parameter (p1)</span>
+                <div class="param-value" id="val-p1">-</div>
+            </div>
+
+            <div class="param-group">
+                <span class="param-label">Density Parameter (p2)</span>
+                <div class="param-value" id="val-p2">-</div>
+            </div>
+
+            <div class="param-group">
+                <span class="param-label">Chaos Parameter (p3)</span>
+                <div class="param-value" id="val-p3">-</div>
+            </div>
+
+            <div class="share-section">
+                <span class="param-label">Shareable Link</span>
+                <div class="share-url" id="share-link">Generating link...</div>
+                <button class="copy-btn" id="copy-btn">Copy Link</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function init() {
+            const pathParts = window.location.pathname.split('/');
+            const iterationId = pathParts[pathParts.indexOf('view') + 1];
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const artworkId = urlParams.get('id');
+
+            if (iterationId && iterationId !== '') {
+                // Case: Viewing an existing iteration
+                await loadArtwork(iterationId);
+            } else if (artworkId) {
+                // Case: Saving a new iteration from URL parameters
+                const data = {
+                    id: artworkId,
+                    seed: urlParams.get('seed'),
+                    subtype: urlParams.get('subtype'),
+                    p1: urlParams.get('p1'),
+                    p2: urlParams.get('p2'),
+                    p3: urlParams.get('p3')
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE}/api/save`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        // Redirect to the view URL without query params
+                        window.history.replaceState({}, '', `/view/${result.iterationId}`);
+                        await loadArtwork(result.iterationId);
+                    }
+                } catch (e) {
+                    console.error('Failed to save artwork:', e);
+                    document.getElementById('loading').textContent = 'Error saving artwork.';
+                }
+            } else {
+                document.getElementById('loading').textContent = 'No artwork specified.';
+            }
+        }
+
+        async function loadArtwork(iterationId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/load/${iterationId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('loading').textContent = 'Artwork not found.';
+                    return;
+                }
+
+                displayData(data);
+                document.getElementById('loading').style.display = 'none';
+            } catch (e) {
+                console.error('Failed to load artwork:', e);
+                document.getElementById('loading').textContent = 'Error loading artwork.';
+            }
+        }
+
+        function displayData(data) {
+            document.getElementById('artwork-title').textContent = data.title || data.artworkId;
+            document.getElementById('iter-id').textContent = data.iterationId;
+            document.getElementById('val-subtype').textContent = data.subtype !== null ? data.subtype : '-';
+            document.getElementById('val-seed').textContent = data.seed || '-';
+            document.getElementById('val-p1').textContent = data.p1 || '-';
+            document.getElementById('val-p2').textContent = data.p2 || '-';
+            document.getElementById('val-p3').textContent = data.p3 || '-';
+            
+            const shareLink = `${window.location.origin}/view/${data.iterationId}`;
+            const shareLinkEl = document.getElementById('share-link');
+            shareLinkEl.textContent = shareLink;
+
+            document.getElementById('copy-btn').onclick = () => {
+                navigator.clipboard.writeText(shareLink).then(() => {
+                    const btn = document.getElementById('copy-btn');
+                    btn.textContent = 'Copied!';
+                    btn.classList.add('success');
+                    setTimeout(() => {
+                        btn.textContent = 'Copy Link';
+                        btn.classList.remove('success');
+                    }, 2000);
+                });
+            };
+
+            // Construct iframe URL
+            const iframeUrl = `/artworks/${data.folder}/index.html?seed=${data.seed}&subtype=${data.subtype}&p1=${data.p1}&p2=${data.p2}&p3=${data.p3}`;
+            document.getElementById('artwork-frame').src = iframeUrl;
+        }
+
+        init();
+    </script>
+</body>
+</html>
