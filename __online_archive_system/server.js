@@ -13,13 +13,23 @@ app.set('trust proxy', 1);
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve the artworks folder
-app.use('/artworks', express.static(path.join(__dirname, '../_artworks')));
+// Serve static files with caching
+// Artwork assets (heavy images/shaders) - 30 days
+app.use('/artworks', express.static(path.join(__dirname, '../_artworks'), {
+    maxAge: 2592000000,
+    immutable: true
+}));
 
-// Serve the artwork configurations matching the exhibition system structure
-app.use('/artwork-configs', express.static(path.join(__dirname, '..', '__exhibition_system', 'configs', 'artworks')));
+// Artwork configurations (JSON) - 5 minutes
+app.use('/artwork-configs', express.static(path.join(__dirname, '..', '__exhibition_system', 'configs', 'artworks'), {
+    maxAge: 300000
+}));
+
+// System public files (index.html, etc) - 1 hour
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: 3600000
+}));
 
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_DIR = path.join(__dirname, 'configs');
