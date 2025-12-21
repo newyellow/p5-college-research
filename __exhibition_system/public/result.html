@@ -127,13 +127,17 @@
     <div class="result-container">
       <div class="info-section">
         <div class="qr-container">
-          <p class="qr-text">掃描下載作品圖片</p>
+          <p class="qr-text">掃描保存作品成果</p>
           <div class="qr-code" id="qrCode">QR Code 區域</div>
         </div>
 
         <!-- 參數顯示區 -->
         <div class="params-container">
             <div class="params-title">生成參數</div>
+            <div class="param-item">
+                <span class="param-label">生成類別</span>
+                <span class="param-value" id="subtypeValue">-</span>
+            </div>
             <div class="param-item">
                 <span class="param-label">顏色種子</span>
                 <span class="param-value" id="param1Value">-</span>
@@ -156,12 +160,13 @@
       // Configuration for the separate host where artworks can be viewed
       const ARTWORK_VIEW_BASE_URL = "https://your-exhibition-website.com"; // Change this to your actual URL
 
-      function displayParamsAndQRCode() {
+      async function displayParamsAndQRCode() {
         const params = new URLSearchParams(window.location.search);
 
         const p1 = params.get("p1");
         const p2 = params.get("p2");
         const p3 = params.get("p3");
+        const subtype = params.get("subtype");
         const seed = params.get("seed");
         const id = params.get("id");
 
@@ -175,6 +180,27 @@
         if (fp2) document.getElementById("param2Value").textContent = fp2;
         if (fp3) document.getElementById("param3Value").textContent = fp3;
 
+        // Fetch Artwork Config to get subtype name
+        if (id && subtype !== null) {
+            try {
+                // Folder is lowercase version of ID (TeamA -> teamA)
+                const folder = id.toLowerCase();
+                const configUrl = `/artworks/__exhibition_system/configs/artworks/${folder}/${id}.json`;
+                const response = await fetch(configUrl);
+                if (response.ok) {
+                    const config = await response.json();
+                    if (config.subtypes && config.subtypes[subtype]) {
+                        document.getElementById("subtypeValue").textContent = config.subtypes[subtype];
+                    } else {
+                        document.getElementById("subtypeValue").textContent = `類別 ${subtype}`;
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching artwork config for subtype name:", e);
+                document.getElementById("subtypeValue").textContent = `類別 ${subtype}`;
+            }
+        }
+
         // Generate QR Code
         const qrManager = new QRCodeManager("qrCode", {
             width: 320,
@@ -185,6 +211,7 @@
         const qrParams = {};
         if (id) qrParams.id = id;
         if (seed) qrParams.seed = seed;
+        if (subtype !== null) qrParams.subtype = subtype;
         if (fp1) qrParams.p1 = fp1;
         if (fp2) qrParams.p2 = fp2;
         if (fp3) qrParams.p3 = fp3;

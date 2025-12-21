@@ -5,7 +5,7 @@ const seed = urlParams.get('seed') || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get('p1') || Math.random());
 const p2 = parseFloat(urlParams.get('p2') || Math.random());
 const p3 = parseFloat(urlParams.get('p3') || Math.random());
-const p4 = parseFloat(urlParams.get('p4') || Math.random());
+const subtype = urlParams.get("subtype") || int(Math.random() * 3);
 
 // this is a p5js v2 script
 let _renderer = null;
@@ -69,7 +69,7 @@ async function setup() {
   collager.setLutTexture(lutTexture);
   collager.setLutIntensity(1.0);
 
-  bottleIndex = int(random(0, 3));
+  bottleIndex = subtype;
 
   bottleScale = random(0.66, 1.1);
   // bottleRotation = random(-20, 20);

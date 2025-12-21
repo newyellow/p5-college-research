@@ -284,6 +284,11 @@
             const jsonFile = artwork.id + '.json'; // Still need this for the 'data' param
             const params = new URLSearchParams();
             params.append('data', jsonFile);
+
+            // Pass subtype if available
+            if (artwork.iteration && artwork.iteration.parameters && artwork.iteration.parameters.subtype !== undefined) {
+                params.append('subtype', artwork.iteration.parameters.subtype);
+            }
             
             artworkIframe.src = `${baseUrl}?${params.toString()}`;
 
@@ -359,6 +364,11 @@
             const jsonFile = currentArtwork.id + '.json';
             const params = new URLSearchParams();
             params.append('data', jsonFile);
+
+            // Pass subtype if available
+            if (currentArtwork.iteration && currentArtwork.iteration.parameters && currentArtwork.iteration.parameters.subtype !== undefined) {
+                params.append('subtype', currentArtwork.iteration.parameters.subtype);
+            }
             
             artworkIframe.src = `${baseUrl}?${params.toString()}`;
         });
@@ -383,7 +393,8 @@
             const params = {
                 p1: (document.getElementById('param1').value / 92).toFixed(4),
                 p2: (document.getElementById('param2').value / 1000000).toFixed(4),
-                p3: (document.getElementById('param3').value / 1000000).toFixed(4)
+                p3: (document.getElementById('param3').value / 1000000).toFixed(4),
+                subtype: Math.floor(Math.random() * 3) // Random subtype 0, 1, or 2
             };
             
             // 1. Send Request

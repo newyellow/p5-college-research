@@ -5,7 +5,7 @@ const seed = urlParams.get('seed') || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get('p1') || Math.random());
 const p2 = parseFloat(urlParams.get('p2') || Math.random());
 const p3 = parseFloat(urlParams.get('p3') || Math.random());
-const p4 = parseFloat(urlParams.get('p4') || Math.random());
+const subtype = urlParams.get("subtype") || int(Math.random() * 3);
 
 // this is a p5js v2 script
 let _renderer = null;
@@ -39,7 +39,10 @@ async function setup() {
   mainHue = lerp(0, 360, p1);
   rectBaseSize = lerp(30, 200, p2);
   baseThickness = lerp(1, 10, p3);
-  sizeVariation = lerp(0.1, 0.6, p4);
+  sizeVariation = lerp(0.1, 0.6, p3);
+
+  // set subtype, although not implemented yet
+  let layoutType = subtype;
 
   // set to orthographic projection
   colorMode(HSB);
