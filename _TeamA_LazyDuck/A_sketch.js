@@ -72,7 +72,7 @@ async function asyncDraw() {
   let lutPath = getLUTPath(p1);
   let lutTexture = await loadImage("../" + lutPath);
   collager.setLutTexture(lutTexture);
-  collager.setLutIntensity(1.0);
+  collager.setLutIntensity(0.6);
 
   // draw sky layer
   await drawSkyLayer(-height / 2 - 100, -100, random(-5, 5));
@@ -142,21 +142,21 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
 
   let rows = 6;
   let cols = 5;
-  let landWidth = width * 1.5; // Wider to account for rotation
+  let landWidth = width * 2.0; 
   let landHeight = _toHeight - _fromHeight;
   
   let stepX = landWidth / cols;
   let stepY = landHeight / rows;
 
   let skewAmount = 0.4; // perspective skew
+  
+  let totalSkewShift = landWidth * skewAmount;
+  let startXOffset = -landWidth / 2 - totalSkewShift / 2;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      let isVertical = random() > 0.5;
-      
-      // Calculate corner points of the field (parallelogram)
       let getPos = (col, row) => {
-        let x = -landWidth / 2 + col * stepX + (row / rows) * landWidth * skewAmount;
+        let x = startXOffset + col * stepX + (row / rows) * landWidth * skewAmount;
         let y = _fromHeight + row * stepY;
         return { x, y };
       };
@@ -166,57 +166,128 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
       let p01 = getPos(c, r + 1);
       let p11 = getPos(c + 1, r + 1);
 
-      // Fill the field with hatch lines
-      let density = 15;
-      for (let i = 0; i < density; i++) {
-        let t = i / (density - 1);
-        
-        let startP, endP;
-        if (isVertical) {
-          // Horizontal lines (spanning across)
-          startP = { x: lerp(p00.x, p01.x, t), y: lerp(p00.y, p01.y, t) };
-          endP = { x: lerp(p10.x, p11.x, t), y: lerp(p10.y, p11.y, t) };
-        } else {
-          // Vertical lines (spanning down)
-          startP = { x: lerp(p00.x, p10.x, t), y: lerp(p00.y, p10.y, t) };
-          endP = { x: lerp(p01.x, p11.x, t), y: lerp(p01.y, p11.y, t) };
-        }
-
-        let posX = (startP.x + endP.x) / 2;
-        let posY = (startP.y + endP.y) / 2;
-        let sizeW = dist(startP.x, startP.y, endP.x, endP.y);
-        let sizeH = random(8, 15);
-        let angle = degrees(atan2(endP.y - startP.y, endP.x - startP.x));
-
-        push();
-        rotate(radians(_angle));
-        collager.drawRect(posX, posY, sizeW, sizeH, angle);
-        pop();
-
-        bufferLayerColorful.draw(() => {
-          push();
-          rotate(radians(_angle));
-          collager.redrawRect(posX, posY, sizeW, sizeH, angle);
-          pop();
-        });
-
-        bufferLayerMask.draw(() => {
-          push();
-          rotate(radians(_angle));
-          colorMode(RGB);
-          tint(0, 0, 0);
-          collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angle);
-
-          let drawInMask = random(0, 1) < 0.2;
-          if (drawInMask) {
-            tint(255, random(0, 255), 255);
-            collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angle);
-          }
-          pop();
-        });
-      }
+      await drawLandRect(p00, p10, p11, p01, _angle);
       
       await sleep(50);
+    }
+  }
+}
+
+async function drawLandRect(p00, p10, p11, p01, _angle) {
+  let isVertical = random() > 0.5;
+  let fieldPoints = [
+    new NYPoint(p00.x, p00.y),
+    new NYPoint(p10.x, p10.y),
+    new NYPoint(p11.x, p11.y),
+    new NYPoint(p01.x, p01.y)
+  ];
+
+  // Special chance for "single full rect" mode
+  let isSingleFullRect = random() < 0.2;
+
+  if (isSingleFullRect) {
+    // 1. Draw full field shape
+    collager.drawVertexShape(fieldPoints);
+    
+    push();
+    rotate(radians(_angle));
+    collager.redrawVertexShape();
+    pop();
+
+    bufferLayerColorful.draw(() => {
+      push();
+      rotate(radians(_angle));
+      collager.redrawVertexShape();
+      pop();
+    });
+
+    bufferLayerMask.draw(() => {
+      push();
+      rotate(radians(_angle));
+      colorMode(RGB);
+      tint(0, 0, 0);
+      collager.redrawVertexShapeOutlineMask();
+      let drawInMask = random() < 0.3;
+      if (drawInMask) {
+        tint(255, random(0, 255), 255);
+        collager.redrawVertexShapeInsideMask();
+      }
+      pop();
+    });
+
+    // 2. Draw 4 borders
+    let edges = [[p00, p10], [p10, p11], [p11, p01], [p01, p00]];
+    for (let edge of edges) {
+      let pt1 = edge[0];
+      let pt2 = edge[1];
+      let posX = (pt1.x + pt2.x) / 2;
+      let posY = (pt1.y + pt2.y) / 2;
+      let sizeW = dist(pt1.x, pt1.y, pt2.x, pt2.y) + 2;
+      let sizeH = random(10, 25);
+      let angle = degrees(atan2(pt2.y - pt1.y, pt2.x - pt1.x));
+
+      push();
+      rotate(radians(_angle));
+      collager.drawRect(posX, posY, sizeW, sizeH, angle);
+      pop();
+
+      bufferLayerColorful.draw(() => {
+        push();
+        rotate(radians(_angle));
+        collager.redrawRect(posX, posY, sizeW, sizeH, angle);
+        pop();
+      });
+    }
+  } else {
+    // Existing hatch line logic
+    let lineThickness = random(12, 60);
+    let fieldDimension = isVertical ? dist(p00.x, p00.y, p01.x, p01.y) : dist(p00.x, p00.y, p10.x, p10.y);
+    let density = floor(fieldDimension / (lineThickness * 0.7)); 
+    
+    for (let i = 0; i < density; i++) {
+      let t = i / (density - 1);
+      
+      let startP, endP;
+      if (isVertical) {
+        startP = { x: lerp(p00.x, p01.x, t), y: lerp(p00.y, p01.y, t) };
+        endP = { x: lerp(p10.x, p11.x, t), y: lerp(p10.y, p11.y, t) };
+      } else {
+        startP = { x: lerp(p00.x, p10.x, t), y: lerp(p00.y, p10.y, t) };
+        endP = { x: lerp(p01.x, p11.x, t), y: lerp(p01.y, p11.y, t) };
+      }
+
+      let posX = (startP.x + endP.x) / 2;
+      let posY = (startP.y + endP.y) / 2;
+      let sizeW = dist(startP.x, startP.y, endP.x, endP.y) + 2;
+      let sizeH = lineThickness * random(0.8, 1.2);
+      let angle = degrees(atan2(endP.y - startP.y, endP.x - startP.x));
+
+      push();
+      rotate(radians(_angle));
+      collager.drawRect(posX, posY, sizeW, sizeH, angle);
+      pop();
+
+      bufferLayerColorful.draw(() => {
+        push();
+        rotate(radians(_angle));
+        collager.redrawRect(posX, posY, sizeW, sizeH, angle);
+        pop();
+      });
+
+      bufferLayerMask.draw(() => {
+        push();
+        rotate(radians(_angle));
+        colorMode(RGB);
+        tint(0, 0, 0);
+        collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angle);
+
+        let drawInMask = random(0, 1) < 0.2;
+        if (drawInMask) {
+          tint(255, random(0, 255), 255);
+          collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angle);
+        }
+        pop();
+      });
     }
   }
 }
