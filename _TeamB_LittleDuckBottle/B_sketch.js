@@ -18,6 +18,7 @@ let bufferLayerBottleStroke;
 
 let bufferLayersComposite;
 let bufferLayerEffectResult;
+let bufferLayerHoleEffectResult;
 let bufferLayerEffectMask;
 
 let bufferLayerBottleHole;
@@ -58,6 +59,7 @@ async function setup() {
 
   bufferLayersComposite = createFramebuffer();
   bufferLayerEffectResult = createFramebuffer();
+  bufferLayerHoleEffectResult = createFramebuffer();
 
   // init collager
   collager = new Collager();
@@ -67,7 +69,7 @@ async function setup() {
   let lutPath = getLUTPath(p1);
   let lutTexture = await loadImage("../" + lutPath);
   collager.setLutTexture(lutTexture);
-  collager.setLutIntensity(1.0);
+  collager.setLutIntensity(0.66);
 
   bottleIndex = subtype;
 
@@ -170,6 +172,9 @@ async function drawBottle(bottleIndex) {
   }
   else if (bottleIndex == 1) {
     await drawBottleBInner();
+
+    // draw ears
+    await drawBottleBEars();
   }
   else if (bottleIndex == 2) {
     await drawBottleCInner();
@@ -189,6 +194,7 @@ async function drawBottle(bottleIndex) {
     drawCurveStroke(5, strokeThickness, strokeNoiseScale, strokeSampleCount);
 
     if (bottleIndex == 2) {
+      strokeThickness *= 0.66;
       drawTargetCurveStroke(curveReaders[1], strokeThickness, strokeNoiseScale, strokeSampleCount);
     }
     pop();
@@ -201,20 +207,65 @@ async function drawBottleAInner() {
   // draw inside
   collager.clearImages();
   await collager.addImage('images/A_snow.JPG', 0.2, 0.6);
-  await collager.addImage('images/A_tree.JPG', 0.2, 0.6);
-  await collager.addImage('images/A_train.JPG', 0.2, 0.6);
 
   push();
   {
-    let pieceCount = 100;
+    let pieceCount = lerp(100, 300, p2);
     for (let i = 0; i < pieceCount; i++) {
       let posX = random(-width / 2, width / 2);
       let posY = random(-height / 2, height / 2);
 
-      let sizeX = random(100, 600);
-      let sizeY = random(100, 600);
+      let baseSize = lerp(360, 120, p2);
+      let sizeX = random(baseSize, baseSize * 2);
+      let sizeY = random(baseSize, baseSize * 2);
 
       let angleDegree = random(-180, 180);
+
+      let shadowOffset = random(3, 12);
+      collager.shadowOffset(shadowOffset, shadowOffset);
+
+      bufferLayerBottleInner.draw(() => {
+        collager.drawRect(posX, posY, sizeX, sizeY, angleDegree);
+      });
+
+      imageMode(CENTER);
+      image(bufferLayerBG, 0, 0, width, height);
+
+      push();
+      scale(bottleScale);
+      rotate(radians(bottleRotation));
+
+      maskBottleBody();
+      image(bufferLayerBottleInner, 0, 0, width, height);
+      pop();
+
+      await sleep(16);
+    }
+  }
+  pop();
+
+  // trees
+  collager.setLutIntensity(0.24);
+  collager.clearImages();
+  await collager.addImage('images/A_tree_01.jpg', 0.36, 0.8);
+  await collager.addImage('images/A_tree_02.jpg', 0.36, 0.8);
+
+  push();
+  {
+    let pieceCount = int(random(2, 7));
+    for (let i = 0; i < pieceCount; i++) {
+      let posX = random(-width / 2, width / 2);
+
+      // Restrict posY to the upper half of the bottle
+      // (from -height/2 to 0, or slightly below 0 for some spread)
+      let minY = -height / 2;
+      let maxY = height / 2 - 200;
+      let posY = random(minY, maxY);
+
+      let sizeX = random(300, 600);
+      let sizeY = random(400, 800);
+
+      let angleDegree = random(-24, 24);
 
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
@@ -245,19 +296,27 @@ async function drawBottleBInner() {
   // draw inside
   collager.clearImages();
   await collager.addImage('images/B_tree.jpg', 0.2, 0.6);
-  await collager.addImage('images/B_stone.jpg', 0.2, 0.6);
-  await collager.addImage('images/B_cloud.jpg', 0.2, 0.6);
 
+  // background layer
   push();
   {
+    let pieceCount = int(lerp(36, 120, p2));
 
-    let pieceCount = 100;
+    collager.rectPointCount(240);
+    collager.rectNoiseScale(0.012);
+    collager.rectEdgeOffset(36);
+    collager.rectRoundness(40);
+
+    collager.outlineWeight(12);
+
+    collager.noShadow();
+
     for (let i = 0; i < pieceCount; i++) {
       let posX = random(-width / 2, width / 2);
       let posY = random(-height / 2, height / 2);
 
-      let sizeX = random(120, 480);
-      let sizeY = random(120, 480);
+      let sizeX = random(120, 480) * lerp(1.2, 0.6, p2);
+      let sizeY = random(120, 480) * lerp(1.2, 0.36, p2);
 
       let angleDegree = random(-180, 180);
 
@@ -284,6 +343,46 @@ async function drawBottleBInner() {
   }
   // pop();
 
+  // draw fixed image on the bottle
+  {
+    collager.clearImages();
+    await collager.addImage('images/B_sky.jpeg', 0.6, 0.9);
+
+    let skyPosX = 0;
+    let skySizeX = 1024;
+    let skySizeY = random(240, 600);
+
+    let skyPosY = -600 + skySizeY / 2;
+    
+    let skyAngle = random(-12, 12);
+
+    bufferLayerBottleInner.draw(() => {
+      collager.drawRect(skyPosX, skyPosY, skySizeX, skySizeY, skyAngle);
+    });
+
+    // draw the stone artifact
+    let stoneImg = await loadImage('artifact/text_board.jpg');
+    let stoneCurveJson = await loadJSON('artifact/text_board.json');
+    let stoneSet = new CroppedImageSet(stoneImg, stoneCurveJson);
+
+    let stonePosX = 0
+    let stoneSize = random(240, 600);
+    let stonePosY = -600 + stoneSize / 2;
+    let stoneAngle = random(-12, 12);
+
+    bufferLayerBottleInner.draw(() => {
+      collager.drawMaskedImage(
+        stoneSet.imageData,
+        stoneSet.curveData,
+        stonePosX,
+        stonePosY,
+        stoneSize,
+        stoneAngle
+      );
+    });
+
+  }
+
   // draw ducks
   // push();
   {
@@ -298,22 +397,39 @@ async function drawBottleBInner() {
     duckImgs.push(await loadImage('images/duck-metal.png'));
     duckImgs.push(await loadImage('images/duck-water.png'));
 
-    let duckCount = int(random(6, 24));
+    // duck spawn parameters
+    let duckSpawnCenterX = 0;
+    let duckSpawnCenterY = 200; // Center of the circular spawn area
+    let duckSpawnRadiusMin = 200;
+    let duckSpawnRadiusMax = duckSpawnRadiusMin * 3;
+    let duckSpawnAngleMin = -45; // Starting angle in degrees
+    let duckSpawnAngleMax = 225; // Ending angle in degrees
 
+    let duckCount = int(lerp(6, 18, p2));
+
+    // Evenly spread ducks along the arc, distribute radius and angle evenly
     for (let i = 0; i < duckCount; i++) {
       let duckImg = duckImgs[int(random(0, duckImgs.length))];
 
-      let duckSize = random(100, 300);
+      let duckSize = lerp(240, 180, p2) * random(0.9, 1.1);
 
-      let duckPosX = random(-400, 400);
-      let duckPosY = random(-300, 600);
+      // Evenly spaced angle along the arc
+      let t = duckCount > 1 ? i / (duckCount - 1) : 0.5;
+      let spawnAngle = lerp(duckSpawnAngleMin, duckSpawnAngleMax, t) + random(-10, 10);
 
-      let duckAngle = random(-180, 180);
+      // Optionally, space the radius a bit for more spread
+      let spawnRadius = random(duckSpawnRadiusMin, duckSpawnRadiusMax);
+
+      let duckPosX = duckSpawnCenterX + spawnRadius * cos(radians(spawnAngle));
+      let duckPosY = duckSpawnCenterY + spawnRadius * sin(radians(spawnAngle));
+
+      let duckAngle = spawnAngle + random(-10, 10);
 
       bufferLayerBottleInner.draw(() => {
         push();
         translate(duckPosX, duckPosY);
         rotate(radians(duckAngle));
+        imageMode(CENTER);
         image(duckImg, 0, 0, duckSize, duckSize);
         pop();
       });
@@ -335,17 +451,58 @@ async function drawBottleBInner() {
   pop();
 }
 
+async function drawBottleBEars() {
+  let leftEarImg = await loadImage('artifact/bottle_ear_left.jpg');
+  let leftEarCurve = await loadJSON('artifact/bottle_ear_left.json');
+  let rightEarImg = await loadImage('artifact/bottle_ear_right.jpg');
+  let rightEarCurve = await loadJSON('artifact/bottle_ear_right.json');
+
+  let earSize = 300; 
+  let earY = -360;
+  let earXOffset = 330;
+
+  // Draw to BG buffer (the color layer)
+  bufferLayerBG.draw(() => {
+    push();
+    scale(bottleScale);
+    rotate(radians(bottleRotation));
+    collager.drawMaskedImage(leftEarImg, leftEarCurve, -earXOffset, earY, earSize, 0);
+    collager.drawMaskedImage(rightEarImg, rightEarCurve, earXOffset, earY, earSize, 0);
+    pop();
+  });
+
+  // Draw to Effect Mask buffer to occlude background breathing
+  bufferLayerEffectMask.draw(() => {
+    push();
+    scale(bottleScale);
+    rotate(radians(bottleRotation));
+    
+    // Left ear occlusion
+    collager.drawMaskedImage(leftEarImg, leftEarCurve, -10000, -10000, earSize, 0); // prepare
+    tint(0, 0, 0);
+    collager.redrawMaskedImageOutlineMask(-earXOffset, earY, 0);
+    
+    // Right ear occlusion
+    collager.drawMaskedImage(rightEarImg, rightEarCurve, -10000, -10000, earSize, 0); // prepare
+    tint(0, 0, 0);
+    collager.redrawMaskedImageOutlineMask(earXOffset, earY, 0);
+    
+    pop();
+  });
+}
 
 async function drawBottleCInner() {
   // draw inside
   collager.clearImages();
-  await collager.addImage('images/C_flower_1.jpg', 0.2, 0.6);
-  await collager.addImage('images/C_flower_2.jpg', 0.2, 0.6);
-  await collager.addImage('images/C_flower_3.jpg', 0.2, 0.6);
+  if(random(0, 1) < 0.5) {
+  await collager.addImage('images/C_sky_01.jpg', 0.12, 0.6);
+  await collager.addImage('images/C_sky_02.jpg', 0.12, 0.6);
+  } else {
+  await collager.addImage('images/C_bottle_pattern.jpg', 0.12, 0.6);
+  }
 
   push();
   {
-
     let pieceCount = 200;
     for (let i = 0; i < pieceCount; i++) {
       let posX = random(-width / 2, width / 2);
@@ -389,17 +546,28 @@ async function drawBottleCInner() {
     islandImgUrls.push('images/C_island_3.jpg');
     islandImgUrls.push('images/C_island_4.jpg');
     islandImgUrls.push('images/C_island_5.jpg');
-    islandImgUrls.push('images/C_island_6.jpg');
 
     let randomIslandIndex = int(random(0, islandImgUrls.length));
     let islandImg = await loadImage(islandImgUrls[randomIslandIndex]);
-
-    let islandImgRatio = islandImg.width / islandImg.height;
-    let islandSize = random(300, 600);
+    let islandSize = random(320, 480);
 
     bufferLayerBottleHole.draw(() => {
+      push();
       imageMode(CENTER);
-      image(islandImg, 0, 300, islandSize * islandImgRatio, islandSize);
+      image(islandImg, 0, 320, islandSize, islandSize);
+      pop();
+    });
+
+    // Draw hole area to effect mask so it breathes
+    bufferLayerEffectMask.draw(() => {
+      push();
+      colorMode(RGB);
+      tint(255, random(0, 255), 255);
+      noStroke();
+      beginShape();
+      drawCurveVertex(curveReaders[1]);
+      endShape(CLOSE);
+      pop();
     });
   }
   pop();
@@ -438,6 +606,25 @@ async function startBreathingEffect() {
       rect(0, 0, width, height);
     });
 
+    // Also apply breathing to the hole layer if needed
+    if (bottleIndex == 2) {
+      bufferLayerHoleEffectResult.draw(() => {
+        shader(breathingShader);
+        breathingShader.setUniform("width", 1080.0);
+        breathingShader.setUniform("height", 1920.0);
+        breathingShader.setUniform("time", (millis() - startTime) / 1000.0);
+        breathingShader.setUniform("uresolution", [width, height]);
+
+        breathingShader.setUniform("utexture", bufferLayerBottleHole);
+        breathingShader.setUniform("uMaskTexture", bufferLayerEffectMask);
+        breathingShader.setUniform("flipV", false);
+        breathingShader.setUniform("uEffectStrength", effectStrength * 0.36);
+
+        noStroke();
+        rect(0, 0, width, height);
+      });
+    }
+
     imageMode(CENTER);
     image(bufferLayerEffectResult, 0, 0, width, height);
 
@@ -455,9 +642,9 @@ async function startBreathingEffect() {
 
       // hole
       push();
-      if(bottleIndex == 2) {
+      if (bottleIndex == 2) {
         maskBottleHole();
-        image(bufferLayerBottleHole, 0, 0, width, height);
+        image(bufferLayerHoleEffectResult, 0, 0, width, height);
       }
       pop();
     }
