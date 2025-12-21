@@ -205,9 +205,14 @@
       </div>
     </div>
 
+    <script src="/node_modules/marked/lib/marked.umd.js"></script>
     <script>
+      function getQueryParams() {
+        return new URLSearchParams(window.location.search);
+      }
+
       function getJsonPath() {
-        const params = new URLSearchParams(window.location.search);
+        const params = getQueryParams();
         return params.get("data") || "TeamC.json";
       }
 
@@ -215,6 +220,36 @@
         const jsonPath = getJsonPath();
         const response = await fetch(jsonPath);
         const data = await response.json();
+        
+        const params = getQueryParams();
+        const subtype = params.get("subtype");
+        
+        // If subtype is present, try to load subtype md file
+        if (subtype !== null) {
+          try {
+            const subtypeMdPath = `subtype_${subtype}.md`;
+            const mdResponse = await fetch(subtypeMdPath);
+            if (mdResponse.ok) {
+                const mdContent = await mdResponse.text();
+                
+                // Parse image: ![alt](path)
+                const imgMatch = mdContent.match(/!\[.*?\]\((.*?)\)/);
+                if (imgMatch) {
+                    data.element = data.element || {};
+                    data.element.image = imgMatch[1];
+                    // Use the subtype name from config for label
+                    if (data.subtypes && data.subtypes[subtype]) {
+                        data.element.label = `♦︎ ${data.subtypes[subtype]} ♦︎`;
+                    }
+                    // Remove image tag from content and parse remaining as markdown
+                    data.element.content = marked.parse(mdContent.replace(/!\[.*?\]\((.*?)\)/, '').trim());
+                }
+            }
+          } catch (e) {
+            console.error("Error loading subtype md:", e);
+          }
+        }
+
         displayExhibitionData(data);
       }
 
