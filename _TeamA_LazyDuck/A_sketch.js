@@ -91,21 +91,14 @@ async function asyncDraw() {
 
   } else if (layoutType === 1 || layoutType === 2) {
     // Subtype 1: Ocean, Subtype 2: Farmland
-    let hasSky = random() < 0.4;
-    let skyPortion = hasSky ? random(10, 24) : 0;
-    
     let isSandwichLayout = random() < 0.5;
-    
-    if (skyPortion > 0) {
-      await drawSkyLayer(-height / 2 - 100, getY(skyPortion), random(-5, 5));
-    }
 
     if (!isSandwichLayout) {
-      // 1. standard: sky -> mountain -> sea/land
+      // 1. standard: mountain -> sea/land (no sky)
       let mtPortion = random(30, 60);
-      let mtStart = getY(skyPortion) - 100;
-      let layerEnd = getY(skyPortion + mtPortion);
-      
+      let mtStart = -height / 2 - 100;
+      let layerEnd = getY(mtPortion);
+
       await drawMountainLayer(mtStart, layerEnd + 100, random(-5, 5), 12);
       
       if (layoutType === 1) {
@@ -114,23 +107,23 @@ async function asyncDraw() {
         await drawLandLayer(layerEnd - 100, height / 2 + 100, random(-10, 10));
       }
     } else {
-      // 2. sandwich: sky -> mountain top -> sea/land -> mountain bottom
+      // 2. sandwich: mountain top -> sea/land -> mountain bottom (no sky)
       let mtTopPortion = random(10, 30);
       let mtBotPortion = random(10, 30);
-      
-      let seaLandStart = getY(skyPortion + mtTopPortion);
+
+      let seaLandStart = getY(mtTopPortion);
       let seaLandEnd = getY(100 - mtBotPortion);
-      
+
       // Top mountain
-      await drawMountainLayer(getY(skyPortion) - 100, seaLandStart + 100, random(-5, 5), 8);
-      
+      await drawMountainLayer(-height / 2 - 100, seaLandStart + 100, random(-5, 5), 8);
+
       // Sea or Land in the middle
       if (layoutType === 1) {
         await drawSeaLayer(seaLandStart - 100, seaLandEnd + 100, random(-20, 20));
       } else {
         await drawLandLayer(seaLandStart - 100, seaLandEnd + 100, random(-20, 20));
       }
-      
+
       // Bottom mountain
       await drawMountainLayer(seaLandEnd - 100, height / 2 + 100, random(-5, 5), 8);
     }
@@ -396,29 +389,42 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
   collager.cutoutNoiseScale(0.3);
   collager.cutoutRatio(0.2, 0.8);
 
-  collager.outlineWeight(24);
+  let waveOutlineThickness = lerp(12, 120, p3);
+  collager.outlineWeight(waveOutlineThickness);
   collager.outlineRatio(0.2, 0.8);
-  collager.outlineNoiseScale(0.6);
+  collager.outlineNoiseScale(0.01);
 
-  collager.noShadow();
+  collager.shadow(10, 0, 10, [0, 0, random(0.1, 0.3)], 0.36);
 
-  let seaLayerCount = Math.floor(random(16, 32));
+  let totalHeight = Math.abs(_toHeight - _fromHeight);
+  let layerSpacing = 10; // Desired distance between layers
+  let seaLayerCount = Math.max(4, Math.floor(totalHeight / layerSpacing));
+  let seaLayerOffset = totalHeight / seaLayerCount;
+
   let xSamplePoints = 40;
 
   let seaHeightRange = [30, 100]; // thickness variation range
   let seaThicknessNoiseScaleX = 0.005;
   let seaThicknessNoiseScaleY = 0.02;
 
-  let waveAmplitude = random(40, 80);
-  let waveFrequency = random(0.004, 0.012);
-
-  let totalHeight = Math.abs(_toHeight - _fromHeight);
-  let seaLayerOffset = totalHeight / seaLayerCount;
+  let waveAmplitude = lerp(20, 120, p3);
+  let waveFrequency = random(0.004, 0.006);
+  let waveNoiseAmplitude = random(20, 40);
+  let waveNoiseScale = random(0.005, 0.015);
 
   let yBase = _fromHeight;
 
   for (let y = 0; y < seaLayerCount; y++) {
     yBase += seaLayerOffset;
+
+    // randomize some parameters for each layer using noise
+    let freqNoise = noise(yBase * 0.01, 1234);
+    let ampNoise = noise(yBase * 0.01, 5678);
+    let noiseAmpNoise = noise(yBase * 0.01, 9999);
+    
+    let lineFrequency = waveFrequency * lerp(0.8, 1.2, freqNoise);
+    let lineAmplitude = waveAmplitude * lerp(0.8, 1.2, ampNoise);
+    let lineNoiseAmplitude = waveNoiseAmplitude * lerp(0.5, 1.5, noiseAmpNoise);
 
     let upperPoints = [];
     let lowerPoints = [];
@@ -435,9 +441,10 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
     for (let x = 0; x < xSamplePoints; x++) {
       let xPos = xStart + x * xStep;
       
-      // Base waveform: Sine wave
-      let sinePart = Math.sin(xPos * waveFrequency + localPhaseShift) * waveAmplitude;
-      let yCenter = yBase + sinePart;
+      // Base waveform: Sine wave + Noise
+      let sinePart = Math.sin(xPos * lineFrequency + localPhaseShift) * lineAmplitude;
+      let noisePart = (noise(xPos * waveNoiseScale, yBase * 0.01, lineSeed) - 0.5) * lineNoiseAmplitude;
+      let yCenter = yBase + sinePart + noisePart;
 
       // Thickness variation: Noise based
       let tNoise = noise(xPos * seaThicknessNoiseScaleX, yBase * seaThicknessNoiseScaleY, lineSeed);
