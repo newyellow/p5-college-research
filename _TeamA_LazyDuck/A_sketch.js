@@ -184,11 +184,9 @@ async function asyncDraw() {
 
 async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
   collager.clearImages();
-  await collager.addImage('images/farmland_01.jpg', 0.1, 0.4);
-  await collager.addImage('images/farmland_02.png', 0.1, 0.4);
-  await collager.addImage('images/farmland_03.jpg', 0.1, 0.4);
-  await collager.addImage('images/farmland_04.jpg', 0.1, 0.4);
-  await collager.addImage('images/farmland_05.jpg', 0.1, 0.4);
+  await collager.addImage('images/farmland_01.jpg', 0.2, 0.8);
+  await collager.addImage('images/farmland_02.png', 0.2, 0.8);
+  await collager.addImage('images/farmland_03.jpg', 0.2, 0.8);
 
   collager.cutoutThickness(10);
   collager.cutoutNoiseScale(0.5);
@@ -249,12 +247,36 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
 
 async function drawLandRect(p00, p10, p11, p01, _angle) {
   let isVertical = random() > 0.5;
+  let rad = radians(_angle);
+
+  // Helper to rotate points
+  const rotatePt = (pt) => {
+    return {
+      x: pt.x * cos(rad) - pt.y * sin(rad),
+      y: pt.x * sin(rad) + pt.y * cos(rad)
+    };
+  };
+
+  const ensureClockwise = (pts) => {
+    let s = 0;
+    for (let i = 0; i < pts.length; i++) {
+      let p1 = pts[i];
+      let p2 = pts[(i + 1) % pts.length];
+      s += (p2.x - p1.x) * (p2.y + p1.y);
+    }
+    if (s > 0) pts.reverse();
+    return pts;
+  };
+
   let fieldPoints = [
-    new NYPoint(p00.x, p00.y),
-    new NYPoint(p10.x, p10.y),
-    new NYPoint(p11.x, p11.y),
-    new NYPoint(p01.x, p01.y)
-  ];
+    rotatePt(p00),
+    rotatePt(p10),
+    rotatePt(p11),
+    rotatePt(p01)
+  ].map(v => new NYPoint(v.x, v.y));
+
+  // Ensure fieldPoints are clockwise
+  ensureClockwise(fieldPoints);
 
   // Pick a single image and mask status for the whole field
   let imageIndex = floor(random(0, collager.images.length));
@@ -266,22 +288,13 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
   if (isSingleFullRect) {
     // 1. Draw full field shape
     collager.drawVertexShape(fieldPoints, imageIndex);
-
-    push();
-    rotate(radians(_angle));
     collager.redrawVertexShape();
-    pop();
 
     bufferLayerColorful.draw(() => {
-      push();
-      rotate(radians(_angle));
       collager.redrawVertexShape();
-      pop();
     });
 
     bufferLayerMask.draw(() => {
-      push();
-      rotate(radians(_angle));
       colorMode(RGB);
       tint(0, 0, 0);
       collager.redrawVertexShapeOutlineMask();
@@ -289,7 +302,6 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
         tint(255, random(0, 255), 255);
         collager.redrawVertexShapeInsideMask();
       }
-      pop();
     });
 
     // 2. Draw 4 borders
@@ -301,53 +313,43 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
       let ptOpp2 = edges[i][3];
 
       let thickness = random(10, 25);
-
-      // Calculate a small parallelogram for the border
-      // We shift pt1 and pt2 towards the center of the field by thickness
+      
       let dirX = (ptOpp1.x + ptOpp2.x) / 2 - (pt1.x + pt2.x) / 2;
       let dirY = (ptOpp1.y + ptOpp2.y) / 2 - (pt1.y + pt2.y) / 2;
       let distToCenter = dist(0, 0, dirX, dirY);
       let ratio = thickness / distToCenter;
-
+      
       let v1 = pt1;
       let v2 = pt2;
       let v3 = { x: pt2.x + dirX * ratio, y: pt2.y + dirY * ratio };
       let v4 = { x: pt1.x + dirX * ratio, y: pt1.y + dirY * ratio };
 
-      let borderPoints = [v1, v2, v3, v4].map(v => new NYPoint(v.x, v.y));
-      let centerX = (v1.x + v2.x + v3.x + v4.x) / 4;
-      let centerY = (v1.y + v2.y + v3.y + v4.y) / 4;
+      let borderPoints = [rotatePt(v1), rotatePt(v2), rotatePt(v3), rotatePt(v4)].map(v => new NYPoint(v.x, v.y));
+      ensureClockwise(borderPoints);
 
-      push();
-      rotate(radians(_angle));
-      collager.drawCustomShape(borderPoints, centerX, centerY, 0, imageIndex);
-      pop();
+      collager.drawVertexShape(borderPoints, imageIndex);
+      collager.redrawVertexShape();
 
       bufferLayerColorful.draw(() => {
-        push();
-        rotate(radians(_angle));
-        collager.redrawCustomShape(centerX, centerY, 0);
-        pop();
+        collager.redrawVertexShape();
       });
     }
   } else {
     // Existing hatch line logic
-    let density = floor(random(6, 12));
+    let density = floor(random(3, 13)); 
 
-    collager.cutoutThickness(3);
-    collager.cutoutNoiseScale(0.3);
+    collager.cutoutThickness(lerp(12, 24, p3));
+    collager.cutoutNoiseScale(lerp(0.3, 0.6, p3));
     collager.cutoutRatio(0.2, 0.8);
-
-    collager.outlineWeight(random(24, 60));
+  
+    collager.outlineWeight(lerp(12, 60, p3));
     collager.outlineRatio(0.2, 0.8);
-    collager.outlineNoiseScale(0.6);
-
-    collager.debug(false);
-
+    collager.outlineNoiseScale(lerp(0.6, 1.2, p3));
+    
     for (let i = 0; i < density; i++) {
       let t1 = (i - 0.2) / density;
       let t2 = (i + 1.2) / density;
-
+      
       let v1, v2, v3, v4;
       if (isVertical) {
         v1 = { x: lerp(p00.x, p01.x, t1), y: lerp(p00.y, p01.y, t1) };
@@ -361,34 +363,25 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
         v4 = { x: lerp(p00.x, p10.x, t2), y: lerp(p00.y, p10.y, t2) };
       }
 
-      let linePoints = [v1, v2, v3, v4].map(v => new NYPoint(v.x, v.y));
-      let centerX = (v1.x + v2.x + v3.x + v4.x) / 4;
-      let centerY = (v1.y + v2.y + v3.y + v4.y) / 4;
+      let linePoints = [rotatePt(v1), rotatePt(v2), rotatePt(v3), rotatePt(v4)].map(v => new NYPoint(v.x, v.y));
+      ensureClockwise(linePoints);
 
-      push();
-      rotate(radians(_angle));
-      collager.drawCustomShape(linePoints, centerX, centerY, 0, imageIndex);
-      pop();
+      collager.drawVertexShape(linePoints, imageIndex);
+      collager.redrawVertexShape();
 
       bufferLayerColorful.draw(() => {
-        push();
-        rotate(radians(_angle));
-        collager.redrawCustomShape(centerX, centerY, 0);
-        pop();
+        collager.redrawVertexShape();
       });
 
       bufferLayerMask.draw(() => {
-        push();
-        rotate(radians(_angle));
         colorMode(RGB);
         tint(0, 0, 0);
-        collager.redrawCustomShapeOutlineMask(centerX, centerY, 0);
+        collager.redrawVertexShapeOutlineMask();
 
         if (drawInMask) {
           tint(255, random(0, 255), 255);
-          collager.redrawCustomShapeInsideMask(centerX, centerY, 0);
+          collager.redrawVertexShapeInsideMask();
         }
-        pop();
       });
     }
   }
