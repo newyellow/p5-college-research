@@ -1,0 +1,10 @@
+{
+  "name": "image-examiner",
+  "version": "1.0.0",
+  "description": "Examine and compress project images",
+  "main": "examine.js",
+  "dependencies": {
+    "sharp": "^0.33.2",
+    "fast-glob": "^3.3.2"
+  }
+}
