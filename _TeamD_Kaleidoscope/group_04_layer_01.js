@@ -1,6 +1,12 @@
 new p5((sketch) => {
   let startTime;
   let images = [];
+  let randomImage01;
+  let randomImage02;
+  let showRandom01 = false;
+  let showRandom02 = false;
+  let tempGraphics01;
+  let tempGraphics02;
 
   const layers = [
     {
@@ -71,6 +77,10 @@ new p5((sketch) => {
     }
     console.log("✅ Images loaded:", images.length);
 
+    randomImage01 = await sketch.loadImage("images/random_01.jpg");
+    randomImage02 = await sketch.loadImage("images/random_02.jpg");
+    console.log("✅ Random images loaded");
+
     let cnv = sketch.createCanvas(1080, 1920, sketch.WEBGL);
     cnv.style("position", "fixed");
     cnv.style("top", "50%");
@@ -79,13 +89,42 @@ new p5((sketch) => {
     cnv.style("z-index", "2");
 
     sketch.pixelDensity(1);
+
+    showRandom01 = sketch.random() < 1 / 100;
+    showRandom02 = sketch.random() < 1 / 1000;
+
     startTime = sketch.millis();
   };
+
+  function createMaskedImage(img, size) {
+    let tempG = sketch.createGraphics(size, size);
+
+    tempG.imageMode(sketch.CENTER);
+    tempG.image(img, size / 2, size / 2, size, size);
+
+    let maskG = sketch.createGraphics(size, size);
+    maskG.fill(255);
+    maskG.noStroke();
+    maskG.circle(size / 2, size / 2, size);
+
+    tempG.loadPixels();
+    maskG.loadPixels();
+
+    for (let i = 0; i < tempG.pixels.length; i += 4) {
+      tempG.pixels[i + 3] = maskG.pixels[i];
+    }
+    tempG.updatePixels();
+
+    return tempG;
+  }
 
   sketch.draw = () => {
     sketch.clear();
 
+    tempGraphics01 = createMaskedImage(randomImage01, 300);
+    tempGraphics02 = createMaskedImage(randomImage02, 300);
     let currentTime = (sketch.millis() - startTime) / 1000.0;
+
 
     sketch.fill(100, 150, 100, 150);
     sketch.noStroke();
@@ -93,6 +132,22 @@ new p5((sketch) => {
 
     for (let layer of layers) {
       drawDecorLayer(layer, currentTime);
+    }
+
+    if (showRandom01 && tempGraphics01) {
+      sketch.push();
+      sketch.texture(tempGraphics01);
+      sketch.noStroke();
+      sketch.plane(250, 250);
+      sketch.pop();
+    }
+
+    if (showRandom02 && tempGraphics02) {
+      sketch.push();
+      sketch.texture(tempGraphics02);
+      sketch.noStroke();
+      sketch.plane(250, 250);
+      sketch.pop();
     }
   };
 
