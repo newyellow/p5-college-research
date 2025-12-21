@@ -10,7 +10,7 @@ const seed = urlParams.get("seed") || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get("p1") || Math.random());
 const p2 = parseFloat(urlParams.get("p2") || Math.random());
 const p3 = parseFloat(urlParams.get("p3") || Math.random());
-const p4 = parseFloat(urlParams.get("p4") || Math.random());
+const subtype = urlParams.get("subtype") || int(Math.random() * 3);
 
 // this is a p5js v2 script
 let _renderer = null;
@@ -64,7 +64,7 @@ async function setup() {
   imageMode(CENTER);
 
   // load images
-  windowSetIndex = int(random(0, 3));
+  windowSetIndex = subtype;
   await loadWindowImages(windowSetIndex);
 
   // init buffers
@@ -100,7 +100,7 @@ async function setup() {
 
   // Use p4 to control split irregularity (split ratio range)
   // If p4 is 0, split near 0.5. If p4 is 1, split can be 0.1-0.9
-  let variation = lerp(0.06, 0.36, p4);
+  let variation = lerp(0.06, 0.36, p3);
   let splitMin = 0.5 - variation;
   let splitMax = 0.5 + variation;
 
