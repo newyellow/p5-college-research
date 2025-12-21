@@ -5,7 +5,7 @@ const seed = urlParams.get('seed') || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get('p1') || Math.random());
 const p2 = parseFloat(urlParams.get('p2') || Math.random());
 const p3 = parseFloat(urlParams.get('p3') || Math.random());
-const subtype = urlParams.get("subtype") || int(Math.random() * 3);
+const subtype = parseInt(urlParams.get("subtype") || (Math.random() * 3));
 
 // this is a p5js v2 script
 let _renderer = null;
