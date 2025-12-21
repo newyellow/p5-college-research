@@ -24,6 +24,7 @@ let sizeVariation = 0;
 // systems
 let collager;
 let layoutType = 0;
+let artifactImageContainer;
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
@@ -45,7 +46,7 @@ async function setup() {
   sizeVariation = lerp(0.1, 0.6, p3);
 
   // set subtype, although not implemented yet
-  layoutType = 1;
+  layoutType = subtype;
 
   // set to orthographic projection
   colorMode(HSB);
@@ -63,11 +64,23 @@ async function asyncDraw() {
   colorMode(HSB);
   rectMode(CENTER);
   imageMode(CENTER);
-  background(0, 0, 20);
+  background(0, 0, 100);
+
+  // default color bg
+  bufferLayerColorful.draw(() => {
+    background(0, 0, 100);
+  });
+
+  bufferLayerMask.draw(() => {
+    background(0, 0, 0);
+  });
 
   // Initialize Collager
   collager = new Collager();
   await collager.initSystem();
+
+  // Initialize artifact images
+  artifactImageContainer = new CroppedImageContainer();
 
   // set lut according to p1
   let lutPath = getLUTPath(p1);
@@ -81,10 +94,10 @@ async function asyncDraw() {
   if (layoutType === 0) {
     // Subtype 0: Mountain & Sky
     let skyPortion = random(40, 70);
-    
+
     // Draw sky from top to skyPortion
-    await drawSkyLayer(-height / 2 - 100, getY(skyPortion), random(-5, 5));
-    
+    // await drawSkyLayer(-height / 2 - 100, getY(skyPortion), random(-5, 5));
+
     // Draw mountain from skyPortion to bottom
     // Start slightly above skyPortion for overlap
     await drawMountainLayer(getY(skyPortion) - 200, height / 2 + 100, random(-5, 5), 24);
@@ -99,12 +112,12 @@ async function asyncDraw() {
       let mtStart = -height / 2 - 100;
       let layerEnd = getY(mtPortion);
 
-      await drawMountainLayer(mtStart, layerEnd + 100, random(-5, 5), 12);
-      
+      await drawMountainLayer(mtStart, layerEnd + 100, random(-12, 12), 12);
+
       if (layoutType === 1) {
-        await drawSeaLayer(layerEnd - 100, height / 2 + 100, random(-3, 3));
+        await drawSeaLayer(layerEnd, height / 2 + 100, random(-6, 6));
       } else {
-        await drawLandLayer(layerEnd - 100, height / 2 + 100, random(-10, 10));
+        await drawLandLayer(layerEnd + 120, height / 2 + 100, random(-12, 0));
       }
     } else {
       // 2. sandwich: mountain top -> sea/land -> mountain bottom (no sky)
@@ -115,17 +128,17 @@ async function asyncDraw() {
       let seaLandEnd = getY(100 - mtBotPortion);
 
       // Top mountain
-      await drawMountainLayer(-height / 2 - 100, seaLandStart + 100, random(-5, 5), 8);
+      await drawMountainLayer(-height / 2 - 100, seaLandStart + 100, random(-12, 12), 8);
 
       // Sea or Land in the middle
       if (layoutType === 1) {
-        await drawSeaLayer(seaLandStart - 100, seaLandEnd + 100, random(-20, 20));
+        await drawSeaLayer(seaLandStart, seaLandEnd + 300, random(-6, 6));
       } else {
-        await drawLandLayer(seaLandStart - 100, seaLandEnd + 100, random(-20, 20));
+        await drawLandLayer(seaLandStart + 120, seaLandEnd + 100, random(-12, 0));
       }
 
       // Bottom mountain
-      await drawMountainLayer(seaLandEnd - 100, height / 2 + 100, random(-5, 5), 8);
+      await drawMountainLayer(seaLandEnd - 200, height / 2 + 100, random(-5, 5), 8);
     }
   }
 
@@ -183,9 +196,9 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
 
   collager.outlineWeight(0);
 
-  let landWidth = width * 2.0; 
+  let landWidth = width * 2.0;
   let landHeight = _toHeight - _fromHeight;
-  
+
   let skewAmount = 0.4; // perspective skew
   let totalSkewShift = landWidth * skewAmount;
   let startXOffset = -landWidth / 2 - totalSkewShift / 2;
@@ -201,14 +214,14 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
   const subdivide = async (u1, v1, u2, v2, depth) => {
     let w = u2 - u1;
     let h = v2 - v1;
-    
+
     // Stopping condition: max depth, too small, or random chance for variety
     if (depth <= 0 || (w < 0.15 && h < 0.15) || (random() < 0.2 && depth < 3)) {
       let p00 = getPos(u1, v1);
       let p10 = getPos(u2, v1);
       let p11 = getPos(u2, v2);
       let p01 = getPos(u1, v2);
-      
+
       await drawLandRect(p00, p10, p11, p01, _angle);
       await sleep(20);
       return;
@@ -253,7 +266,7 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
   if (isSingleFullRect) {
     // 1. Draw full field shape
     collager.drawVertexShape(fieldPoints, imageIndex);
-    
+
     push();
     rotate(radians(_angle));
     collager.redrawVertexShape();
@@ -288,14 +301,14 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
       let ptOpp2 = edges[i][3];
 
       let thickness = random(10, 25);
-      
+
       // Calculate a small parallelogram for the border
       // We shift pt1 and pt2 towards the center of the field by thickness
       let dirX = (ptOpp1.x + ptOpp2.x) / 2 - (pt1.x + pt2.x) / 2;
       let dirY = (ptOpp1.y + ptOpp2.y) / 2 - (pt1.y + pt2.y) / 2;
       let distToCenter = dist(0, 0, dirX, dirY);
       let ratio = thickness / distToCenter;
-      
+
       let v1 = pt1;
       let v2 = pt2;
       let v3 = { x: pt2.x + dirX * ratio, y: pt2.y + dirY * ratio };
@@ -319,22 +332,22 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
     }
   } else {
     // Existing hatch line logic
-    let density = floor(random(6, 12)); 
+    let density = floor(random(6, 12));
 
     collager.cutoutThickness(3);
     collager.cutoutNoiseScale(0.3);
     collager.cutoutRatio(0.2, 0.8);
-  
+
     collager.outlineWeight(random(24, 60));
     collager.outlineRatio(0.2, 0.8);
     collager.outlineNoiseScale(0.6);
 
     collager.debug(false);
-    
+
     for (let i = 0; i < density; i++) {
       let t1 = (i - 0.2) / density;
       let t2 = (i + 1.2) / density;
-      
+
       let v1, v2, v3, v4;
       if (isVertical) {
         v1 = { x: lerp(p00.x, p01.x, t1), y: lerp(p00.y, p01.y, t1) };
@@ -385,6 +398,15 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
   collager.clearImages();
   await collager.addImage('images/sea_01.jpeg', 0.1, 0.4);
 
+  // add artifact images for ships
+  artifactImageContainer.clearImageSets();
+  await artifactImageContainer.addImage('artifacts/ship_01.png', 'artifacts/ship_01.json');
+  await artifactImageContainer.addImage('artifacts/ship_02.png', 'artifacts/ship_02.json');
+  await artifactImageContainer.addImage('artifacts/boat_01.png', 'artifacts/boat_01.json');
+  await artifactImageContainer.addImage('artifacts/boat_02.png', 'artifacts/boat_02.json');
+  await artifactImageContainer.addImage('artifacts/boat_03.png', 'artifacts/boat_03.json');
+  await artifactImageContainer.addImage('artifacts/boat_04.png', 'artifacts/boat_04.json');
+
   collager.cutoutThickness(20);
   collager.cutoutNoiseScale(0.3);
   collager.cutoutRatio(0.2, 0.8);
@@ -401,6 +423,17 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
   let seaLayerCount = Math.max(4, Math.floor(totalHeight / layerSpacing));
   let seaLayerOffset = totalHeight / seaLayerCount;
 
+  // Pre-calculate ship placements
+  let maxShipCount = int(lerp(6, 36, p3));
+  let shipCount = int(random(0, maxShipCount));
+  let shipPlacements = [];
+  for (let i = 0; i < shipCount; i++) {
+    shipPlacements.push({
+      layerIndex: int(random(0, seaLayerCount)),
+      xRatio: random(0.2, 0.8)
+    });
+  }
+
   let xSamplePoints = 40;
 
   let seaHeightRange = [30, 100]; // thickness variation range
@@ -415,13 +448,21 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
   let yBase = _fromHeight;
 
   for (let y = 0; y < seaLayerCount; y++) {
+    // Restore wave settings for collager
+    collager.cutoutThickness(20);
+    collager.cutoutNoiseScale(0.3);
+    collager.cutoutRatio(0.2, 0.8);
+    collager.outlineWeight(waveOutlineThickness);
+    collager.outlineRatio(0.2, 0.8);
+    collager.outlineNoiseScale(0.01);
+
     yBase += seaLayerOffset;
 
     // randomize some parameters for each layer using noise
     let freqNoise = noise(yBase * 0.01, 1234);
     let ampNoise = noise(yBase * 0.01, 5678);
     let noiseAmpNoise = noise(yBase * 0.01, 9999);
-    
+
     let lineFrequency = waveFrequency * lerp(0.8, 1.2, freqNoise);
     let lineAmplitude = waveAmplitude * lerp(0.8, 1.2, ampNoise);
     let lineNoiseAmplitude = waveNoiseAmplitude * lerp(0.5, 1.5, noiseAmpNoise);
@@ -440,7 +481,7 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
 
     for (let x = 0; x < xSamplePoints; x++) {
       let xPos = xStart + x * xStep;
-      
+
       // Base waveform: Sine wave + Noise
       let sinePart = Math.sin(xPos * lineFrequency + localPhaseShift) * lineAmplitude;
       let noisePart = (noise(xPos * waveNoiseScale, yBase * 0.01, lineSeed) - 0.5) * lineNoiseAmplitude;
@@ -489,6 +530,72 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
       }
     });
 
+    // Draw ships assigned to this layer
+    let shipsInThisLayer = shipPlacements.filter(p => p.layerIndex === y);
+    for (let shipPos of shipsInThisLayer) {
+      let xRange = width * 2.0;
+      let xStart = -xRange / 2;
+      let shipXPos = xStart + shipPos.xRatio * xRange;
+
+      let sinePart = Math.sin(shipXPos * lineFrequency + localPhaseShift) * lineAmplitude;
+      let noisePart = (noise(shipXPos * waveNoiseScale, yBase * 0.01, lineSeed) - 0.5) * lineNoiseAmplitude;
+      let yCenter = yBase + sinePart + noisePart;
+
+      let artifactIndex = int(random(0, 6));
+      let artifact = artifactImageContainer.croppedImageSets[artifactIndex];
+
+      if (artifact) {
+        // setup collager for artifact layer
+        collager.cutoutThickness(1);
+        collager.cutoutRatio(0.2, 0.8);
+
+        collager.outlineWeight(40);
+        collager.outlineRatio(0.2, 0.8);
+        collager.outlineNoiseScale(0.36);
+
+        let rad = radians(_angle);
+        let drawPosX = shipXPos * cos(rad) - yCenter * sin(rad);
+        let drawPosY = shipXPos * sin(rad) + yCenter * cos(rad);
+
+        let drawSize = random(240, 360);
+        if (artifactIndex == 4) // rect boat, need to scale down
+          drawSize *= 0.36;
+
+        let currentScale = drawSize / max(artifact.imageData.width, artifact.imageData.height);
+        let scaledHeight = artifact.imageData.height * currentScale;
+
+        let offX = (scaledHeight * 0.4) * sin(rad);
+        let offY = -(scaledHeight * 0.4) * cos(rad);
+
+        let finalDrawX = drawPosX + offX;
+        let finalDrawY = drawPosY + offY;
+
+        collager.drawMaskedImage(
+          artifact.imageData,
+          artifact.curveData,
+          finalDrawX,
+          finalDrawY,
+          drawSize,
+          _angle
+        );
+
+        bufferLayerColorful.draw(() => {
+          collager.redrawMaskedImage(finalDrawX, finalDrawY, _angle);
+        });
+
+        bufferLayerMask.draw(() => {
+          colorMode(RGB);
+          tint(0, 0, 0);
+          collager.redrawMaskedImageOutlineMask(finalDrawX, finalDrawY, _angle);
+          let drawInMask = random(0, 1) < 0.48;
+          if (drawInMask) {
+            tint(255, random(0, 255), 255);
+            collager.redrawMaskedImageInsideMask(finalDrawX, finalDrawY, _angle);
+          }
+        });
+      }
+    }
+
     await sleep(50);
   }
 }
@@ -498,21 +605,22 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
   await collager.addImage('images/train_01.jpg', 0.2, 0.6);
   await collager.addImage('images/train_02.jpg', 0.2, 0.6);
 
-  collager.cutoutThickness(200);
-  collager.cutoutNoiseScale(0.6);
-  collager.cutoutRatio(0.2, 0.8);
-
-  collager.outlineWeight(100);
-  collager.outlineNoiseScale(0.018);
-  collager.outlineRatio(0.3, 0.7);
+  // add artifact images
+  artifactImageContainer.clearImageSets();
+  await artifactImageContainer.addImage('artifacts/mountain_01.png', 'artifacts/mountain_01.json');
+  await artifactImageContainer.addImage('artifacts/mountain_02.png', 'artifacts/mountain_02.json');
+  await artifactImageContainer.addImage('artifacts/stone_01.png', 'artifacts/stone_01.json');
+  await artifactImageContainer.addImage('artifacts/stone_02.png', 'artifacts/stone_02.json');
+  await artifactImageContainer.addImage('artifacts/stone_03.png', 'artifacts/stone_03.json');
+  await artifactImageContainer.addImage('artifacts/stone_04.png', 'artifacts/stone_04.json');
 
 
   let mountainLayerCount = _count;
-  let xSamplePoints = 10;
+  let xSamplePoints = int(random(36, 24));
 
-  let mountainHeightRange = [60, 666];
-  let mountainHeightNoiseScaleX = 0.002;
-  let mountainHeightNoiseScaleY = 0.036;
+  let mountainHeightRange = [30, 480];
+  let mountainHeightNoiseScaleX = lerp(0.002, 0.006, p3);
+  let mountainHeightNoiseScaleY = lerp(0.012, 0.036, p3);
 
   // Calculate offset based on range to ensure we fill the space
   let totalHeight = _endY - _startY;
@@ -521,6 +629,16 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
   let yStart = _startY;
 
   for (let y = 0; y < mountainLayerCount; y++) {
+
+    // setup collager for mountain layer
+    collager.cutoutThickness(200);
+    collager.cutoutNoiseScale(lerp(0.12, 0.66, p3));
+    collager.cutoutRatio(0.2, 0.8);
+
+    collager.outlineWeight(100);
+    collager.outlineNoiseScale(lerp(0.006, 0.12, p3));
+    collager.outlineRatio(0.2, 0.8);
+
     // Increase yStart more predictably to reach _endY
     yStart += mountainLayerOffset;
 
@@ -547,7 +665,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
       let botYPos = yStart;
 
       let botNoiseValue = noise(botXPos * mountainHeightNoiseScaleX, botYPos * mountainHeightNoiseScaleY, 1234);
-      let botAddHeight = lerp(mountainHeightRange[0] * 0.2, mountainHeightRange[1] * 0.2, botNoiseValue);
+      let botAddHeight = lerp(30, 100, botNoiseValue);
 
       yPos -= mountainAddHeight;
       botYPos += botAddHeight;
@@ -588,11 +706,119 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
       }
     })
 
+
+    // Chance to draw an artifact between mountain layers
+    if (random() < 0.25) {
+
+      let isMountainObject = random() < 0.5;
+      let artifactIndex = isMountainObject ? 0 : 1;
+
+      if (isMountainObject) {
+        artifactIndex = int(random(0, 2));
+      }
+      else {
+        artifactIndex = int(random(2, 4));
+      }
+
+      let artifact = artifactImageContainer.croppedImageSets[artifactIndex];
+
+      // setup collager for artifact layer
+      collager.cutoutThickness(1);
+      collager.cutoutRatio(0.2, 0.8);
+
+      collager.outlineWeight(100);
+
+      if (artifact) {
+        let rawPosX = random(-width / 2 - 200, width / 2 + 200);
+        let rawPosY = yStart + 100;
+
+        // if it is the last layer of the mountain layer
+        if (y === mountainLayerCount - 1) {
+          rawPosY = yStart + 300;
+        }
+
+        // Rotate the position to match mountain layer rotation
+        let rad = radians(_angle);
+        let drawPosX = rawPosX * cos(rad) - rawPosY * sin(rad);
+        let drawPosY = rawPosX * sin(rad) + rawPosY * cos(rad);
+
+        // this is the mountain object size
+        let drawSize = random(600, 1000); // this is the max side
+        let currentScale = random(0.8, 3.0);
+
+        let maskedImgRatio = artifact.imageData.width / artifact.imageData.height;
+        let drawHeight = drawSize / maskedImgRatio;
+
+        if (!isMountainObject) {
+          drawSize = random(360, 600);
+          currentScale = 1.0;
+          drawHeight = drawSize;
+        }
+
+        let scaledHeight = drawHeight * currentScale;
+
+        // Offset center up by half height in rotated coordinate space
+        let offX = (scaledHeight / 2) * sin(rad);
+        let offY = -(scaledHeight / 2) * cos(rad);
+
+        let finalDrawX = drawPosX + offX;
+        let finalDrawY = drawPosY + offY;
+
+        push();
+        translate(finalDrawX, finalDrawY);
+        rotate(radians(_angle));
+        scale(currentScale);
+
+        collager.drawMaskedImage(
+          artifact.imageData,
+          artifact.curveData, 0, 0,
+          drawSize,
+          0
+        );
+        pop();
+
+        // draw on color
+        bufferLayerColorful.draw(() => {
+          push();
+          translate(finalDrawX, finalDrawY);
+          rotate(radians(_angle));
+          scale(currentScale);
+          collager.redrawMaskedImage(0, 0, 0);
+          pop();
+        });
+
+        bufferLayerMask.draw(() => {
+          push();
+          translate(finalDrawX, finalDrawY);
+          rotate(radians(_angle));
+          scale(currentScale);
+
+          colorMode(RGB);
+          tint(0, 0, 0);
+          collager.redrawMaskedImageOutlineMask(0, 0, 0);
+          pop();
+
+          let drawInMask = random(0, 1) < 0.48;
+
+          if (drawInMask) {
+            push();
+            translate(finalDrawX, finalDrawY);
+            rotate(radians(_angle));
+            scale(currentScale);
+
+            tint(255, random(0, 255), 255);
+            collager.redrawMaskedImageInsideMask(0, 0, 0);
+            pop();
+          }
+        });
+      }
+    }
+
     await sleep(100);
   }
 }
 
-async function drawSkyLayer (_fromHeight, _toHeight, _angle = 0) {
+async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
   // Add images
   await collager.addImage('images/sky_01.png', 0.1, 0.6);
   await collager.addImage('images/sky_02.jpg', 0.1, 0.3);

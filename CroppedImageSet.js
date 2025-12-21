@@ -10,6 +10,10 @@ class CroppedImageContainer {
         this.croppedImageSets = [];
     }
 
+    clearImageSets() {
+        this.croppedImageSets = [];
+    }
+
     async addImage(_imageUrl, _curveJsonUrl) {
         let imageData = await loadImage(_imageUrl);
         let dataResponse = await fetch(_curveJsonUrl);
