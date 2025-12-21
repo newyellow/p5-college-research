@@ -5,7 +5,10 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3600;
+const PORT = 3600;
+
+// Enable trust proxy so Express knows it is behind Caddy
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors());
