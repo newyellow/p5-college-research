@@ -135,12 +135,15 @@ class Collager {
         this.collageProfiles = [];
     }
 
-    drawVertexShape(_edgePointsArray) {
+    drawVertexShape(_edgePointsArray, _imageIndex = -1) {
         // 1. Build Shape Model
         this._setShapeByEdgePoints(_edgePointsArray);
 
         // 2. Prepare Image
-        let imageIndex = floor(random(0, this.images.length));
+        let imageIndex = _imageIndex;
+        if (imageIndex < 0 || imageIndex >= this.images.length) {
+            imageIndex = floor(random(0, this.images.length));
+        }
         let targetImg = this.images[imageIndex];
         let targetProfile = this.collageProfiles[imageIndex];
 
@@ -207,7 +210,7 @@ class Collager {
         pop();
     }
 
-    drawRect(_x, _y, _w, _h, _rotateDegree = 0) {
+    drawRect(_x, _y, _w, _h, _rotateDegree = 0, _imageIndex = -1) {
 
         // 1. Generate edge points with noise
         let points = NYModel.generatePointsForRoundedRect(_w, _h, this._rectRoundness, this._rectPointCount, this._rectNoiseScale, this._rectEdgeOffset);
@@ -216,7 +219,10 @@ class Collager {
         this._setShapeByEdgePoints(points);
 
         // prepare the image and uv offset/scale
-        let imageIndex = floor(random(0, this.images.length));
+        let imageIndex = _imageIndex;
+        if (imageIndex < 0 || imageIndex >= this.images.length) {
+            imageIndex = floor(random(0, this.images.length));
+        }
 
         let targetImg = this.images[imageIndex];
         let targetProfile = this.collageProfiles[imageIndex];
@@ -291,7 +297,7 @@ class Collager {
         pop();
     }
 
-    drawCustomShape(_edgePointsArray, _x, _y, _rotateDegree = 0) {
+    drawCustomShape(_edgePointsArray, _x, _y, _rotateDegree = 0, _imageIndex = -1) {
         // 1. Calculate bounding box and center
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         for (let p of _edgePointsArray) {
@@ -322,7 +328,10 @@ class Collager {
         this._setShapeByEdgePoints(processedPoints);
 
         // 4. Prepare Image
-        let imageIndex = floor(random(0, this.images.length));
+        let imageIndex = _imageIndex;
+        if (imageIndex < 0 || imageIndex >= this.images.length) {
+            imageIndex = floor(random(0, this.images.length));
+        }
         let targetImg = this.images[imageIndex];
         let targetProfile = this.collageProfiles[imageIndex];
 

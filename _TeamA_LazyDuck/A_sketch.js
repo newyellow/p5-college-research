@@ -72,7 +72,7 @@ async function asyncDraw() {
   let lutPath = getLUTPath(p1);
   let lutTexture = await loadImage("../" + lutPath);
   collager.setLutTexture(lutTexture);
-  collager.setLutIntensity(0.6);
+  collager.setLutIntensity(0.36);
 
   // draw sky layer
   await drawSkyLayer(-height / 2 - 100, -100, random(-5, 5));
@@ -140,37 +140,55 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
 
   collager.outlineWeight(0);
 
-  let rows = 6;
-  let cols = 5;
   let landWidth = width * 2.0; 
   let landHeight = _toHeight - _fromHeight;
   
-  let stepX = landWidth / cols;
-  let stepY = landHeight / rows;
-
   let skewAmount = 0.4; // perspective skew
-  
   let totalSkewShift = landWidth * skewAmount;
   let startXOffset = -landWidth / 2 - totalSkewShift / 2;
 
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      let getPos = (col, row) => {
-        let x = startXOffset + col * stepX + (row / rows) * landWidth * skewAmount;
-        let y = _fromHeight + row * stepY;
-        return { x, y };
-      };
+  // Coordinate mapping function (normalized u, v [0, 1] to screen x, y)
+  let getPos = (u, v) => {
+    let x = startXOffset + u * landWidth + v * landWidth * skewAmount;
+    let y = _fromHeight + v * landHeight;
+    return { x, y };
+  };
 
-      let p00 = getPos(c, r);
-      let p10 = getPos(c + 1, r);
-      let p01 = getPos(c, r + 1);
-      let p11 = getPos(c + 1, r + 1);
-
-      await drawLandRect(p00, p10, p11, p01, _angle);
+  // Recursive subdivision function
+  const subdivide = async (u1, v1, u2, v2, depth) => {
+    let w = u2 - u1;
+    let h = v2 - v1;
+    
+    // Stopping condition: max depth, too small, or random chance for variety
+    if (depth <= 0 || (w < 0.15 && h < 0.15) || (random() < 0.2 && depth < 3)) {
+      let p00 = getPos(u1, v1);
+      let p10 = getPos(u2, v1);
+      let p11 = getPos(u2, v2);
+      let p01 = getPos(u1, v2);
       
-      await sleep(50);
+      await drawLandRect(p00, p10, p11, p01, _angle);
+      await sleep(20);
+      return;
     }
-  }
+
+    // Decide split axis based on aspect ratio with some randomness
+    let splitVertical = w > h;
+    if (abs(w - h) < 0.1) splitVertical = random() > 0.5;
+
+    let ratio = random(0.3, 0.7);
+    if (splitVertical) {
+      let splitU = u1 + w * ratio;
+      await subdivide(u1, v1, splitU, v2, depth - 1);
+      await subdivide(splitU, v1, u2, v2, depth - 1);
+    } else {
+      let splitV = v1 + h * ratio;
+      await subdivide(u1, v1, u2, splitV, depth - 1);
+      await subdivide(u1, splitV, u2, v2, depth - 1);
+    }
+  };
+
+  // Start subdivision from the full area
+  await subdivide(0, 0, 1, 1, 5);
 }
 
 async function drawLandRect(p00, p10, p11, p01, _angle) {
@@ -182,12 +200,16 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
     new NYPoint(p01.x, p01.y)
   ];
 
+  // Pick a single image and mask status for the whole field
+  let imageIndex = floor(random(0, collager.images.length));
+  let drawInMask = random() < 0.2;
+
   // Special chance for "single full rect" mode
   let isSingleFullRect = random() < 0.2;
 
   if (isSingleFullRect) {
     // 1. Draw full field shape
-    collager.drawVertexShape(fieldPoints);
+    collager.drawVertexShape(fieldPoints, imageIndex);
     
     push();
     rotate(radians(_angle));
@@ -207,7 +229,6 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
       colorMode(RGB);
       tint(0, 0, 0);
       collager.redrawVertexShapeOutlineMask();
-      let drawInMask = random() < 0.3;
       if (drawInMask) {
         tint(255, random(0, 255), 255);
         collager.redrawVertexShapeInsideMask();
@@ -243,7 +264,7 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
 
       push();
       rotate(radians(_angle));
-      collager.drawCustomShape(borderPoints, centerX, centerY, 0);
+      collager.drawCustomShape(borderPoints, centerX, centerY, 0, imageIndex);
       pop();
 
       bufferLayerColorful.draw(() => {
@@ -255,7 +276,7 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
     }
   } else {
     // Existing hatch line logic
-    let density = floor(random(6, 15)); 
+    let density = floor(random(6, 12)); 
 
     collager.cutoutThickness(3);
     collager.cutoutNoiseScale(0.3);
@@ -290,7 +311,7 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
 
       push();
       rotate(radians(_angle));
-      collager.drawCustomShape(linePoints, centerX, centerY, 0);
+      collager.drawCustomShape(linePoints, centerX, centerY, 0, imageIndex);
       pop();
 
       bufferLayerColorful.draw(() => {
@@ -307,7 +328,6 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
         tint(0, 0, 0);
         collager.redrawCustomShapeOutlineMask(centerX, centerY, 0);
 
-        let drawInMask = random(0, 1) < 0.2;
         if (drawInMask) {
           tint(255, random(0, 255), 255);
           collager.redrawCustomShapeInsideMask(centerX, centerY, 0);
@@ -320,7 +340,7 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
 
 async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
   collager.clearImages();
-  await collager.addImage('images/sea_01.jpg', 0.1, 0.4);
+  await collager.addImage('images/sea_01.jpeg', 0.1, 0.4);
 
   collager.cutoutThickness(3);
   collager.cutoutNoiseScale(0.3);
