@@ -1,7 +1,6 @@
 
 precision mediump float;
 
-// 貼圖
 uniform int uColorMode;  
 uniform sampler2D utexture;
 uniform sampler2D uMaskTexture;
@@ -14,7 +13,6 @@ uniform float height;
 uniform sampler2D colorTex;
 uniform int rand[6];
 uniform float gauss[3];
-
 float getclrpos(vec3 color, int idx) {
     if (idx == 0) return color.r;
     if (idx == 1) return color.g;
@@ -277,138 +275,45 @@ vec3 color3 = vec3(
     float totalCaustics = (caustic1 + caustic2 + caustic3) *0.05;
     col += vec3(totalCaustics);
     
-    return vec4(col, 1.0);
-}
-
-struct LensRipple {
-    vec2 center;
-    float maxRadius;
-    float phase;
-    float speed;
-};
-
-LensRipple getLensRipple(int index, float time) {
-    float fi = float(index);
-
-    float seedX = fi * 123.456;
-    float seedY = fi * 789.012;
-
-    float maxScreenRadius = sqrt(width * width + height * height) * 0.5;
-
-    float moveSpeed1 = 0.15 + random(vec2(seedX, 0.0)) * 0.1;
-    float moveSpeed2 = 0.2 + random(vec2(seedY, 1.0)) * 0.1;
-
-    vec2 center = vec2(
-        width * (0.3 + 0.2 * sin(time * moveSpeed1 + fi * 2.0)),
-        height * (0.3 + 0.2 * cos(time * moveSpeed2 + fi * 1.5)));
-
-    float maxRadius = maxScreenRadius * (1.2 + random(vec2(fi, fi * 2.0)) * 0.3);
-
-    float phase = fi * 2.0 + random(vec2(fi * 3.0, fi * 4.0)) * 3.14;
-
-    float speed = 0.3 + random(vec2(fi * 5.0, fi * 6.0)) * 0.2;
-
-    return LensRipple(center, maxRadius, phase, speed);
-}
-
-vec2 calculateRippleDistortion(vec2 pixelPos, float time, float strength) {
-    vec2 totalLensOffset = vec2(0.0);
-
-    const int NUM_LENSES = 5;
-
-    for (int i = 0; i < NUM_LENSES; i++) {
-        LensRipple lens = getLensRipple(i, time);
-
-        vec2 toLens = pixelPos - lens.center;
-        float dist = length(toLens);
-
-        if (dist < lens.maxRadius) {
-            float uniformDist = sqrt(dist / lens.maxRadius);
-
-            float ripplePhase = time * lens.speed * 0.1 + lens.phase;
-
-            const int NUM_RINGS = 12;
-            for (int ring = 1; ring <= NUM_RINGS; ring++) {
-                float normalizedRing = float(ring) / float(NUM_RINGS);
-                float ringRadius = normalizedRing;
-
-                float expandingRadius = ringRadius + sin(ripplePhase - normalizedRing * 8.0) * 0.03;
-
-                float ringWidth = 0.1 + sin(ripplePhase - normalizedRing * 6.0) * 0.02;
-
-                if (abs(uniformDist - expandingRadius) < ringWidth * 0.5) {
-                    float localDist = abs(uniformDist - expandingRadius);
-                    float ringPct = 1.0 - (localDist / (ringWidth * 0.5));
-
-                    float rippleIntensity = sin(dist * 0.02 - ripplePhase * 2.0) * 0.5 + 0.5;
-
-                    float alphaWave = abs(sin(dist * 0.025 - ripplePhase * 1.5));
-
-                    float ringFactor = 1.0 - normalizedRing * 0.3;
-
-                    float lensEffect = sin(ringPct * 25.0 + dist * 0.05 - ripplePhase) * 
-                                     rippleIntensity * alphaWave * ringFactor * 0.025;
-
-                    vec2 lensDir = normalize(toLens);
-                    vec2 lensOffset = lensDir * lensEffect * lens.maxRadius * 0.1;
-
-                    vec2 tangent = vec2(-lensDir.y, lensDir.x);
-                    lensOffset += tangent * lensEffect * lens.maxRadius * 0.05 * 
-                                sin(ripplePhase + float(i) * 2.0);
-
-                    totalLensOffset += lensOffset * strength;
-                    break;
-                }
-            }
-        }
-    }
-
-    return totalLensOffset;
+    return vec4(col, 1.0); // 10.0 is meaningless lol
 }
 
 void main() {
 
   vec2 uv = vTexCoord;
+  // convert this to a pixel position (uv space goes from 0,0 to 1,1)
   vec2 pos = uv * vec2(width, height);
   vec2 center = vec2(width/2., height/2.);
  
-  float rippleStrength = 1.0;
-  vec2 rippleOffset = calculateRippleDistortion(pos, time, rippleStrength);
-  vec2 distortedPos = pos + rippleOffset;
-  vec2 distortedUV = distortedPos / vec2(width, height);
-  
-  float edgeFade = smoothstep(0.0, 0.1, distortedUV.x) * 
-                   smoothstep(0.0, 0.1, distortedUV.y) *
-                   smoothstep(1.0, 0.9, distortedUV.x) * 
-                   smoothstep(1.0, 0.9, distortedUV.y);
-  distortedUV = mix(uv, distortedUV, edgeFade);
-  
   float strengthTotal = 0.0;
   vec3 colorTotal = vec3(0.);
     for (int i = 0; i <8; i++){
         float ii = float(i);
        
         float angleTemp = mapc(ii, 0., 10., 0., PI*2.) + sin(ii)*0.03;
-        float radius =  (width+ii*sin(time)*6.)* (sin(ii/(5.75 * (1.0 + gauss[1]*0.9))))*PI;
+float radius =  (width+ii*sin(time)*6.)* (sin(ii/(5.75 * (1.0 + gauss[1]*0.9))))*PI;
         float x = center.x + radius * cos(angleTemp);
         float y = center.y + radius * sin(angleTemp);
         
         float loopGauss = gaussian(sin(time * 0.00001*gauss[0] + ii * 0.1), 0.4);
 
-        float dist = distance(distortedPos, vec2(x,y));
+        float dist = distance(pos, vec2(x,y));
         
     
         float osc = sin(time* 0.1 * 0.02) * 0.05+ (0.06 * time* 0.1 + cos(time * 0.04) * PI) * 8.0;
     vec3 color;
     if (uColorMode == 0) {
-        color = vec3(color_fun(distortedUV*distortedUV*sin(distortedUV.x/40.),1.-pow(dist,0.097)));
+        color = vec3(color_fun(uv*uv*sin(uv.x/40.),1.-pow(dist,0.097)));
     } else if (uColorMode == 1) {
-        color = vec3(color_fun(distortedUV*distortedUV*sin(distortedUV.x/40.),1.-pow(dist,0.025)));
+        color = vec3(color_fun(uv*uv*sin(uv.x/40.),1.-pow(dist,0.025)));
     } else {
-        color = vec3(color_fun(distortedUV*distortedUV*sin(distortedUV.x/40.),1.-pow(dist,1.4)));
+        color = vec3(color_fun(uv*uv*sin(uv.x/40.),1.-pow(dist,1.4)));
     }
+        //   vec3 color_2 = vec3(color_fun(uv*uv*sin(uv.x/40.),1.-pow(dist,0.6)));
 
-        vec2 diff = distortedPos - vec2(x,y);
+        //   vec3 color_2 = vec3(warpcolor(uv*uv*sin(uv.x/30.),1.-pow(dist,0.1)));
+
+        vec2 diff = pos - vec2(x,y);
         
         vec2 centerDiff = center - vec2(x,y);
         
@@ -416,10 +321,11 @@ void main() {
         vec2 target = vec2(cos(angle), sin(angle));
         float dotp = dot(normalize(diff), target);
         
+        // contrain dotp and shape it 
         dotp = mapc(dotp, mapc(dist, 0., 600., 0.1, 0.4), 1., 0., 1.);
         dotp = pow(dotp, 4.);
         
-        vec2 normalizedPos = distortedPos;
+        vec2 normalizedPos = pos;
         normalizedPos -= vec2(x,y);
         normalizedPos = normalizedPos*rotate2d(-angle);
         float gridSz = 10. + sin(ii)*0.001;
@@ -435,7 +341,7 @@ void main() {
       strength *= centerFade;
        
        float rad = snoise(vec3(floorGrid.x*100.1, floorGrid.y*100.1, ii));
-        if (circDist*mapc(dist, 0., 1., 0., 100.) > (rad*100.1*random(distortedUV) + 0.2) ){
+        if (circDist*mapc(dist, 0., 1., 0., 100.) > (rad*100.1*random(uv) + 0.2) ){
           strength *= 0.000001;
         } else {
           strength = pow(strength, 0.1);
@@ -443,6 +349,7 @@ void main() {
 
       float ringEffect = sin(dist * 0.6 + time * 0.1) * 1.3;
       color.rgb += vec3(ringEffect * 0.5);
+        // vec3 mixedColor = mix(color, color.rgb, 0.5);
         colorTotal += color* strength;
         strengthTotal += strength;
         
@@ -450,7 +357,7 @@ void main() {
 
     colorTotal /= strengthTotal;
     
-    vec4 originalColor = texture2D(utexture, distortedUV);
+    vec4 originalColor = texture2D(utexture, uv);
     
     vec4 maskColor = texture2D(uMaskTexture, uv);
     
