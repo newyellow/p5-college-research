@@ -15,9 +15,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Serve node_modules to access libraries like marked
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 
-// Serve the entire project root at /artworks so we can access team folders
-// We go up one level from __dirname (__exhibition_system) to get to the project root
-app.use('/artworks', express.static(path.join(__dirname, '../')));
+// Serve the artworks folder
+app.use('/artworks', express.static(path.join(__dirname, '../_artworks')));
+
+// Serve the artwork configurations separately so we don't expose the whole system
+app.use('/artwork-configs', express.static(path.join(__dirname, 'configs/artworks')));
 
 // Load Artworks dynamically from configs/artworks folder
 const artworks = [];
@@ -54,8 +56,8 @@ try {
                             // infoUrl: The description page in the config folder
                             // artworkUrl: The actual p5.js sketch
                             
-                            // infoUrl is always in the same folder as the JSON
-                            artworkObj.infoUrl = `/artworks/__exhibition_system/configs/artworks/${folder}/index.html`;
+                            // infoUrl is served via /artwork-configs/
+                            artworkObj.infoUrl = `/artwork-configs/${folder}/index.html`;
                             artworkObj.resultUrl = `/result.html`;
                             
                             // artworkUrl is what was previously in 'path' (for B-E)
@@ -66,7 +68,13 @@ try {
                                 artworkObj.artworkUrl = '/artworks/_TeamA_LazyDuck/index.html';
                             } else {
                                 // Fallback or use existing path if it looks like a full path
-                                artworkObj.artworkUrl = artworkObj.path;
+                                // Since we host _artworks at /artworks, if path was "_TeamB_.../index.html", 
+                                // we should prepend /artworks/
+                                if (artworkObj.path && !artworkObj.path.startsWith('/')) {
+                                    artworkObj.artworkUrl = `/artworks/${artworkObj.path}`;
+                                } else {
+                                    artworkObj.artworkUrl = artworkObj.path;
+                                }
                             }
 
                             artworks.push(artworkObj);

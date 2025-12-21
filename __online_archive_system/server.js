@@ -15,9 +15,11 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Also serve the root directory to access artwork folders
-// This assumes the online archive system is inside the project root
-app.use('/artworks', express.static(path.join(__dirname, '..')));
+// Serve the artworks folder
+app.use('/artworks', express.static(path.join(__dirname, '../_artworks')));
+
+// Serve the artwork configurations matching the exhibition system structure
+app.use('/artwork-configs', express.static(path.join(__dirname, '..', '__exhibition_system', 'configs', 'artworks')));
 
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_DIR = path.join(__dirname, 'configs');

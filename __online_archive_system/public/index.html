@@ -363,7 +363,7 @@
                 // Try to fetch artwork config for subtype names
                 try {
                     const configFolder = data.artworkId.toLowerCase();
-                    const configUrl = `/artworks/__exhibition_system/configs/artworks/${configFolder}/${data.artworkId}.json`;
+                    const configUrl = `/artwork-configs/${configFolder}/${data.artworkId}.json`;
                     const configRes = await fetch(configUrl);
                     if (configRes.ok) {
                         const config = await configRes.json();
