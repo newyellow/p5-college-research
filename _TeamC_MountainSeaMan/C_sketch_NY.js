@@ -30,6 +30,20 @@ let croppedImageContainer = null;
 let randonclrpos = [];
 let randomGauss = [];
 
+let shaderPath;
+let randomValue = Math.random();
+
+if (randomValue < 0.35) {
+    // 35% mix
+    shaderPath = "../shaders/effect_C.frag";
+} else if (randomValue < 0.80) {
+    // 45% 波紋
+    shaderPath = "../shaders/effect_C_01.frag";
+} else {
+    // 20% 純紙
+    shaderPath = "../shaders/effect_C_02.frag";
+}
+
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
   flex();
@@ -387,7 +401,7 @@ let effectTimeCounter = 0.0;
 async function startBreathingEffect() {
   // do breathing effect
   let fragShaderPath = "";
-  fragShaderPath = "../shaders/effect_C.frag";
+  fragShaderPath = shaderPath;
 
   breathingShader = await loadShader("../shaders/uniform.vert", fragShaderPath);
 
