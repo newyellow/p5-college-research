@@ -314,6 +314,12 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
         colorMode(RGB);
         tint(0, 0, 0);
         collager.redrawMaskedImageOutlineMask(finalDrawX, finalDrawY, duckRotation);
+        
+        let drawInMask = random(0, 1) < 0.48;
+        if (drawInMask) {
+          tint(255, random(0, 255), 1);
+          collager.redrawMaskedImageInsideMask(finalDrawX, finalDrawY, duckRotation);
+        }
       });
 
       await sleep(100);
@@ -375,7 +381,7 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
       tint(0, 0, 0);
       collager.redrawVertexShapeOutlineMask();
       if (drawInMask) {
-        tint(255, random(0, 255), 255);
+        tint(255, random(0, 255), 1);
         collager.redrawVertexShapeInsideMask();
       }
     });
@@ -455,7 +461,7 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
         collager.redrawVertexShapeOutlineMask();
 
         if (drawInMask) {
-          tint(255, random(0, 255), 255);
+          tint(255, random(0, 255), 1);
           collager.redrawVertexShapeInsideMask();
         }
       });
@@ -594,7 +600,7 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
 
       let drawInMask = random() < 0.36;
       if (drawInMask) {
-        tint(255, random(0, 255), 255);
+        tint(255, random(0, 255), 2);
         collager.redrawVertexShapeInsideMask();
       }
     });
@@ -658,7 +664,7 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
           collager.redrawMaskedImageOutlineMask(finalDrawX, finalDrawY, _angle);
           let drawInMask = random(0, 1) < 0.48;
           if (drawInMask) {
-            tint(255, random(0, 255), 255);
+            tint(255, random(0, 255), 2);
             collager.redrawMaskedImageInsideMask(finalDrawX, finalDrawY, _angle);
           }
         });
@@ -772,7 +778,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
       let drawInMask = random(0, 1) < 0.24;
 
       if (drawInMask) {
-        tint(255, random(0, 255), 255);
+        tint(255, random(0, 255), 3);
         collager.redrawVertexShapeInsideMask();
       }
     })
@@ -877,7 +883,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
             rotate(radians(_angle));
             scale(currentScale);
 
-            tint(255, random(0, 255), 255);
+            tint(255, random(0, 255), 3);
             collager.redrawMaskedImageInsideMask(0, 0, 0);
             pop();
           }
@@ -951,7 +957,7 @@ async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
 
       let drawInMask = random(0, 1) < 0.24;
       if (drawInMask) {
-        tint(255, random(0, 255), 255);
+        tint(255, random(0, 255), 4);
         collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angleDegree);
       }
       pop();
