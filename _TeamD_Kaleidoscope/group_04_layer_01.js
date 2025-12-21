@@ -138,7 +138,7 @@ new p5((sketch) => {
       sketch.push();
       sketch.texture(tempGraphics01);
       sketch.noStroke();
-      sketch.plane(300, 300);
+      sketch.plane(250, 250);
       sketch.pop();
     }
 
@@ -146,7 +146,7 @@ new p5((sketch) => {
       sketch.push();
       sketch.texture(tempGraphics02);
       sketch.noStroke();
-      sketch.plane(300, 300);
+      sketch.plane(250, 250);
       sketch.pop();
     }
   };
