@@ -86,7 +86,7 @@ async function asyncDraw() {
   let lutPath = getLUTPath(p1);
   let lutTexture = await loadImage("../" + lutPath);
   collager.setLutTexture(lutTexture);
-  collager.setLutIntensity(0.36);
+  collager.setLutIntensity(0.6);
 
   // Helper to convert percentage (0-100) to Y coordinate
   const getY = (p) => -height / 2 + (p / 100) * height;
@@ -115,7 +115,7 @@ async function asyncDraw() {
       await drawMountainLayer(mtStart, layerEnd + 100, random(-12, 12), 12);
 
       if (layoutType === 1) {
-        await drawSeaLayer(layerEnd, height / 2 + 100, random(-6, 6));
+        await drawSeaLayer(layerEnd + 240, height / 2 + 100, random(-6, 6));
       } else {
         await drawLandLayer(layerEnd + 120, height / 2 + 100, random(-12, 0));
       }
@@ -132,7 +132,7 @@ async function asyncDraw() {
 
       // Sea or Land in the middle
       if (layoutType === 1) {
-        await drawSeaLayer(seaLandStart, seaLandEnd + 300, random(-6, 6));
+        await drawSeaLayer(seaLandStart + 240, seaLandEnd + 300, random(-6, 6));
       } else {
         await drawLandLayer(seaLandStart + 120, seaLandEnd + 100, random(-12, 0));
       }
@@ -187,6 +187,12 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
   await collager.addImage('images/farmland_01.jpg', 0.2, 0.8);
   await collager.addImage('images/farmland_02.png', 0.2, 0.8);
   await collager.addImage('images/farmland_03.jpg', 0.2, 0.8);
+
+  // add artifact images for ducks
+  artifactImageContainer.clearImageSets();
+  await artifactImageContainer.addImage('artifacts/duck_01.jpg', 'artifacts/duck_01.json');
+  await artifactImageContainer.addImage('artifacts/duck_02.jpg', 'artifacts/duck_02.json');
+  await artifactImageContainer.addImage('artifacts/duck_03.jpg', 'artifacts/duck_03.json');
 
   collager.cutoutThickness(10);
   collager.cutoutNoiseScale(0.5);
@@ -243,6 +249,76 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
 
   // Start subdivision from the full area
   await subdivide(0, 0, 1, 1, 5);
+
+  // Pre-generate ducks data for sorting and sizing
+  let maxDuckCount = int(lerp(3, 18, p3));
+  let duckCount = int(random(2, maxDuckCount));
+
+  let ducks = [];
+  for (let i = 0; i < duckCount; i++) {
+    let u = random(0.1, 0.9);
+    let v = random(0.1, 0.9);
+    let rawPos = getPos(u, v);
+
+    // Rotate position to match land rotation
+    let rad = radians(_angle);
+    let drawPosX = rawPos.x * cos(rad) - rawPos.y * sin(rad);
+    let drawPosY = rawPos.x * sin(rad) + rawPos.y * cos(rad);
+
+    ducks.push({ u, v, drawPosX, drawPosY });
+  }
+
+  // Sort ducks by Y coordinate so they overlap correctly (closer to bottom drawn later)
+  ducks.sort((a, b) => a.drawPosY - b.drawPosY);
+
+  for (let duck of ducks) {
+    let artifact = artifactImageContainer.getRandomCroppedImageSet();
+    if (artifact) {
+      // setup collager for artifact layer
+      collager.cutoutThickness(1);
+      collager.cutoutRatio(0.1, 0.9);
+
+      collager.outlineWeight(24);
+      collager.shadow(10, -6, 10, [0, 0, 0], 0.36);
+
+      // Sizing based on depth (v) - closer ducks are larger
+      let drawSize = lerp(120, 240, duck.v) * random(0.9, 1, 1);
+      let duckRotation = random(-20, 20);
+
+      let currentScale = drawSize / max(artifact.imageData.width, artifact.imageData.height);
+      let scaledHeight = artifact.imageData.height * currentScale;
+
+      // Scaling from bottom center
+      // Offset center up by half height in duck's local rotated coordinate space
+      let duckRad = radians(duckRotation);
+      let offX = (scaledHeight / 2) * sin(duckRad);
+      let offY = -(scaledHeight / 2) * cos(duckRad);
+
+      let finalDrawX = duck.drawPosX + offX;
+      let finalDrawY = duck.drawPosY + offY;
+
+      collager.drawMaskedImage(
+        artifact.imageData,
+        artifact.curveData,
+        finalDrawX,
+        finalDrawY,
+        drawSize,
+        duckRotation
+      );
+
+      bufferLayerColorful.draw(() => {
+        collager.redrawMaskedImage(finalDrawX, finalDrawY, duckRotation);
+      });
+
+      bufferLayerMask.draw(() => {
+        colorMode(RGB);
+        tint(0, 0, 0);
+        collager.redrawMaskedImageOutlineMask(finalDrawX, finalDrawY, duckRotation);
+      });
+
+      await sleep(100);
+    }
+  }
 }
 
 async function drawLandRect(p00, p10, p11, p01, _angle) {
@@ -313,12 +389,12 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
       let ptOpp2 = edges[i][3];
 
       let thickness = random(10, 25);
-      
+
       let dirX = (ptOpp1.x + ptOpp2.x) / 2 - (pt1.x + pt2.x) / 2;
       let dirY = (ptOpp1.y + ptOpp2.y) / 2 - (pt1.y + pt2.y) / 2;
       let distToCenter = dist(0, 0, dirX, dirY);
       let ratio = thickness / distToCenter;
-      
+
       let v1 = pt1;
       let v2 = pt2;
       let v3 = { x: pt2.x + dirX * ratio, y: pt2.y + dirY * ratio };
@@ -336,20 +412,20 @@ async function drawLandRect(p00, p10, p11, p01, _angle) {
     }
   } else {
     // Existing hatch line logic
-    let density = floor(random(3, 13)); 
+    let density = floor(random(3, 13));
 
     collager.cutoutThickness(lerp(12, 24, p3));
     collager.cutoutNoiseScale(lerp(0.3, 0.6, p3));
     collager.cutoutRatio(0.2, 0.8);
-  
+
     collager.outlineWeight(lerp(12, 60, p3));
     collager.outlineRatio(0.2, 0.8);
     collager.outlineNoiseScale(lerp(0.6, 1.2, p3));
-    
+
     for (let i = 0; i < density; i++) {
       let t1 = (i - 0.2) / density;
       let t2 = (i + 1.2) / density;
-      
+
       let v1, v2, v3, v4;
       if (isVertical) {
         v1 = { x: lerp(p00.x, p01.x, t1), y: lerp(p00.y, p01.y, t1) };
@@ -632,6 +708,8 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
     collager.outlineNoiseScale(lerp(0.006, 0.12, p3));
     collager.outlineRatio(0.2, 0.8);
 
+    collager.shadow(10, 0, -10, [0, 0, 0], 0.36);
+
     // Increase yStart more predictably to reach _endY
     yStart += mountainLayerOffset;
 
@@ -691,7 +769,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
       tint(0, 0, 0);
       collager.redrawVertexShapeOutlineMask();
 
-      let drawInMask = random(0, 1) < 0.48;
+      let drawInMask = random(0, 1) < 0.24;
 
       if (drawInMask) {
         tint(255, random(0, 255), 255);
@@ -871,7 +949,7 @@ async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
       tint(0, 0, 0);
       collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angleDegree);
 
-      let drawInMask = random(0, 1) < 0.12;
+      let drawInMask = random(0, 1) < 0.24;
       if (drawInMask) {
         tint(255, random(0, 255), 255);
         collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angleDegree);
