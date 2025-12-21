@@ -96,7 +96,7 @@ async function asyncDraw() {
     let skyPortion = random(40, 70);
 
     // Draw sky from top to skyPortion
-    // await drawSkyLayer(-height / 2 - 100, getY(skyPortion), random(-5, 5));
+    await drawSkyLayer(-height / 2 - 100, getY(skyPortion), random(-5, 5));
 
     // Draw mountain from skyPortion to bottom
     // Start slightly above skyPortion for overlap
@@ -916,7 +916,7 @@ async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
   collager.debug(false);
   collager.debugScale(0.25);
 
-  let skyRotationNoiseScale = random(0.0001, 0.0012);
+  let skyRotationNoiseScale = lerp(0.0001, 0.0012, p3);
   // Draw Rects
   let flowFieldsCount = 2000;
   for (let i = 0; i < flowFieldsCount; i++) {
