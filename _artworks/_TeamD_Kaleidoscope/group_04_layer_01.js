@@ -11,7 +11,6 @@ new p5((sketch) => {
   const layers = [
     {
       type: "image",
-      imageIndex: 5,
       count: 8,
       radius: 900,
       size: 250,
@@ -20,7 +19,6 @@ new p5((sketch) => {
     },
     {
       type: "image",
-      imageIndex: 1,
       count: 8,
       radius: 700,
       size: 250,
@@ -30,7 +28,6 @@ new p5((sketch) => {
     },
     {
       type: "image",
-      imageIndex: 2,
       count: 16,
       radius: 530,
       size: 150,
@@ -39,7 +36,6 @@ new p5((sketch) => {
     },
     {
       type: "image",
-      imageIndex: 3,
       count: 12,
       radius: 400,
       size: 150,
@@ -49,7 +45,6 @@ new p5((sketch) => {
     },
     {
       type: "image",
-      imageIndex: 4,
       count: 12,
       radius: 250,
       size: 100,
@@ -59,7 +54,6 @@ new p5((sketch) => {
     },
     {
       type: "image",
-      imageIndex: 0,
       count: 12,
       radius: 125,
       size: 100,
@@ -71,15 +65,17 @@ new p5((sketch) => {
 
   sketch.setup = async () => {
     // N 張圖
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 11; i++) {
       let imgPath = `images/${String(i).padStart(2, "0")}.png`;
       images[i] = await sketch.loadImage(imgPath);
     }
-    console.log("✅ Images loaded:", images.length);
 
     randomImage01 = await sketch.loadImage("images/random_01.jpg");
     randomImage02 = await sketch.loadImage("images/random_02.jpg");
-    console.log("✅ Random images loaded");
+
+    for (let layer of layers) {
+      layer.imageIndex = Math.floor(Math.random() * images.length);
+    }
 
     let cnv = sketch.createCanvas(1080, 1920, sketch.WEBGL);
     cnv.style("position", "fixed");
@@ -125,7 +121,6 @@ new p5((sketch) => {
     tempGraphics02 = createMaskedImage(randomImage02, 300);
     let currentTime = (sketch.millis() - startTime) / 1000.0;
 
-
     sketch.fill(100, 150, 100, 150);
     sketch.noStroke();
     sketch.circle(0, 0, 30);
@@ -161,13 +156,6 @@ new p5((sketch) => {
       let x = sketch.cos(angle) * layer.radius;
       let y = sketch.sin(angle) * layer.radius;
 
-      // sketch.push();
-      // sketch.translate(x, y);
-      // sketch.rotate(angle + time * layer.selfRotation);
-
-      // sketch.fill(...layer.color);
-      // sketch.noStroke();
-
       sketch.push();
       sketch.translate(x, y);
       sketch.rotate(angle + time * layer.selfRotation);
@@ -185,42 +173,6 @@ new p5((sketch) => {
             );
           }
           break;
-
-        // case "ellipse":
-        //   sketch.ellipse(0, 0, layer.size.w, layer.size.h);
-        //   break;
-
-        // case "semicircle":
-        //   sketch.arc(0, 0, layer.size, layer.size, 0, sketch.PI);
-        //   break;
-
-        // case "sector":
-        //   sketch.arc(
-        //     0,
-        //     0,
-        //     layer.size,
-        //     layer.size,
-        //     -layer.sectorAngle / 2,
-        //     layer.sectorAngle / 2,
-        //     sketch.PIE
-        //   );
-        //   break;
-
-        // case "rect":
-        //   sketch.rectMode(sketch.CENTER);
-        //   sketch.rect(0, 0, layer.size, layer.size);
-        //   break;
-
-        // case "triangle":
-        //   sketch.triangle(
-        //     -layer.size / 2,
-        //     layer.size / 2,
-        //     layer.size / 2,
-        //     layer.size / 2,
-        //     0,
-        //     -layer.size / 2
-        //   );
-        //   break;
       }
 
       sketch.pop();
