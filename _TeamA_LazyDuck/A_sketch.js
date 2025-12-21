@@ -23,6 +23,7 @@ let sizeVariation = 0;
 
 // systems
 let collager;
+let layoutType = 0;
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
@@ -44,7 +45,7 @@ async function setup() {
   sizeVariation = lerp(0.1, 0.6, p3);
 
   // set subtype, although not implemented yet
-  let layoutType = subtype;
+  layoutType = 1;
 
   // set to orthographic projection
   colorMode(HSB);
@@ -74,17 +75,66 @@ async function asyncDraw() {
   collager.setLutTexture(lutTexture);
   collager.setLutIntensity(0.36);
 
-  // draw sky layer
-  await drawSkyLayer(-height / 2 - 100, -100, random(-5, 5));
+  // Helper to convert percentage (0-100) to Y coordinate
+  const getY = (p) => -height / 2 + (p / 100) * height;
 
-  // draw mountains
-  await drawMountainLayer(-400, random(-5, 5));
+  if (layoutType === 0) {
+    // Subtype 0: Mountain & Sky
+    let skyPortion = random(40, 70);
+    
+    // Draw sky from top to skyPortion
+    await drawSkyLayer(-height / 2 - 100, getY(skyPortion), random(-5, 5));
+    
+    // Draw mountain from skyPortion to bottom
+    // Start slightly above skyPortion for overlap
+    await drawMountainLayer(getY(skyPortion) - 200, height / 2 + 100, random(-5, 5), 24);
 
-  // draw sea layer
-  await drawSeaLayer(100, 500, random(-3, 3));
+  } else if (layoutType === 1 || layoutType === 2) {
+    // Subtype 1: Ocean, Subtype 2: Farmland
+    let hasSky = random() < 0.4;
+    let skyPortion = hasSky ? random(10, 24) : 0;
+    
+    let isSandwichLayout = random() < 0.5;
+    
+    if (skyPortion > 0) {
+      await drawSkyLayer(-height / 2 - 100, getY(skyPortion), random(-5, 5));
+    }
 
-  // draw land layer
-  await drawLandLayer(400, height / 2 + 100, random(-10, 10));
+    if (!isSandwichLayout) {
+      // 1. standard: sky -> mountain -> sea/land
+      let mtPortion = random(30, 60);
+      let mtStart = getY(skyPortion) - 100;
+      let layerEnd = getY(skyPortion + mtPortion);
+      
+      await drawMountainLayer(mtStart, layerEnd + 100, random(-5, 5), 12);
+      
+      if (layoutType === 1) {
+        await drawSeaLayer(layerEnd - 100, height / 2 + 100, random(-3, 3));
+      } else {
+        await drawLandLayer(layerEnd - 100, height / 2 + 100, random(-10, 10));
+      }
+    } else {
+      // 2. sandwich: sky -> mountain top -> sea/land -> mountain bottom
+      let mtTopPortion = random(10, 30);
+      let mtBotPortion = random(10, 30);
+      
+      let seaLandStart = getY(skyPortion + mtTopPortion);
+      let seaLandEnd = getY(100 - mtBotPortion);
+      
+      // Top mountain
+      await drawMountainLayer(getY(skyPortion) - 100, seaLandStart + 100, random(-5, 5), 8);
+      
+      // Sea or Land in the middle
+      if (layoutType === 1) {
+        await drawSeaLayer(seaLandStart - 100, seaLandEnd + 100, random(-20, 20));
+      } else {
+        await drawLandLayer(seaLandStart - 100, seaLandEnd + 100, random(-20, 20));
+      }
+      
+      // Bottom mountain
+      await drawMountainLayer(seaLandEnd - 100, height / 2 + 100, random(-5, 5), 8);
+    }
+  }
 
   // do breathing effect
   let breathingShader = await loadShader(
@@ -342,101 +392,101 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
   collager.clearImages();
   await collager.addImage('images/sea_01.jpeg', 0.1, 0.4);
 
-  collager.cutoutThickness(3);
+  collager.cutoutThickness(20);
   collager.cutoutNoiseScale(0.3);
   collager.cutoutRatio(0.2, 0.8);
 
-  collager.outlineWeight(20);
+  collager.outlineWeight(24);
   collager.outlineRatio(0.2, 0.8);
-  collager.outlineNoiseScale(1.0);
+  collager.outlineNoiseScale(0.6);
 
-  collager.rectEdgeOffset(5);
-  collager.rectRoundness(0);
-  collager.rectNoiseScale(0.05);
-  collager.rectPointCount(20);
+  collager.noShadow();
 
-  let lines = 24;
-  let stepsPerLine = 40;
-  let seaWidth = width * 1.5; 
-  let xStart = -seaWidth / 2;
-  let xStep = seaWidth / stepsPerLine;
-  
-  // Base wave parameters
-  let baseWaveAmplitude = random(40, 100);
-  let baseWaveFrequency = random(0.003, 0.01);
-  let baseNoise2DScale = random(0.002, 0.006);
+  let seaLayerCount = Math.floor(random(16, 32));
+  let xSamplePoints = 40;
 
-  for (let l = 0; l < lines; l++) {
-    let yProgress = l / (lines - 1);
-    let posYBase = lerp(_fromHeight, _toHeight, yProgress);
-    
-    // Per-line wave variation
+  let seaHeightRange = [30, 100]; // thickness variation range
+  let seaThicknessNoiseScaleX = 0.005;
+  let seaThicknessNoiseScaleY = 0.02;
+
+  let waveAmplitude = random(40, 80);
+  let waveFrequency = random(0.004, 0.012);
+
+  let totalHeight = Math.abs(_toHeight - _fromHeight);
+  let seaLayerOffset = totalHeight / seaLayerCount;
+
+  let yBase = _fromHeight;
+
+  for (let y = 0; y < seaLayerCount; y++) {
+    yBase += seaLayerOffset;
+
+    let upperPoints = [];
+    let lowerPoints = [];
+
+    // Wider range for rotation coverage
+    let xRange = width * 2.0;
+    let xStart = -xRange / 2;
+    let xEnd = xRange / 2;
+    let xStep = xRange / (xSamplePoints - 1);
+
     let lineSeed = random(1000);
-    let localWaveFrequency = baseWaveFrequency * random(0.9, 1.1);
-    let localPhaseShift = random(TWO_PI * 0.3); // Different "starting point" for sine wave
-    let localWaveAmplitude = baseWaveAmplitude * random(0.9, 1.1);
-    let localNoiseScale = baseNoise2DScale * random(0.8, 1.2);
-    
-    // Pick entire line for mask
-    let isLineInMask = random() < 0.2; 
+    let localPhaseShift = random(TWO_PI);
 
-    for (let s = 0; s < stepsPerLine; s++) {
-      let posX = xStart + s * xStep + random(-10, 10);
+    for (let x = 0; x < xSamplePoints; x++) {
+      let xPos = xStart + x * xStep;
       
-      // Calculate wave height using dynamic Sine + 2D Noise
-      // Adding localPhaseShift makes each line "offset" in the sine cycle
-      let sinePart = sin(posX * localWaveFrequency + localPhaseShift) * localWaveAmplitude;
-      let noisePart = (noise(posX * localNoiseScale, posYBase * localNoiseScale, lineSeed) - 0.5) * localWaveAmplitude * 1.5;
-      
-      let posY = posYBase + sinePart + noisePart;
+      // Base waveform: Sine wave
+      let sinePart = Math.sin(xPos * waveFrequency + localPhaseShift) * waveAmplitude;
+      let yCenter = yBase + sinePart;
 
-      let sizeW = random(80, 180);
-      let sizeH = random(8, 16);
+      // Thickness variation: Noise based
+      let tNoise = noise(xPos * seaThicknessNoiseScaleX, yBase * seaThicknessNoiseScaleY, lineSeed);
+      let localThickness = lerp(seaHeightRange[0], seaHeightRange[1], tNoise);
 
-      // Estimate slope for angle calculation
-      let sampleNextX = posX + 5;
-      let nextSinePart = sin(sampleNextX * localWaveFrequency + localPhaseShift) * localWaveAmplitude;
-      let nextNoisePart = (noise(sampleNextX * localNoiseScale, posYBase * localNoiseScale, lineSeed) - 0.5) * localWaveAmplitude * 1.5;
-      let nextPosY = posYBase + nextSinePart + nextNoisePart;
-      
-      let angleRad = atan2(nextPosY - posY, sampleNextX - posX);
-      let angleDegree = degrees(angleRad);
+      let upY = yCenter - localThickness / 2;
+      let loY = yCenter + localThickness / 2;
 
-      push();
-      rotate(radians(_angle));
-      collager.drawRect(posX, posY, sizeW, sizeH, angleDegree);
-      pop();
+      // Rotate points directly (like mountain layer)
+      let rad = radians(_angle);
+      let urx = xPos * Math.cos(rad) - upY * Math.sin(rad);
+      let ury = xPos * Math.sin(rad) + upY * Math.cos(rad);
+      let lrx = xPos * Math.cos(rad) - loY * Math.sin(rad);
+      let lry = xPos * Math.sin(rad) + loY * Math.cos(rad);
 
-      bufferLayerColorful.draw(() => {
-        push();
-        rotate(radians(_angle));
-        collager.redrawRect(posX, posY, sizeW, sizeH, angleDegree);
-        pop();
-      });
-
-      bufferLayerMask.draw(() => {
-        push();
-        rotate(radians(_angle));
-        colorMode(RGB);
-        
-        // Always clear mask for this rect first
-        tint(0, 0, 0);
-        collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, angleDegree);
-
-        // If line is selected, draw into the mask
-        if (isLineInMask) {
-          tint(255, random(0, 255), 255);
-          collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, angleDegree);
-        }
-        pop();
-      });
+      upperPoints.push(new NYPoint(urx, ury));
+      lowerPoints.push(new NYPoint(lrx, lry));
     }
-    
-    await sleep(50); // Draw line by line
+
+    // build clockwise array
+    let waveShapePoints = [];
+    waveShapePoints.push(...upperPoints);
+    let reversedLower = [...lowerPoints].reverse();
+    waveShapePoints.push(...reversedLower);
+
+    collager.drawVertexShape(waveShapePoints);
+
+    // draw on color
+    bufferLayerColorful.draw(() => {
+      collager.redrawVertexShape();
+    });
+
+    bufferLayerMask.draw(() => {
+      colorMode(RGB);
+      tint(0, 0, 0);
+      collager.redrawVertexShapeOutlineMask();
+
+      let drawInMask = random() < 0.36;
+      if (drawInMask) {
+        tint(255, random(0, 255), 255);
+        collager.redrawVertexShapeInsideMask();
+      }
+    });
+
+    await sleep(50);
   }
 }
 
-async function drawMountainLayer(_yOffset, _angle = 0) {
+async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
   collager.clearImages();
   await collager.addImage('images/train_01.jpg', 0.2, 0.6);
   await collager.addImage('images/train_02.jpg', 0.2, 0.6);
@@ -450,27 +500,32 @@ async function drawMountainLayer(_yOffset, _angle = 0) {
   collager.outlineRatio(0.3, 0.7);
 
 
-  let mountainLayerCount = 24;
+  let mountainLayerCount = _count;
   let xSamplePoints = 10;
 
   let mountainHeightRange = [60, 666];
   let mountainHeightNoiseScaleX = 0.002;
   let mountainHeightNoiseScaleY = 0.036;
 
-  let mountainLayerOffset = 80;
+  // Calculate offset based on range to ensure we fill the space
+  let totalHeight = _endY - _startY;
+  let mountainLayerOffset = totalHeight / mountainLayerCount;
 
-  let yStart = _yOffset;
+  let yStart = _startY;
 
   for (let y = 0; y < mountainLayerCount; y++) {
-    yStart += mountainLayerOffset * random(0.2, 1.0);
+    // Increase yStart more predictably to reach _endY
+    yStart += mountainLayerOffset;
 
     let mountainUpperPoints = [];
     let mountainLowerPoints = [];
 
-    let xStart = -0.7 * width;
-    let xEnd = 0.7 * width;
+    // Wider range to account for rotation
+    let xRange = width * 2.0;
+    let xStart = -xRange / 2;
+    let xEnd = xRange / 2;
 
-    let xStep = width / xSamplePoints;
+    let xStep = xRange / (xSamplePoints - 1);
 
     for (let x = 0; x < xSamplePoints; x++) {
       let xt = x / (xSamplePoints - 1);
