@@ -1,3 +1,5 @@
+console.log("NYHelpers.js loaded");
+
 function inverseLerp(_value, _min, _max) {
     return (_value - _min) / (_max - _min);
 }
@@ -218,3 +220,37 @@ function debugBufferLayers(debugItems, scale = 0.25) {
   
     pop();
   }
+
+// Add message listener for save command from parent window
+window.addEventListener('message', function(event) {
+  if (event.data === 'saveImage') {
+    console.log('Artwork received saveImage message');
+    const filename = 'artwork_' + new Date().getTime();
+    
+    // 1. Try p5.js global saveCanvas
+    if (typeof saveCanvas === 'function') {
+      saveCanvas(filename, 'png');
+    } 
+    // 2. Try window.saveCanvas
+    else if (window.saveCanvas && typeof window.saveCanvas === 'function') {
+      window.saveCanvas(filename, 'png');
+    }
+    // 3. Try p5.js global save
+    else if (typeof save === 'function') {
+      save(filename + '.png');
+    }
+    // 4. Fallback: manual canvas download
+    else {
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        console.log('Falling back to manual canvas download');
+        const link = document.createElement('a');
+        link.download = filename + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } else {
+        console.error('No canvas found to save');
+      }
+    }
+  }
+});

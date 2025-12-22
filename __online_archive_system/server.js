@@ -15,10 +15,9 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Serve static files with caching
-// Artwork assets (heavy images/shaders) - 30 days
+// Artwork assets (heavy images/shaders) - 1 hour (reduced from 30 days for updates)
 app.use('/artworks', express.static(path.join(__dirname, '../_artworks'), {
-    maxAge: 2592000000,
-    immutable: true
+    maxAge: 3600000
 }));
 
 // Artwork configurations (JSON) - 5 minutes
@@ -147,6 +146,27 @@ app.get('/api/load/:iterationId', (req, res) => {
         res.json(data);
     } else {
         res.status(404).json({ error: 'Artwork not found' });
+    }
+});
+
+// Serve the density configuration
+app.get('/api/config/density', (req, res) => {
+    const densityPath = path.join(CONFIG_DIR, 'densityConfig.json');
+    if (fs.existsSync(densityPath)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(densityPath, 'utf8'));
+            res.json(config);
+        } catch (e) {
+            res.status(500).json({ error: 'Failed to parse density config' });
+        }
+    } else {
+        // Default values if config doesn't exist
+        res.json({
+            mobile: 0.2,
+            lowDesktop: 0.4,
+            mediumDesktop: 0.75,
+            fullDesktop: 1.0
+        });
     }
 });
 

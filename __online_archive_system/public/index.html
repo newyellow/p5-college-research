@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,13 +75,13 @@
         }
 
         .artwork-title {
-            font-size: clamp(24px, 3vw, 32px);
+            font-size: clamp(36px, 3vw, 48px);
             font-weight: 700;
             color: #fff;
             text-align: center;
             letter-spacing: 4px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
         }
 
         /* 參數顯示區 - Matches result.html */
@@ -128,6 +129,129 @@
             font-family: "Courier New", monospace;
         }
 
+        /* GPU Resolution Notice */
+        .resolution-notice {
+            display: none;
+            /* Hidden by default */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 380px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            align-self: center;
+            margin: 0 40px;
+        }
+
+        @media (max-width: 768px) {
+            .resolution-notice {
+                display: block;
+                /* Show only on mobile */
+                width: 100%;
+                max-width: 380px;
+                margin: 40px 0 0 0;
+                align-self: center;
+            }
+        }
+
+        /* Quality Selector */
+        .quality-section {
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .quality-section {
+                display: none;
+                /* Hide quality selector on mobile */
+            }
+
+            .download-section {
+                display: none;
+                /* Hide download button on mobile */
+            }
+        }
+
+        .quality-title {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .quality-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .quality-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .quality-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .quality-btn.active {
+            background: #27ae60;
+            border-color: #27ae60;
+            box-shadow: 0 0 15px rgba(39, 174, 96, 0.4);
+        }
+
+        /* Download Button */
+        .download-section {
+            width: 100%;
+            max-width: 380px;
+            margin-top: 10px;
+        }
+
+        .download-btn {
+            width: 100%;
+            background-color: #2980b9;
+            color: #fff;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background-color: #3498db;
+        }
+
+        .download-btn:active {
+            transform: translateY(0);
+        }
+
         /* Share Section */
         .share-section {
             width: 100%;
@@ -159,12 +283,12 @@
             font-weight: 700;
             letter-spacing: 2px;
             transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .copy-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             background-color: #2ecc71;
         }
 
@@ -176,37 +300,12 @@
             background-color: #219150;
         }
 
-        .mobile-notice {
-            display: none;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 380px;
-            margin-bottom: 20px;
-            border-left: 5px solid #e74c3c;
-        }
-
-        .mobile-notice h2 {
-            font-size: 18px;
-            color: #e74c3c;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-
-        .mobile-notice p {
-            font-size: 16px;
-            font-weight: 600;
-            line-height: 1.6;
-            color: #333;
-        }
-
         /* Mobile Layout */
         @media (max-width: 768px) {
             body {
                 overflow: auto;
             }
+
             .container {
                 flex-direction: column;
                 height: auto;
@@ -215,12 +314,27 @@
                 align-items: center;
                 padding: 40px 20px;
             }
+
             .artwork-section {
-                display: none; /* Hide artwork on mobile */
+                width: 100%;
+                padding: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+                margin-bottom: 30px;
+                /* Add distance from the info panel */
             }
-            .mobile-notice {
-                display: block; /* Show notice on mobile */
+
+            .artwork-card {
+                height: 70vh;
+                width: calc(70vh * 9 / 16);
+                max-width: 100%;
+                max-height: none;
+                margin: 0 auto;
+                border-width: 4px;
             }
+
             .info-panel {
                 width: 100%;
                 padding: 0;
@@ -249,6 +363,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="loading" class="loading-overlay">載入作品中...</div>
 
@@ -258,25 +373,14 @@
                 <iframe id="artwork-frame"></iframe>
             </div>
         </div>
-        
+
         <div class="info-panel">
             <h1 class="artwork-title" id="artwork-title">作品名稱</h1>
-            
-            <div class="mobile-notice">
-                <h2>📱 行動裝置瀏覽提示</h2>
-                <p>
-                    由於本作品包含大量的 3D 運算與高解析度圖像，行動裝置效能無法承受。
-                    建議您<strong>分享或儲存此連結</strong>，並使用<strong>電腦</strong> 瀏覽器開啟。
-                </p>
-                <p style="margin-top: 10px; ">
-                    另外，您的作品數據已記錄於系統中，未來可能上鏈進行保存，成為永久的典藏。
-                </p>
-            </div>
 
             <div class="params-container">
-                <div class="params-title">作品資訊</div>
+                <!-- <div class="params-title">作品資訊</div> -->
                 <div class="param-item">
-                    <span class="param-label">存檔編號</span>
+                    <span class="param-label">紀錄編號</span>
                     <span class="param-value" id="iter-id">-</span>
                 </div>
                 <div class="param-item">
@@ -301,17 +405,99 @@
                 <div class="share-url" id="share-link">正在產生分享連結...</div>
                 <button class="copy-btn" id="copy-btn">分享此作品</button>
             </div>
+
+            <div class="quality-section" id="quality-selector">
+                <div class="quality-title">畫質設定 (Density)</div>
+                <div class="quality-buttons">
+                    <button class="quality-btn" data-level="low" onclick="setQuality('low')">低 (Low)</button>
+                    <button class="quality-btn" data-level="medium" onclick="setQuality('medium')">中 (Med)</button>
+                    <button class="quality-btn" data-level="full" onclick="setQuality('full')">高 (Full)</button>
+                </div>
+            </div>
+
+            <div class="download-section">
+                <button class="download-btn" onclick="downloadImage()">
+                    <span>💾 下載作品圖片</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="resolution-notice">
+            <strong>💡 瀏覽提示</strong>
+            <p>
+                由於本作品包含大量的 GPU 運算，行動裝置的解析度已大幅調降。
+                若欲獲得最佳的視覺體驗，建議使用電腦瀏覽器開啟此頁面。
+            </p>
         </div>
     </div>
 
     <script>
         const API_BASE = window.location.origin;
+        let currentDensityConfig = null;
+        let currentArtworkData = null;
+
+        async function getDensityRatio() {
+            try {
+                const res = await fetch(`${API_BASE}/api/config/density`);
+                if (!res.ok) throw new Error('Failed to fetch');
+                currentDensityConfig = await res.json();
+
+                if (window.innerWidth <= 768) {
+                    return currentDensityConfig.mobile || 0.2;
+                } else {
+                    // Default to low setting for desktop view
+                    return currentDensityConfig.lowDesktop || 0.4;
+                }
+            } catch (e) {
+                console.error('Failed to load density config:', e);
+                return window.innerWidth <= 768 ? 0.2 : 1.0;
+            }
+        }
+
+        function setQuality(level) {
+            if (!currentDensityConfig || !currentArtworkData) return;
+
+            let density = 1.0;
+            if (level === 'low') {
+                density = currentDensityConfig.lowDesktop || 0.4;
+            } else if (level === 'medium') {
+                density = currentDensityConfig.mediumDesktop || 0.75;
+            } else if (level === 'full') {
+                density = currentDensityConfig.fullDesktop || 1.0;
+            }
+
+            // Update UI
+            document.querySelectorAll('.quality-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.level === level);
+            });
+
+            // Update Iframe
+            updateArtworkIframe(density);
+        }
+
+        function updateArtworkIframe(density) {
+            if (!currentArtworkData) return;
+            const data = currentArtworkData;
+            const iframeUrl = `/artworks/${data.folder}/index.html?seed=${data.seed}&subtype=${data.subtype}&p1=${data.p1}&p2=${data.p2}&p3=${data.p3}&density=${density}`;
+            document.getElementById('artwork-frame').src = iframeUrl;
+        }
+
+        function downloadImage() {
+            console.log('Download button clicked');
+            const iframe = document.getElementById('artwork-frame');
+            if (iframe && iframe.contentWindow) {
+                console.log('Sending saveImage message to iframe');
+                iframe.contentWindow.postMessage('saveImage', '*');
+            } else {
+                console.error('Iframe or contentWindow not found');
+            }
+        }
 
         async function init() {
             const pathParts = window.location.pathname.split('/');
             const viewIdx = pathParts.indexOf('view');
             const iterationId = viewIdx !== -1 ? pathParts[viewIdx + 1] : null;
-            
+
             const urlParams = new URLSearchParams(window.location.search);
             const artworkId = urlParams.get('id');
 
@@ -373,7 +559,7 @@
                     console.error('Failed to load artwork config:', e);
                 }
 
-                displayData(data);
+                await displayData(data);
                 document.getElementById('loading').style.display = 'none';
             } catch (e) {
                 console.error('Failed to load artwork:', e);
@@ -381,10 +567,11 @@
             }
         }
 
-        function displayData(data) {
+        async function displayData(data) {
+            currentArtworkData = data;
             document.getElementById('artwork-title').textContent = data.title || data.artworkId;
             document.getElementById('iter-id').textContent = '#' + data.iterationId;
-            
+
             // Map subtype index to name if config is available
             let subtypeText = data.subtype !== null ? data.subtype : '-';
             if (data.config && data.config.subtypes && data.subtype !== null) {
@@ -394,11 +581,11 @@
                 }
             }
             document.getElementById('val-subtype').textContent = subtypeText;
-            
+
             document.getElementById('val-p1').textContent = data.p1 || '-';
             document.getElementById('val-p2').textContent = data.p2 || '-';
             document.getElementById('val-p3').textContent = data.p3 || '-';
-            
+
             const shareLink = `${window.location.origin}/view/${data.iterationId}`;
             const shareLinkEl = document.getElementById('share-link');
             shareLinkEl.textContent = shareLink;
@@ -406,7 +593,7 @@
             document.getElementById('copy-btn').onclick = async () => {
                 const shareData = {
                     title: `線上典藏 - ${data.title || data.artworkId}`,
-                    text: `這是我在展覽中生成的作品 #${data.iterationId}，快來看看吧！`,
+                    text: `這是我在勁水國寶展覽中生成的作品 #${data.iterationId}，快來看看吧！`,
                     url: shareLink
                 };
 
@@ -430,16 +617,34 @@
                 }
             };
 
-            // Construct iframe URL
-            const iframeUrl = `/artworks/${data.folder}/index.html?seed=${data.seed}&subtype=${data.subtype}&p1=${data.p1}&p2=${data.p2}&p3=${data.p3}`;
-            
-            // Only load iframe if not on mobile
+            // Get initial density ratio and set active quality button
+            const density = await getDensityRatio();
+
             if (window.innerWidth > 768) {
-                document.getElementById('artwork-frame').src = iframeUrl;
+                let activeLevel = 'full';
+                const lowVal = currentDensityConfig.lowDesktop || 0.4;
+                const medVal = currentDensityConfig.mediumDesktop || 0.75;
+                const fullVal = currentDensityConfig.fullDesktop || 1.0;
+
+                if (Math.abs(density - lowVal) < 0.01) {
+                    activeLevel = 'low';
+                } else if (Math.abs(density - medVal) < 0.01) {
+                    activeLevel = 'medium';
+                } else if (Math.abs(density - fullVal) < 0.01) {
+                    activeLevel = 'full';
+                }
+
+                document.querySelectorAll('.quality-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.level === activeLevel);
+                });
             }
+
+            // Construct iframe URL
+            updateArtworkIframe(density);
         }
 
         init();
     </script>
 </body>
+
 </html>
