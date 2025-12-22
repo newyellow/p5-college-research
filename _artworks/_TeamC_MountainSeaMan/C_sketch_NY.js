@@ -69,7 +69,7 @@ async function setup() {
   let randomShaderType = 0;
 
   // map to index is easier for testing
-  if(randomValue < 0.35) {
+  if (randomValue < 0.35) {
     randomShaderType = 0;
   } else if (randomValue < 0.80) {
     randomShaderType = 1;
@@ -310,6 +310,47 @@ async function prepareTextBGLayer() {
 async function drawSeaWaveLayer() {
   collager.clearImages();
 
+  // Load subtype-specific artifacts and keep their indices
+  let artifactIndices = [];
+  if (textIndex == 0) {
+    // subtype 0: mountains
+    await croppedImageContainer.addImage(
+      "images/artifacts/mountain_01.png",
+      "images/artifacts/mountain_01.json"
+    );
+    artifactIndices.push(croppedImageContainer.croppedImageSets.length - 1);
+    await croppedImageContainer.addImage(
+      "images/artifacts/mountain_02.png",
+      "images/artifacts/mountain_02.json"
+    );
+    artifactIndices.push(croppedImageContainer.croppedImageSets.length - 1);
+  } else if (textIndex == 1) {
+    // subtype 1: blue_artifacts
+    let blueArtifacts = [
+      "images/artifacts/blue_artifact_01.png",
+      "images/artifacts/blue_artifact_02.png",
+      "images/artifacts/blue_artifact_03.png"
+    ];
+    for (let path of blueArtifacts) {
+      await croppedImageContainer.addImage(path, path.replace(".png", ".json"));
+      artifactIndices.push(croppedImageContainer.croppedImageSets.length - 1);
+    }
+  } else if (textIndex == 2) {
+    // subtype 2: boats
+    let boatImages = [
+      "images/artifacts/boat_01.png",
+      "images/artifacts/boat_02.png",
+      "images/artifacts/boat_03.png",
+      "images/artifacts/boat_04.png",
+      "images/artifacts/ship_01.png",
+      "images/artifacts/ship_02.png"
+    ];
+    for (let path of boatImages) {
+      await croppedImageContainer.addImage(path, path.replace(".png", ".json"));
+      artifactIndices.push(croppedImageContainer.croppedImageSets.length - 1);
+    }
+  }
+
   let texturePaths = [
     "images/wave_textures/sea-paper-1.png",
     "images/wave_textures/sea-paper-2.png",
@@ -326,26 +367,35 @@ async function drawSeaWaveLayer() {
 
   // randomly pick 3
   shuffle(texturePaths, true);
-
   for (let i = 0; i < 3; i++) {
     await collager.addImage(texturePaths[i], 0.6, 1.0);
   }
 
-  let pieceCount = random(3, 6);
+  collager.cutoutThickness(10);
+  collager.cutoutNoiseScale(0.3);
+  collager.cutoutRatio(0.2, 0.8);
+
+  let waveOutlineThickness = lerp(12, 60, p3);
+  collager.outlineWeight(waveOutlineThickness);
+  collager.outlineRatio(0.2, 0.8);
+  collager.outlineNoiseScale(0.01);
 
   collager.shadow(12, -6, 30, [0, 0, 0], 0.3);
 
-  // draw some large image
-  for (let i = 0; i < pieceCount; i++) {
-    // let posX = random(-360, 360);
+  // draw some large image (thick pieces)
+  let thickPieceCount = random(3, 6);
+
+  // Set thicker settings for these pieces
+  collager.cutoutThickness(120);
+  collager.cutoutNoiseScale(0.6);
+  collager.rectEdgeOffset(60);
+  collager.rectPointCount(200);
+
+  for (let i = 0; i < thickPieceCount; i++) {
     let posX = 0;
     let posY = random(-900, 900);
-
-    // let sizeW = random(800, 1200);
-    // let sizeH = random(300, 400);
     let sizeW = 1480;
     let sizeH = random(100, 360);
-
     let rotationDegree = random(-12, 12);
 
     textBGLayer.draw(() => {
@@ -358,12 +408,183 @@ async function drawSeaWaveLayer() {
       collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, rotationDegree);
     });
     await sleep(16);
+  }
 
-    // draw all
+  // Restore wave settings for the line layers
+  collager.cutoutThickness(10);
+  collager.cutoutNoiseScale(0.3);
+  collager.rectEdgeOffset(10); // reset to a smaller value for waves if needed
+
+  // Define layout bottom range
+  let fromHeight = random(360, 660);
+  let toHeight = 960;
+  let totalHeight = toHeight - fromHeight;
+
+  let maxLayerCount = lerp(6, 24, p3);
+  let seaLayerCount = floor(random(6, maxLayerCount));
+  let seaLayerOffset = totalHeight / seaLayerCount;
+
+  // Pre-calculate artifact placements
+  let artifactCount = floor(random(6, maxLayerCount));
+  if (textIndex == 0) {
+    artifactCount = floor(random(3, 8));
+  }
+  let artifactPlacements = [];
+
+  for (let i = 0; i < artifactCount; i++) {
+    artifactPlacements.push({
+      layerIndex: floor(random(0, seaLayerCount)),
+      xRatio: random(0.1, 0.9),
+      artifactIndex: artifactIndices[floor(random(artifactIndices.length))],
+    });
+  }
+
+  // artifact calculation
+  let drawnArtifactCount = 0;
+
+
+  // wave settings
+  let xSamplePoints = 360;
+  let waveAmplitude = 120;
+  let waveFrequency = lerp(0.001, 0.006, p3);
+  let waveNoiseAmplitude = random(60, 240);
+  let waveNoiseScale = random(0.005, 0.001);
+
+  let maxThickness = lerp(60, 120, p3);
+
+  let thicknessNoiseScale = 0.001;
+
+  let yBase = fromHeight;
+
+  for (let y = 0; y < seaLayerCount; y++) {
+    yBase += seaLayerOffset;
+
+    let lineFrequency = waveFrequency * random(0.8, 1.2);
+    let lineAmplitude = waveAmplitude * random(0.8, 1.2);
+    let localPhaseShift = random(TWO_PI);
+    let lineSeed = random(1000);
+
+    let upperPoints = [];
+    let lowerPoints = [];
+
+    let xRange = width * 1.5;
+    let xStart = -xRange / 2;
+    let xStep = xRange / (xSamplePoints - 1);
+
+    for (let x = 0; x < xSamplePoints; x++) {
+      let xPos = xStart + x * xStep;
+
+      let frequencyNoise = noise(xPos * 0.003, yBase * 0.012, lineSeed);
+      let localFrequency = lerp(lineFrequency, lineFrequency * 1.6, frequencyNoise);
+
+      let sinePart = Math.sin(xPos * localFrequency + localPhaseShift) * lineAmplitude;
+      let noisePart = (noise(xPos * waveNoiseScale, yBase * 0.01, lineSeed) - 0.5) * waveNoiseAmplitude;
+      let yCenter = yBase + sinePart + noisePart;
+
+      let thicknessNoise = noise(xPos * thicknessNoiseScale, yBase * thicknessNoiseScale, lineSeed);
+      let localThickness = lerp(12, maxThickness, thicknessNoise);
+
+      upperPoints.push(new NYPoint(xPos, yCenter - localThickness / 2));
+      lowerPoints.push(new NYPoint(xPos, yCenter + localThickness / 2));
+    }
+
+    let waveShapePoints = [...upperPoints, ...[...lowerPoints].reverse()];
+
+    collager.drawVertexShape(waveShapePoints);
+
+    textBGLayer.draw(() => {
+      collager.redrawVertexShape();
+    });
+
+    tempMaskLayer.draw(() => {
+      tint(0, 0, 0);
+      collager.redrawVertexShapeOutlineMask();
+    });
+
+    // Draw artifacts assigned to this layer
+    let artifactsInThisLayer = artifactPlacements.filter((p) => p.layerIndex === y);
+    let mountainStartY = random(600, 800); // just for mountains
+
+    for (let artPos of artifactsInThisLayer) {
+      let shipXPos = xStart + artPos.xRatio * xRange;
+      let sinePart = Math.sin(shipXPos * lineFrequency + localPhaseShift) * lineAmplitude;
+      let noisePart = (noise(shipXPos * waveNoiseScale, yBase * 0.01, lineSeed) - 0.5) * waveNoiseAmplitude;
+      let yCenter = yBase + sinePart + noisePart;
+
+      let artifact = croppedImageContainer.croppedImageSets[artPos.artifactIndex];
+
+      if (artifact) {
+        let drawSize = 300;
+        let rotationDegree = 0;
+        let yOffsetRatio = 0.4;
+        let drawScale = 1.0; // for mountain to scale up
+
+        if (textIndex == 0) {
+          // Mountains: Big and standing
+          shipXPos = random(-width / 2 - 200, width / 2 + 200);
+          drawSize = random(480, 1024);
+          rotationDegree = random(-6, 6);
+          yOffsetRatio = 0; // Anchored more to the bottom
+
+          drawScale = random(1.0, 2.0);
+
+          let drawnT = drawnArtifactCount++ / artifactCount;
+          yCenter = lerp(mountainStartY, 900, drawnT);
+        } else if (textIndex == 1) {
+          // Blue Artifacts: Small, full rotation, flowing with waves
+          drawSize = random(180, 360);
+          rotationDegree = random(-360, 360);
+          yOffsetRatio = random(-0.2, 0.2); // Floating range
+        } else if (textIndex == 2) {
+          // Boats: Small, slight rotation, floating on waves
+          drawSize = random(180, 360);
+          rotationDegree = random(-20, 20);
+          yOffsetRatio = random(-0.2, 0.2); // Floating range
+        }
+
+        let currentScale = drawSize / max(artifact.imageData.width, artifact.imageData.height);
+        let scaledHeight = artifact.imageData.height * currentScale;
+
+        let finalDrawX = shipXPos;
+        let finalDrawY = yCenter - scaledHeight * yOffsetRatio;
+
+        collager.setLutIntensity(0.0);
+        textBGLayer.draw(() => {
+          push();
+          translate(finalDrawX, finalDrawY);
+          scale(drawScale);
+
+          collager.drawMaskedImage(
+            artifact.imageData,
+            artifact.curveData,
+            0,
+            0,
+            drawSize,
+            rotationDegree
+          );
+
+          pop();
+        });
+
+        tempMaskLayer.draw(() => {
+          push();
+          translate(finalDrawX, finalDrawY);
+          scale(drawScale);
+
+          tint(0, 0, 0);
+          collager.redrawMaskedImageOutlineMask(0, 0, rotationDegree);
+
+          pop();
+        });
+      }
+    }
+
+    // draw all to screen for progress feedback
     background(0, 0, 100);
     image(textBGLayer, 0, 0);
     image(textLayer, 0, 0);
-    await sleep(66);
+
+    await sleep(32);
   }
 }
 
@@ -457,7 +678,7 @@ async function loadTextImageSetData(_textIndex) {
       "images/artifacts/stone_04.json"
     );
   } else if (_textIndex == 1) {
-    // sea
+    // boat/sea
     await croppedImageContainer.addImage(
       "images/artifacts/blue_artifact_01.png",
       "images/artifacts/blue_artifact_01.json"
@@ -471,7 +692,7 @@ async function loadTextImageSetData(_textIndex) {
       "images/artifacts/blue_artifact_03.json"
     );
   } else if (_textIndex == 2) {
-    // human
+    // boats
     await croppedImageContainer.addImage(
       "images/artifacts/skeleton_01.png",
       "images/artifacts/skeleton_01.json"
