@@ -294,7 +294,7 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
 
       // Sizing based on depth (v) - closer ducks are larger
       let drawSize = lerp(120, 240, duck.v) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
-      let duckRotation = random(-p3RotRange, p3RotRange);
+      let duckRotation = random(-12, 12);
 
       let currentScale = drawSize / max(artifact.imageData.width, artifact.imageData.height);
       let scaledHeight = artifact.imageData.height * currentScale;
@@ -655,7 +655,7 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
         let finalDrawX = drawPosX + offX;
         let finalDrawY = drawPosY + offY;
 
-        let shipRotation = _angle + random(-p3RotRange, p3RotRange);
+        let shipRotation = _angle + random(-12, 12);
 
         collager.drawMaskedImage(
           artifact.imageData,
@@ -853,7 +853,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
         let finalDrawX = drawPosX + offX;
         let finalDrawY = drawPosY + offY;
 
-        let artifactRotation = _angle + random(-p3RotRange, p3RotRange);
+        let artifactRotation = _angle + random(-6, 6);
 
         push();
         translate(finalDrawX, finalDrawY);
@@ -913,6 +913,10 @@ async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
   // Add images
   await collager.addImage('images/sky_01.png', 0.1, 0.6);
   await collager.addImage('images/sky_02.jpg', 0.1, 0.3);
+
+  // add golden fish artifact
+  artifactImageContainer.clearImageSets();
+  await artifactImageContainer.addImage('artifacts/goldenfish.jpg', 'artifacts/goldenfish.json');
 
   // outline settings
   collager.cutoutThickness(20);
@@ -981,6 +985,54 @@ async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
     if (i % 5 == 0) {
       await collager.sync();
     }
+  }
+
+  // Draw golden fish in the sky (moon)
+  let artifact = artifactImageContainer.getRandomCroppedImageSet();
+  if (artifact) {
+    // setup collager for artifact layer
+    collager.cutoutThickness(1);
+    collager.cutoutRatio(0.1, 0.9);
+
+    collager.outlineWeight(30);
+    collager.shadow(10, 5, 15, [0, 0, 0], 0.3);
+
+    // Position it more like a moon, slightly biased towards the top half of the sky
+    let posX = random(-width / 2 + 100, width / 2 - 100);
+    let posY = lerp(_fromHeight, _toHeight, random(0.1, 0.4));
+
+    let drawSize = random(100, 360) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+    let fishRotation = random(-p3RotRange, p3RotRange);
+
+    // Rotate position to match sky rotation
+    let rad = radians(_angle);
+    let drawPosX = posX * cos(rad) - posY * sin(rad);
+    let drawPosY = posX * sin(rad) + posY * cos(rad);
+
+    collager.drawMaskedImage(
+      artifact.imageData,
+      artifact.curveData,
+      drawPosX,
+      drawPosY,
+      drawSize,
+      fishRotation
+    );
+
+    bufferLayerColorful.draw(() => {
+      collager.redrawMaskedImage(drawPosX, drawPosY, fishRotation);
+    });
+
+    bufferLayerMask.draw(() => {
+      colorMode(RGB);
+      tint(0, 0, 0);
+      collager.redrawMaskedImageOutlineMask(drawPosX, drawPosY, fishRotation);
+
+      // Always include in breathing effect
+      tint(255, random(0, 255), 4); // Sky mask index is 4
+      collager.redrawMaskedImageInsideMask(drawPosX, drawPosY, fishRotation);
+    });
+
+    await collager.sync();
   }
 
 }
