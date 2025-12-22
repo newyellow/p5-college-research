@@ -88,14 +88,14 @@ void main() {
                     float ringFactor = 1.0 - normalizedRing * 0.3;
 
                     float lensEffect = sin(ringPct * 25.0 + dist * 0.05 - ripplePhase) * 
-                                     rippleIntensity * alphaWave * ringFactor * 0.025;
+                    rippleIntensity * alphaWave * ringFactor * 0.025;
 
                     vec2 lensDir = normalize(toLens);
                     vec2 lensOffset = lensDir * lensEffect * lens.maxRadius * 0.1;
 
                     vec2 tangent = vec2(-lensDir.y, lensDir.x);
                     lensOffset += tangent * lensEffect * lens.maxRadius * 0.05 * 
-                                sin(ripplePhase + float(i) * 2.0);
+                    sin(ripplePhase + float(i) * 2.0);
 
                     totalLensOffset += lensOffset;
                     break;
@@ -108,9 +108,9 @@ void main() {
     vec2 distortedUV = distortedPixelPos / vec2(width, height);
 
     float edgeFade = smoothstep(0.0, 0.1, distortedUV.x) * 
-                     smoothstep(0.0, 0.1, distortedUV.y) *
-                     smoothstep(1.0, 0.9, distortedUV.x) * 
-                     smoothstep(1.0, 0.9, distortedUV.y);
+    smoothstep(0.0, 0.1, distortedUV.y) *
+    smoothstep(1.0, 0.9, distortedUV.x) * 
+    smoothstep(1.0, 0.9, distortedUV.y);
     distortedUV = mix(uv, distortedUV, edgeFade);
 
     vec4 distortedColor = texture2D(utexture, distortedUV);
@@ -119,7 +119,7 @@ void main() {
     vec4 originalColor = texture2D(utexture, uv);
     vec3 finalColor = mix(originalColor.rgb, distortedColor.rgb, maskColor.r);
 
-    finalColor = mix(originalColor.rgb, finalColor, uEffectStrength);
-    
-    gl_FragColor = vec4(finalColor, 1.0);
+    vec3 finalApplyColor = mix(originalColor.rgb, finalColor, uEffectStrength);
+
+    gl_FragColor = vec4(finalApplyColor, 1.0);
 }

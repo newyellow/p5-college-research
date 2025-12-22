@@ -31,18 +31,6 @@ let randonclrpos = [];
 let randomGauss = [];
 
 let shaderPath;
-let randomValue = Math.random();
-
-if (randomValue < 0.35) {
-    // 35% mix
-    shaderPath = "../shaders/effect_C.frag";
-} else if (randomValue < 0.80) {
-    // 45% 波紋
-    shaderPath = "../shaders/effect_C_01.frag";
-} else {
-    // 20% 純紙
-    shaderPath = "../shaders/effect_C_02.frag";
-}
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
@@ -66,15 +54,39 @@ async function setup() {
 
   textIndex = subtype;
 
-    for (let i = 0; i < 6; i++) {
-      randonclrpos.push(Math.floor(Math.random() * 3));
-    }
-    
-    for (let i = 0; i < 3; i++) {
-      let sign = Math.random() > 0.5 ? 1 : -1;
-      let strength = 0.1 + Math.random() * 0.9;
-      randomGauss.push(sign * strength);
-    }
+  for (let i = 0; i < 6; i++) {
+    randonclrpos.push(Math.floor(Math.random() * 3));
+  }
+
+  for (let i = 0; i < 3; i++) {
+    let sign = Math.random() > 0.5 ? 1 : -1;
+    let strength = 0.1 + Math.random() * 0.9;
+    randomGauss.push(sign * strength);
+  }
+
+  // setup shader type
+  let randomValue = random();
+  let randomShaderType = 0;
+
+  // map to index is easier for testing
+  if(randomValue < 0.35) {
+    randomShaderType = 0;
+  } else if (randomValue < 0.80) {
+    randomShaderType = 1;
+  } else {
+    randomShaderType = 2;
+  }
+
+  if (randomShaderType == 0) {
+    // 35% mix
+    shaderPath = "../shaders/effect_C.frag";
+  } else if (randomShaderType == 1) {
+    // 45% 波紋
+    shaderPath = "../shaders/effect_C_01.frag";
+  } else {
+    // 20% 純紙
+    shaderPath = "../shaders/effect_C_02.frag";
+  }
 
 
   // set to orthographic projection
@@ -109,30 +121,6 @@ async function asyncDraw() {
 
   // debugBufferLayers([tempAssetLayer, tempMaskLayer, textLayer, textBGLayer]);
   startBreathingEffect();
-
-  // let greenLut = await loadImage('images/luts/C_lut_green.png');
-
-  // collager.cutoutThickness(0.01);
-  // collager.cutoutNoiseScale(0.1);
-  // collager.cutoutRatio(0.1, 0.9);
-
-  // collager.outlineWeight(12);
-  // collager.outlineNoiseScale(0.36);
-  // collager.outlineRatio(0.4, 0.8);
-
-  // collager.shadow(12, -6, 30, [0, 0, 0], 0.3);
-
-  // collager.debug(true);
-
-  // collager.setLutTexture(greenLut);
-  // collager.setLutIntensity(1.0);
-
-  // // await collager.addImage('images/artifacts/boat_01.png', 0.2, 0.8);
-  // let imgData = await loadImage('images/artifacts/mountain_01.png');
-  // let imgPathData = await loadJSON('images/artifacts/mountain_01.json');
-
-  // collager.drawMaskedImage(imgData, imgPathData, 0, 0, 800, 10);;
-  // collager.drawRect(0, 0, 300, 300);
 }
 
 async function prepareMainTextLayer() {
@@ -363,17 +351,19 @@ async function drawSeaWaveLayer() {
     textBGLayer.draw(() => {
       collager.drawRect(posX, posY, sizeW, sizeH, rotationDegree);
     });
+    await sleep(16);
 
     tempMaskLayer.draw(() => {
       tint(0, 0, 0);
       collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, rotationDegree);
     });
+    await sleep(16);
 
     // draw all
     background(0, 0, 100);
     image(textBGLayer, 0, 0);
     image(textLayer, 0, 0);
-    await sleep(100);
+    await sleep(66);
   }
 }
 
@@ -396,7 +386,7 @@ let breathingShader = null;
 let startTime = null;
 let isBreathing = false;
 let effectStrength = 0.0;
-let effectTimeCounter = 0.0;
+let effectTimeCounter = -0.6;
 
 async function startBreathingEffect() {
   // do breathing effect
@@ -425,7 +415,7 @@ function draw() {
       breathingShader.setUniform("uColorMode", textIndex);
       breathingShader.setUniform("rand", randonclrpos);
       breathingShader.setUniform("gauss", randomGauss);
-      
+
       noStroke();
       fill(0, 0, 100);
       rect(0, 0, width, height);
@@ -435,6 +425,7 @@ function draw() {
 
     // slowly apply the effect
     effectTimeCounter += deltaTime / 2400.0;
+
     effectStrength = easeInOutSine(constrain(effectTimeCounter, 0.0, 1.0));
 
     image(tempAssetLayer, 0, 0, width, height);
