@@ -11,7 +11,7 @@ new p5((sketch) => {
   const layers = [
     {
       type: "image",
-      count: 8,
+      count: 12,
       radius: 900,
       size: 250,
       rotationSpeed: 0.1,
@@ -19,10 +19,10 @@ new p5((sketch) => {
     },
     {
       type: "image",
-      count: 8,
+      count: 12,
       radius: 700,
       size: 250,
-      rotationSpeed: -0.15,
+      rotationSpeed: -0.2,
       selfRotation: 0,
       startAngle: Math.PI / 8,
     },
@@ -30,8 +30,8 @@ new p5((sketch) => {
       type: "image",
       count: 16,
       radius: 530,
-      size: 150,
-      rotationSpeed: 0.2,
+      size: 200,
+      rotationSpeed: 0.4,
       selfRotation: -0.3,
     },
     {
@@ -40,16 +40,16 @@ new p5((sketch) => {
       radius: 400,
       size: 150,
       rotationSpeed: -0.12,
-      selfRotation: 0.5,
+      selfRotation: -0.6,
       startAngle: Math.PI / 12,
     },
     {
       type: "image",
       count: 12,
-      radius: 250,
-      size: 100,
+      radius: 230,
+      size: 150,
       rotationSpeed: 0.18,
-      selfRotation: -0.5,
+      selfRotation: 0.8,
       startAngle: Math.PI / 6,
     },
     {
@@ -58,14 +58,14 @@ new p5((sketch) => {
       radius: 125,
       size: 100,
       rotationSpeed: 0.18,
-      selfRotation: -0.5,
+      selfRotation: -1,
       startAngle: Math.PI / 6,
     },
   ];
 
   sketch.setup = async () => {
     // N 張圖
-    for (let i = 0; i < 11; i++) {
+    for (let i = 0; i < 15; i++) {
       let imgPath = `images/${String(i).padStart(2, "0")}.png`;
       images[i] = await sketch.loadImage(imgPath);
     }
