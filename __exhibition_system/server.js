@@ -21,6 +21,16 @@ app.use('/artworks', express.static(path.join(__dirname, '../_artworks')));
 // Serve the artwork configurations separately so we don't expose the whole system
 app.use('/artwork-configs', express.static(path.join(__dirname, 'configs/artworks')));
 
+// Serve the screen configuration
+app.get('/config/screen', (req, res) => {
+    try {
+        const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'configs', 'screenConfig.json'), 'utf8'));
+        res.json(config);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to load screen config' });
+    }
+});
+
 // Load Artworks dynamically from configs/artworks folder
 const artworks = [];
 const artworksDir = path.join(__dirname, 'configs', 'artworks');
@@ -163,7 +173,12 @@ io.on('connection', (socket) => {
         }
 
         let pickedArtwork = null;
-        if (sequenceQueue.length > 0) {
+        const targetId = clientParams.targetId;
+
+        if (targetId) {
+            pickedArtwork = artworks.find(art => art.id === targetId);
+            console.log(`Debug pick: ${targetId}`);
+        } else if (sequenceQueue.length > 0) {
             const nextId = sequenceQueue[sequencePosition];
             sequencePosition = (sequencePosition + 1) % sequenceQueue.length;
             pickedArtwork = artworks.find(art => art.id === nextId);

@@ -197,6 +197,35 @@
             background-color: #e74c3c;
             color: white;
         }
+
+        /* Debug Buttons Styles */
+        .debug-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-width: 400px;
+            z-index: 2000;
+        }
+
+        .debug-btn {
+            padding: 10px 15px;
+            font-size: 16px;
+            font-weight: 600;
+            background-color: rgba(44, 62, 80, 0.7);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .debug-btn:active {
+            transform: scale(0.95);
+            background-color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -222,6 +251,8 @@
 
         <button id="generateBtn" class="action-button">生成作品</button>
     </div>
+
+    <div id="debugControls" class="debug-controls"></div>
 
     <!-- Layout 2: Description Display (now using Iframe) -->
     <div id="displayPanel" class="panel">
@@ -254,6 +285,7 @@
         const generateBtn = document.getElementById('generateBtn');
         const returnHint = document.getElementById('returnHint');
         const artworkIframe = document.getElementById('artworkIframe');
+        const debugControls = document.getElementById('debugControls');
         
         const overlayNextBtn = document.getElementById('overlayNextBtn');
         const overlayBackBtn = document.getElementById('overlayBackBtn');
@@ -265,11 +297,76 @@
         let currentArtwork = null;
         let currentViewState = 'info'; // 'info' or 'result'
         let hasInitialRevealHappened = false;
+        let isDebugEnabled = false;
 
         // Init Styles
         settingPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
         displayPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
         returnHint.style.transitionDuration = `${HINT_FADE_DURATION}ms`;
+
+        // --- DEBUG MODE LOGIC ---
+        function toggleDebugMode() {
+            isDebugEnabled = !isDebugEnabled;
+            console.log('Debug mode:', isDebugEnabled);
+            if (isDebugEnabled) {
+                if (settingPanel.classList.contains('active')) {
+                    debugControls.style.display = 'flex';
+                }
+                if (debugControls.children.length === 0) {
+                    setupDebugButtons();
+                }
+            } else {
+                debugControls.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 't') {
+                toggleDebugMode();
+            }
+        });
+
+        function setupDebugButtons() {
+            const types = ['A', 'B', 'C', 'D', 'E'];
+            types.forEach(type => {
+                for (let i = 1; i <= 3; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'debug-btn';
+                    btn.textContent = `${type}-${i}`;
+                    btn.onclick = () => {
+                        const teamId = `Team${type}`;
+                        const subtype = i - 1; // 1-indexed to 0-indexed
+                        handleGenerateClick(teamId, subtype);
+                    };
+                    debugControls.appendChild(btn);
+                }
+            });
+        }
+
+        function handleGenerateClick(targetId = null, specificSubtype = null) {
+            if (isAnimating) return;
+            
+            isAnimating = true; // Lock interaction
+
+            // Collect Slider Values (Normalize to 0-1 and fix length to 0.0000)
+            const params = {
+                p1: (document.getElementById('param1').value / 92).toFixed(4),
+                p2: (document.getElementById('param2').value / 1000000).toFixed(4),
+                p3: (document.getElementById('param3').value / 1000000).toFixed(4),
+                subtype: specificSubtype !== null ? specificSubtype : Math.floor(Math.random() * 3)
+            };
+
+            if (targetId) {
+                params.targetId = targetId;
+            }
+            
+            // 1. Send Request
+            socket.emit('pick-random', params);
+            
+            // The actual transition happens when we get data back (in socket.on)
+            settingPanel.classList.remove('active');
+            debugControls.style.display = 'none';
+        }
 
         const updateControlPanel = (artwork) => {
             currentArtwork = artwork;
@@ -385,23 +482,7 @@
 
         // Event: Generate Button Click
         generateBtn.addEventListener('click', () => {
-            if (isAnimating) return;
-            
-            isAnimating = true; // Lock interaction
-
-            // Collect Slider Values (Normalize to 0-1 and fix length to 0.0000)
-            const params = {
-                p1: (document.getElementById('param1').value / 92).toFixed(4),
-                p2: (document.getElementById('param2').value / 1000000).toFixed(4),
-                p3: (document.getElementById('param3').value / 1000000).toFixed(4),
-                subtype: Math.floor(Math.random() * 3) // Random subtype 0, 1, or 2
-            };
-            
-            // 1. Send Request
-            socket.emit('pick-random', params);
-            
-            // The actual transition happens when we get data back (in socket.on)
-            settingPanel.classList.remove('active');
+            handleGenerateClick();
         });
 
         // Event: Screen Tap (Return)
@@ -417,6 +498,7 @@
 
         function performTransitionToDisplay() {
             settingPanel.classList.remove('active');
+            debugControls.style.display = 'none';
 
             setTimeout(() => {
                 displayPanel.classList.add('active');
@@ -443,6 +525,7 @@
 
             setTimeout(() => {
                 settingPanel.classList.add('active');
+                if (isDebugEnabled) debugControls.style.display = 'flex';
                 artworkIframe.src = "about:blank"; // Clear iframe
                 
                 setTimeout(() => {
