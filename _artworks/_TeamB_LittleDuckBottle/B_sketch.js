@@ -363,7 +363,7 @@ async function drawBottleBInner() {
 
     let skyPosY = -600 + skySizeY / 2;
     
-    let skyAngle = random(-p3RotRange, p3RotRange);
+    let skyAngle = random(-6, 6);
 
     bufferLayerBottleInner.draw(() => {
       collager.drawRect(skyPosX, skyPosY, skySizeX, skySizeY, skyAngle);
@@ -377,7 +377,7 @@ async function drawBottleBInner() {
     let stonePosX = 0
     let stoneSize = random(240, 600) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
     let stonePosY = -600 + stoneSize / 2;
-    let stoneAngle = random(-p3RotRange, p3RotRange);
+    let stoneAngle = random(-6, 6);
 
     bufferLayerBottleInner.draw(() => {
       collager.drawMaskedImage(
@@ -469,6 +469,8 @@ async function drawBottleBEars() {
   let earSize = 300; 
   let earY = -360;
   let earXOffset = 330;
+
+  collager.shadow(10, 10, 20, [0, 0, 0, 0.5]);
 
   // Draw to BG buffer (the color layer)
   bufferLayerBG.draw(() => {
