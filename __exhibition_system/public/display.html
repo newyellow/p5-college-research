@@ -58,6 +58,16 @@
         const placeholder = document.getElementById('placeholder');
         const fadeOverlay = document.getElementById('fadeOverlay');
 
+        // Density config
+        let densityConfig = { server: 1, client: 1 };
+        fetch('/config/density')
+            .then(res => res.json())
+            .then(data => {
+                densityConfig = data;
+                console.log("Density config loaded:", densityConfig);
+            })
+            .catch(err => console.error("Failed to load density config:", err));
+
         // Apply Config
         fadeOverlay.style.backgroundColor = FADE_COLOR;
         fadeOverlay.style.transition = `opacity ${FADE_DURATION}ms ease-in-out`;
@@ -122,6 +132,11 @@
                             params.append(key, value);
                         }
                     }
+                }
+
+                // Add density from config
+                if (densityConfig && densityConfig.server) {
+                    params.append('density', densityConfig.server);
                 }
 
                 const url = `${artwork.artworkUrl}?${params.toString()}`;

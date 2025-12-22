@@ -39,8 +39,11 @@ let randomGauss = [];
 
 let shaderPath;
 
+const density = urlParams.get('density') || 1;
+
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
+  pixelDensity(parseFloat(density));
   flex();
   fontResource = await loadFont("../fonts/Monospace.ttf");
 

@@ -45,8 +45,11 @@ let bottleIndex = 0;
 let bottleScale = 0.6;
 let bottleRotation = 0;
 
+const density = urlParams.get('density') || 1;
+
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
+  pixelDensity(parseFloat(density));
   flex();
   fontResource = await loadFont('../fonts/Monospace.ttf');
   frameRate(60);

@@ -31,6 +31,16 @@ app.get('/config/screen', (req, res) => {
     }
 });
 
+// Serve the density configuration
+app.get('/config/density', (req, res) => {
+    try {
+        const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'configs', 'densityConfig.json'), 'utf8'));
+        res.json(config);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to load density config' });
+    }
+});
+
 // Load Artworks dynamically from configs/artworks folder
 const artworks = [];
 const artworksDir = path.join(__dirname, 'configs', 'artworks');
