@@ -597,7 +597,23 @@ class Collager {
         let quadGeom = this._cachedQuadGeom;
 
         // generate outline model
-        let outlineModel = this.shapeModel.generateOutlineModel(this._cutoutThickness, this._outlineThickness);
+        // Safeguard: ensure cutout thickness doesn't exceed shape size to prevent artifacts
+        let safeCutoutThickness = this._cutoutThickness;
+        if (this.shapeModel.edgePoints && this.shapeModel.edgePoints.length > 0) {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (let p of this.shapeModel.edgePoints) {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+            }
+            let maxDim = min(maxX - minX, maxY - minY);
+            // Limit cutout thickness to at most 45% of the smallest dimension
+            // to ensure the gradient doesn't cross the center.
+            safeCutoutThickness = min(this._cutoutThickness, maxDim * 0.45);
+        }
+
+        let outlineModel = this.shapeModel.generateOutlineModel(safeCutoutThickness, this._outlineThickness);
 
         // Build Geometries
         let shapeGeom = this.shapeModel.build();

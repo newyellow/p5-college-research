@@ -49,6 +49,13 @@ void main() {
     float cutThreshold = baseCutThreshold + (noiseCut - 0.5) * uNoiseCutoutRatio;
     cutThreshold *= 0.5; // the actual range is from 0 ~ 0.5
 
+    // Fix: if cutThreshold is negative or zero, it means the piece is fully cut out.
+    // Just don't show anything to prevent artifacts like black lines at the center.
+    if (cutThreshold <= 0.0) {
+        gl_FragColor = vec4(0.0);
+        return;
+    }
+
     float imageMaskT = smoothstep(cutThreshold - edgeWidth, cutThreshold + edgeWidth, gradientVal);
 
     // calculate in 0-1 range first
