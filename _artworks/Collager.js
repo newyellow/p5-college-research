@@ -58,6 +58,9 @@ class Collager {
         this._debugScale = 0.25;
 
         this._lastBufferScale = 1.0;
+        this._cachedQuadGeom = null;
+        this._cachedQuadWidth = 0;
+        this._cachedQuadHeight = 0;
     }
 
     async initSystem() {
@@ -581,7 +584,17 @@ class Collager {
         let bufferW = baseBuffer.width;
         let bufferH = baseBuffer.height;
 
-        let quadModel = NYModel.generateFullScreenQuadModel(bufferW, bufferH);
+        // Optimized: Cache quad geometry
+        if (!this._cachedQuadGeom || this._cachedQuadWidth !== bufferW || this._cachedQuadHeight !== bufferH) {
+            if (this._cachedQuadGeom) {
+                p5.instance.freeGeometry(this._cachedQuadGeom);
+            }
+            let quadModel = NYModel.generateFullScreenQuadModel(bufferW, bufferH);
+            this._cachedQuadGeom = quadModel.build();
+            this._cachedQuadWidth = bufferW;
+            this._cachedQuadHeight = bufferH;
+        }
+        let quadGeom = this._cachedQuadGeom;
 
         // generate outline model
         let outlineModel = this.shapeModel.generateOutlineModel(this._cutoutThickness, this._outlineThickness);
@@ -589,7 +602,6 @@ class Collager {
         // Build Geometries
         let shapeGeom = this.shapeModel.build();
         let outlineGeom = outlineModel.build();
-        let quadGeom = quadModel.build();
 
         // draw outline gradient for use
         outlineBuffer.begin();
@@ -758,9 +770,40 @@ class Collager {
         finalBuffer.end();
 
         // Clean up geometries to prevent memory leaks
-        p5.instance.freeGeometry(shapeGeom);
-        p5.instance.freeGeometry(outlineGeom);
-        p5.instance.freeGeometry(quadGeom);
+        if (p5.instance && typeof p5.instance.freeGeometry === 'function') {
+            p5.instance.freeGeometry(shapeGeom);
+            p5.instance.freeGeometry(outlineGeom);
+        }
+    }
+
+    /**
+     * Wait for GPU to finish previous commands
+     */
+    async sync() {
+        const gl = p5.instance._renderer.GL;
+        if (!gl || !gl.fenceSync) {
+            return new Promise(resolve => setTimeout(resolve, 0));
+        }
+
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        gl.flush();
+
+        return new Promise(resolve => {
+            const check = () => {
+                const status = gl.clientWaitSync(sync, 0, 0);
+                if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
+                    gl.deleteSync(sync);
+                    resolve();
+                } else {
+                    if (typeof requestAnimationFrame !== 'undefined') {
+                        requestAnimationFrame(check);
+                    } else {
+                        setTimeout(check, 0);
+                    }
+                }
+            };
+            check();
+        });
     }
 
     shadowPass(_sourceBuffer, _targetBuffer, _offset = [10.0, 10.0], _radius = 20.0, _color = [0.0, 0.0, 0.0, 0.5]) {

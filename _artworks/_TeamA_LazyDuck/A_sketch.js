@@ -176,7 +176,7 @@ async function asyncDraw() {
     effectStrength = easeInOutSine(constrain(effectTimeCounter, 0.0, 1.0));
     effectTimeCounter += 0.016;
 
-    await sleep(16);
+    await collager.sync();
   }
 }
 
@@ -227,7 +227,7 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
       let p01 = getPos(u1, v2);
 
       await drawLandRect(p00, p10, p11, p01, _angle);
-      await sleep(20);
+      await collager.sync();
       return;
     }
 
@@ -322,7 +322,7 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
         }
       });
 
-      await sleep(100);
+      await collager.sync();
     }
   }
 }
@@ -671,7 +671,7 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
       }
     }
 
-    await sleep(50);
+    await collager.sync();
   }
 }
 
@@ -891,7 +891,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
       }
     }
 
-    await sleep(100);
+    await collager.sync();
   }
 }
 
@@ -964,8 +964,8 @@ async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
     });
 
 
-    if (i % 10 == 0) {
-      await sleep(16);
+    if (i % 5 == 0) {
+      await collager.sync();
     }
   }
 

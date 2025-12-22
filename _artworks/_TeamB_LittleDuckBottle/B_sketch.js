@@ -161,7 +161,7 @@ async function drawBottle(bottleIndex) {
       imageMode(CENTER);
       image(bufferLayerBG, 0, 0, width, height);
 
-      await sleep(16);
+      await collager.sync();
     }
   }
   pop();
@@ -239,7 +239,7 @@ async function drawBottleAInner() {
       image(bufferLayerBottleInner, 0, 0, width, height);
       pop();
 
-      await sleep(16);
+      await collager.sync();
     }
   }
   pop();
@@ -285,7 +285,7 @@ async function drawBottleAInner() {
       image(bufferLayerBottleInner, 0, 0, width, height);
       pop();
 
-      await sleep(16);
+      await collager.sync();
     }
   }
   pop();
@@ -338,7 +338,7 @@ async function drawBottleBInner() {
       image(bufferLayerBottleInner, 0, 0, width, height);
       pop();
 
-      await sleep(16);
+      await collager.sync();
     }
   }
   // pop();
@@ -445,7 +445,7 @@ async function drawBottleBInner() {
       image(bufferLayerBottleInner, 0, 0, width, height);
       pop();
 
-      await sleep(16);
+      await collager.sync();
     }
   }
   pop();
@@ -651,7 +651,7 @@ async function startBreathingEffect() {
     pop();
     image(bufferLayerBottleStroke, 0, 0, width, height);
 
-    await sleep(16);
+    await collager.sync();
   }
 }
 

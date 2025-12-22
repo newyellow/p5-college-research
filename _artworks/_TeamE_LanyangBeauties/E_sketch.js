@@ -43,6 +43,7 @@ let windowObjects = [];
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
+  noLoop();
   flex();
   fontResource = await loadFont("../fonts/Monospace.ttf");
 
@@ -197,7 +198,7 @@ async function AsyncDrawOnce() {
 
     // show bg
     image(bufferBGLayer, 0, 0, width, height);
-    await sleep(16);
+    await collager.sync();
   }
 
   await loadWindowInsideImages(windowSetIndex);

@@ -353,7 +353,7 @@ new p5((sketch) => {
     sketch.pop();
   }
 
-  sketch.draw = () => {
+  sketch.draw = async () => {
     sketch.clear();
     let currentTime = (sketch.millis() - startTime) / 1000.0;
 
@@ -366,7 +366,35 @@ new p5((sketch) => {
     drawWaves(currentTime);
     drawMountainsWithMask();
     drawCenterWithMask(currentTime);
+
+    await sync();
   };
+
+  async function sync() {
+    const gl = sketch._renderer.GL;
+    if (!gl || !gl.fenceSync) {
+      return new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    gl.flush();
+
+    return new Promise((resolve) => {
+      const check = () => {
+        const status = gl.clientWaitSync(sync, 0, 0);
+        if (
+          status === gl.ALREADY_SIGNALED ||
+          status === gl.CONDITION_SATISFIED
+        ) {
+          gl.deleteSync(sync);
+          resolve();
+        } else {
+          setTimeout(check, 0);
+        }
+      };
+      check();
+    });
+  }
 
   function drawWaves(time) {
     sketch.push();

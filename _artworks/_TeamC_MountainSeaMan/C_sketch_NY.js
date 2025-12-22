@@ -187,7 +187,7 @@ async function prepareMainTextLayer() {
 
     image(tempAssetLayer, 0, 0);
 
-    await sleep(16);
+    await collager.sync();
   }
 
   // draw onto the final layer
@@ -228,7 +228,7 @@ async function prepareMainTextLayer() {
 
     tint(0, 0, 100, t);
     image(textLayer, 0, 0);
-    await sleep(16);
+    await collager.sync();
   }
 
   background(0, 0, 100);
@@ -303,7 +303,7 @@ async function prepareTextBGLayer() {
     tint(0, 0, 100, 1.0);
     image(textLayer, 0, 0);
 
-    await sleep(16);
+    await collager.sync();
   }
 }
 
@@ -401,13 +401,13 @@ async function drawSeaWaveLayer() {
     textBGLayer.draw(() => {
       collager.drawRect(posX, posY, sizeW, sizeH, rotationDegree);
     });
-    await sleep(16);
+    await collager.sync();
 
     tempMaskLayer.draw(() => {
       tint(0, 0, 0);
       collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, rotationDegree);
     });
-    await sleep(16);
+    await collager.sync();
   }
 
   // Restore wave settings for the line layers
@@ -585,7 +585,7 @@ async function drawSeaWaveLayer() {
     image(textBGLayer, 0, 0);
     image(textLayer, 0, 0);
 
-    await sleep(32);
+    await collager.sync();
   }
 }
 
