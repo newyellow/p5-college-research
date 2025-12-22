@@ -5,6 +5,13 @@ const seed = urlParams.get("seed") || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get("p1") || Math.random());
 const p2 = parseFloat(urlParams.get("p2") || Math.random());
 const p3 = parseFloat(urlParams.get("p3") || Math.random());
+
+// Density and chaos multipliers
+const p2AmountMult = 0.3 + (0.7 * p2 / 0.6);
+const p2SizeMult = 1.7 - (0.7 * p2 / 0.6);
+const p3RotRange = 6 + (360 - 6) * p3;
+const p3SizeVarMin = 1.0 - 0.6 * p3;
+const p3SizeVarMax = 1.0 + 0.6 * p3;
 const subtype = parseInt(urlParams.get("subtype") || (Math.random() * 3));
 
 // this is a p5js v2 script
@@ -164,19 +171,19 @@ async function AsyncDrawOnce() {
   // draw background
   await loadBackgroundImages(windowSetIndex);
 
-  let pieceCount = random(200, 600);
+  let pieceCount = random(200, 600) * p2AmountMult;
 
   for (let i = 0; i < pieceCount; i++) {
     let posX = random(-width / 2, width / 2);
     let posY = random(-height / 2, height / 2);
 
-    let t = i / 600;
+    let t = i / pieceCount;
     let drawSizeMultiplier = lerp(1.0, 0.2, t);
 
-    let sizeW = random(100, 900) * drawSizeMultiplier;
-    let sizeH = random(100, 900) * drawSizeMultiplier;
+    let sizeW = random(100, 900) * drawSizeMultiplier * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+    let sizeH = random(100, 900) * drawSizeMultiplier * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
 
-    let angleDegree = random(-360, 360);
+    let angleDegree = random(-p3RotRange, p3RotRange);
 
     // color bg layer
     bufferBGLayer.draw(() => {

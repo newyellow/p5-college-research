@@ -5,6 +5,11 @@ const seed = urlParams.get('seed') || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get('p1') || Math.random());
 const p2 = parseFloat(urlParams.get('p2') || Math.random());
 const p3 = parseFloat(urlParams.get('p3') || Math.random());
+
+// Parameter multipliers (0.7 is the reference "current" level)
+const p2AmountMult = p2 / 0.7;
+const p3ChaosMult = p3 / 0.7;
+
 const subtype = parseInt(urlParams.get("subtype") || (Math.random() * 3));
 
 // p5.js 2.0 script for Team D - Kaleidoscope
@@ -40,16 +45,47 @@ async function setup() {
   seedPRNG(seed);
 
   // Generate random layers
-  let layerCount = floor(random(6, 13));
+  // p2 logic: 0.7 is current level. If p2=0, at least 3 layers and 5 objects.
+  let p2Target = p2 / 0.7;
+  
+  // p3 logic: 0.7 is current level (1.0x). If p3=1, 1.6x faster. If p3=0, moves a little bit (0.15x).
+  let p3Target = p3 <= 0.7 
+    ? lerp(0.15, 1.0, p3 / 0.7) 
+    : lerp(1.0, 1.6, (p3 - 0.7) / 0.3);
+
+  let p2SizeMult = lerp(1.7, 1.0, p2Target);
+
+  let layerCount = floor(lerp(3, random(10, 15), p2Target));
+
   for (let i = 0; i < layerCount; i++) {
     let t = layerCount > 1 ? i / (layerCount - 1) : 0;
+    
+    let objCount = floor(lerp(5, random(12, 18), p2Target));
+    
+    let rotSpeedBase = random(-0.02, 0.02);
+    let rotSpeedVar = random(-0.18, 0.36) * p3Target;
+    
+    let selfRotBase = random(-0.1, 0.1);
+    let selfRotVar = random(-0.9, 0.9) * p3Target;
+
+    let waveAmpBase = random(2, 5);
+    let waveAmpVar = random(10, 60) * p3Target;
+    
+    // Size pulsation amplitude
+    let sizeAmp = random(0.05, 0.25) * p3Target;
+
     layers.push({
       type: "image",
-      count: floor(random(10, 20)),
+      count: objCount,
       radius: lerp(900, 125, t),
-      size: lerp(250, 100, t),
-      rotationSpeed: random(-0.2, 0.2),
-      selfRotation: random(-1, 1),
+      size: lerp(250, 100, t) * p2SizeMult,
+      rotationSpeed: rotSpeedBase + rotSpeedVar,
+      selfRotation: selfRotBase + selfRotVar,
+      waveAmplitude: waveAmpBase + waveAmpVar,
+      waveSpeed: random(0.5, 2.0) * p3Target,
+      wavePhase: random(TWO_PI),
+      sizeAmplitude: sizeAmp,
+      sizeSpeed: random(1.0, 3.0),
       startAngle: random(TWO_PI)
     });
   }
@@ -198,14 +234,22 @@ function draw() {
 }
 
 function drawDecorLayer(layer, time) {
+  if (layer.count <= 0) return;
+
   for (let i = 0; i < layer.count; i++) {
     let angle =
       (TWO_PI / layer.count) * i +
       (layer.startAngle || 0) +
       time * layer.rotationSpeed;
 
-    let x = cos(angle) * layer.radius;
-    let y = sin(angle) * layer.radius;
+    // Apply waving effect to radius based on p3
+    let currentRadius = layer.radius + sin(time * (layer.waveSpeed || 0) + (layer.wavePhase || 0)) * (layer.waveAmplitude || 0);
+
+    // Apply size pulsation based on p3
+    let currentSize = layer.size * (1.0 + sin(time * (layer.sizeSpeed || 1.0) + (layer.wavePhase || 0)) * (layer.sizeAmplitude || 0));
+
+    let x = cos(angle) * currentRadius;
+    let y = sin(angle) * currentRadius;
 
     push();
     translate(x, y);
@@ -219,8 +263,8 @@ function drawDecorLayer(layer, time) {
             decorImages[layer.imageIndex],
             0,
             0,
-            layer.size,
-            layer.size
+            currentSize,
+            currentSize
           );
         }
         break;

@@ -2,9 +2,16 @@
 const urlParams = new URLSearchParams(window.location.search);
 
 const seed = urlParams.get("seed") || Math.random() * 100000000;
-const p1 = urlParams.get("p1") || Math.random();
-const p2 = urlParams.get("p2") || Math.random();
-const p3 = urlParams.get("p3") || Math.random();
+const p1 = parseFloat(urlParams.get("p1") || Math.random());
+const p2 = parseFloat(urlParams.get("p2") || Math.random());
+const p3 = parseFloat(urlParams.get("p3") || Math.random());
+
+// Density and chaos multipliers
+const p2AmountMult = 0.3 + (0.9 * p2 / 0.6);
+const p2SizeMult = 1.7 - (0.7 * p2 / 0.6);
+const p3RotRange = 6 + (360 - 6) * p3;
+const p3SizeVarMin = 1.0 - 0.4 * p3;
+const p3SizeVarMax = 1.0 + 0.4 * p3;
 const subtype = parseInt(urlParams.get("subtype") || (Math.random() * 3));
 
 // this is a p5js v2 script
@@ -160,7 +167,7 @@ async function prepareMainTextLayer() {
 
   collager.shadow(12, -6, 30, [0, 0, 0], 0.6);
 
-  let filledObjects = 120;
+  let filledObjects = 120 * p2AmountMult;
   for (let i = 0; i < filledObjects; i++) {
     let croppedImgSet = croppedImageContainer.getRandomCroppedImageSet();
 
@@ -170,8 +177,8 @@ async function prepareMainTextLayer() {
     let drawPosX = textPosX + cos(angle) * radius;
     let drawPosY = textPosY + sin(angle) * radius;
 
-    let drawSize = random(textSize * 0.12, textSize * 0.48);
-    let drawAngle = random(-180, 180);
+    let drawSize = random(textSize * 0.12, textSize * 0.48) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+    let drawAngle = random(-p3RotRange, p3RotRange);
 
     tempAssetLayer.draw(() => {
       collager.drawMaskedImage(
@@ -269,26 +276,27 @@ async function prepareTextBGLayer() {
   collager.rectNoiseScale(0.001);
   collager.rectPointCount(200);
 
-  let pieceCount = 24;
+  let pieceCount = lerp(12, 80, p2);
 
   for (let i = 0; i < pieceCount; i++) {
     let posX = random(-600, 600);
-    let posY = random(-600, 600);
+    let posY = random(-1100, 1100);
 
-    let sizeW = random(600, 1000);
-    let sizeH = random(600, 1200);
+    let sizeW = random(600, 1000) * lerp(1.2, 0.36, p2) * random(p3SizeVarMin, p3SizeVarMax);
+    let sizeH = random(600, 1200) * lerp(1.2, 0.36, p2) * random(p3SizeVarMin, p3SizeVarMax);
+    let drawAngle = random(-p3RotRange, p3RotRange);
 
     textBGLayer.draw(() => {
-      collager.drawRect(posX, posY, sizeW, sizeH);
+      collager.drawRect(posX, posY, sizeW, sizeH, drawAngle);
     });
 
     // redraw mask
     tempMaskLayer.draw(() => {
       tint(0, 0, 0);
-      collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH);
+      collager.redrawRectOutlineMask(posX, posY, sizeW, sizeH, drawAngle);
 
       tint(0, 0, 100);
-      collager.redrawRectInsideMask(posX, posY, sizeW, sizeH);
+      collager.redrawRectInsideMask(posX, posY, sizeW, sizeH, drawAngle);
     });
   }
 
@@ -382,7 +390,7 @@ async function drawSeaWaveLayer() {
   collager.shadow(12, -6, 30, [0, 0, 0], 0.3);
 
   // draw some large image (thick pieces)
-  let thickPieceCount = random(3, 6);
+  let thickPieceCount = random(3, 6) * p2AmountMult;
 
   // Set thicker settings for these pieces
   collager.cutoutThickness(120);
@@ -394,8 +402,8 @@ async function drawSeaWaveLayer() {
     let posX = 0;
     let posY = random(-900, 900);
     let sizeW = 1480;
-    let sizeH = random(100, 360);
-    let rotationDegree = random(-12, 12);
+    let sizeH = random(100, 360) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+    let rotationDegree = random(-p3RotRange, p3RotRange);
 
     textBGLayer.draw(() => {
       collager.drawRect(posX, posY, sizeW, sizeH, rotationDegree);
@@ -419,12 +427,11 @@ async function drawSeaWaveLayer() {
   let toHeight = 960;
   let totalHeight = toHeight - fromHeight;
 
-  let maxLayerCount = lerp(6, 24, p3);
-  let seaLayerCount = floor(random(6, maxLayerCount));
+  let seaLayerCount = floor(random(6, 18) * p2AmountMult);
   let seaLayerOffset = totalHeight / seaLayerCount;
 
   // Pre-calculate artifact placements
-  let artifactCount = floor(random(6, maxLayerCount));
+  let artifactCount = floor(random(6, 18) * p2AmountMult);
   if (textIndex == 0) {
     artifactCount = floor(random(3, 8));
   }
@@ -522,8 +529,8 @@ async function drawSeaWaveLayer() {
         if (textIndex == 0) {
           // Mountains: Big and standing
           shipXPos = random(-width / 2 - 200, width / 2 + 200);
-          drawSize = random(480, 1024);
-          rotationDegree = random(-6, 6);
+          drawSize = random(480, 1024) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+          rotationDegree = random(-p3RotRange, p3RotRange);
           yOffsetRatio = 0; // Anchored more to the bottom
 
           drawScale = random(1.0, 2.0);
@@ -532,13 +539,13 @@ async function drawSeaWaveLayer() {
           yCenter = lerp(mountainStartY, 900, drawnT);
         } else if (textIndex == 1) {
           // Blue Artifacts: Small, full rotation, flowing with waves
-          drawSize = random(180, 360);
-          rotationDegree = random(-360, 360);
+          drawSize = random(180, 360) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+          rotationDegree = random(-p3RotRange, p3RotRange);
           yOffsetRatio = random(-0.2, 0.2); // Floating range
         } else if (textIndex == 2) {
           // Boats: Small, slight rotation, floating on waves
-          drawSize = random(180, 360);
-          rotationDegree = random(-20, 20);
+          drawSize = random(180, 360) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+          rotationDegree = random(-p3RotRange, p3RotRange);
           yOffsetRatio = random(-0.2, 0.2); // Floating range
         }
 

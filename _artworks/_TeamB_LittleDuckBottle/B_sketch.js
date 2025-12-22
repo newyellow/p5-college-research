@@ -5,6 +5,13 @@ const seed = urlParams.get('seed') || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get('p1') || Math.random());
 const p2 = parseFloat(urlParams.get('p2') || Math.random());
 const p3 = parseFloat(urlParams.get('p3') || Math.random());
+
+// Density and chaos multipliers
+const p2AmountMult = 0.3 + (0.7 * p2 / 0.6);
+const p2SizeMult = 1.7 - (0.7 * p2 / 0.6);
+const p3RotRange = 6 + (360 - 6) * p3;
+const p3SizeVarMin = 1.0 - 0.6 * p3;
+const p3SizeVarMax = 1.0 + 0.6 * p3;
 const subtype = parseInt(urlParams.get("subtype") || (Math.random() * 3));
 
 // this is a p5js v2 script
@@ -107,7 +114,7 @@ async function drawBottle(bottleIndex) {
   {
     background(0, 0, 0);
 
-    let pieceCount = 300;
+    let pieceCount = 300 * p2AmountMult;
 
     // bg collager settings
     collager.cutoutThickness(30);
@@ -129,10 +136,10 @@ async function drawBottle(bottleIndex) {
       let posX = random(-width / 2, width / 2);
       let posY = random(-height / 2, height / 2);
 
-      let sizeX = random(100, 300);
-      let sizeY = random(100, 300);
+      let sizeX = random(100, 300) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+      let sizeY = random(100, 300) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
 
-      let angleDegree = random(-180, 180);
+      let angleDegree = random(-p3RotRange, p3RotRange);
 
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
@@ -209,16 +216,16 @@ async function drawBottleAInner() {
 
   push();
   {
-    let pieceCount = lerp(100, 300, p2);
+    let pieceCount = 220 * p2AmountMult;
     for (let i = 0; i < pieceCount; i++) {
       let posX = random(-width / 2, width / 2);
       let posY = random(-height / 2, height / 2);
 
-      let baseSize = lerp(360, 120, p2);
-      let sizeX = random(baseSize, baseSize * 2);
-      let sizeY = random(baseSize, baseSize * 2);
+      let baseSize = 216 * p2SizeMult;
+      let sizeX = random(baseSize, baseSize * 2) * random(p3SizeVarMin, p3SizeVarMax);
+      let sizeY = random(baseSize, baseSize * 2) * random(p3SizeVarMin, p3SizeVarMax);
 
-      let angleDegree = random(-180, 180);
+      let angleDegree = random(-p3RotRange, p3RotRange);
 
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
@@ -251,7 +258,7 @@ async function drawBottleAInner() {
 
   push();
   {
-    let pieceCount = int(random(2, 7));
+    let pieceCount = int(random(2, 7) * p2AmountMult);
     for (let i = 0; i < pieceCount; i++) {
       let posX = random(-width / 2, width / 2);
 
@@ -261,10 +268,10 @@ async function drawBottleAInner() {
       let maxY = height / 2 - 200;
       let posY = random(minY, maxY);
 
-      let sizeX = random(300, 600);
-      let sizeY = random(400, 800);
+      let sizeX = random(300, 600) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+      let sizeY = random(400, 800) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
 
-      let angleDegree = random(-24, 24);
+      let angleDegree = random(-p3RotRange, p3RotRange);
 
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
@@ -299,7 +306,7 @@ async function drawBottleBInner() {
   // background layer
   push();
   {
-    let pieceCount = int(lerp(36, 120, p2));
+    let pieceCount = int(86 * p2AmountMult);
 
     collager.rectPointCount(240);
     collager.rectNoiseScale(0.012);
@@ -314,10 +321,10 @@ async function drawBottleBInner() {
       let posX = random(-width / 2, width / 2);
       let posY = random(-height / 2, height / 2);
 
-      let sizeX = random(120, 480) * lerp(1.2, 0.6, p2);
-      let sizeY = random(120, 480) * lerp(1.2, 0.36, p2);
+      let sizeX = random(120, 480) * 0.84 * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+      let sizeY = random(120, 480) * 0.696 * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
 
-      let angleDegree = random(-180, 180);
+      let angleDegree = random(-p3RotRange, p3RotRange);
 
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);
@@ -353,7 +360,7 @@ async function drawBottleBInner() {
 
     let skyPosY = -600 + skySizeY / 2;
     
-    let skyAngle = random(-12, 12);
+    let skyAngle = random(-p3RotRange, p3RotRange);
 
     bufferLayerBottleInner.draw(() => {
       collager.drawRect(skyPosX, skyPosY, skySizeX, skySizeY, skyAngle);
@@ -365,9 +372,9 @@ async function drawBottleBInner() {
     let stoneSet = new CroppedImageSet(stoneImg, stoneCurveJson);
 
     let stonePosX = 0
-    let stoneSize = random(240, 600);
+    let stoneSize = random(240, 600) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
     let stonePosY = -600 + stoneSize / 2;
-    let stoneAngle = random(-12, 12);
+    let stoneAngle = random(-p3RotRange, p3RotRange);
 
     bufferLayerBottleInner.draw(() => {
       collager.drawMaskedImage(
@@ -404,17 +411,17 @@ async function drawBottleBInner() {
     let duckSpawnAngleMin = -45; // Starting angle in degrees
     let duckSpawnAngleMax = 225; // Ending angle in degrees
 
-    let duckCount = int(lerp(6, 18, p2));
+    let duckCount = int(13 * p2AmountMult);
 
     // Evenly spread ducks along the arc, distribute radius and angle evenly
     for (let i = 0; i < duckCount; i++) {
       let duckImg = duckImgs[int(random(0, duckImgs.length))];
 
-      let duckSize = lerp(240, 180, p2) * random(0.9, 1.1);
+      let duckSize = 204 * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
 
       // Evenly spaced angle along the arc
       let t = duckCount > 1 ? i / (duckCount - 1) : 0.5;
-      let spawnAngle = lerp(duckSpawnAngleMin, duckSpawnAngleMax, t) + random(-10, 10);
+      let spawnAngle = lerp(duckSpawnAngleMin, duckSpawnAngleMax, t);
 
       // Optionally, space the radius a bit for more spread
       let spawnRadius = random(duckSpawnRadiusMin, duckSpawnRadiusMax);
@@ -422,7 +429,7 @@ async function drawBottleBInner() {
       let duckPosX = duckSpawnCenterX + spawnRadius * cos(radians(spawnAngle));
       let duckPosY = duckSpawnCenterY + spawnRadius * sin(radians(spawnAngle));
 
-      let duckAngle = spawnAngle + random(-10, 10);
+      let duckAngle = spawnAngle + random(-p3RotRange, p3RotRange);
 
       bufferLayerBottleInner.draw(() => {
         push();
@@ -502,15 +509,15 @@ async function drawBottleCInner() {
 
   push();
   {
-    let pieceCount = 200;
+    let pieceCount = 200 * p2AmountMult;
     for (let i = 0; i < pieceCount; i++) {
       let posX = random(-width / 2, width / 2);
       let posY = random(-height / 2, height / 2);
 
-      let sizeX = random(120, 480);
-      let sizeY = random(120, 480);
+      let sizeX = random(120, 480) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+      let sizeY = random(120, 480) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
 
-      let angleDegree = random(-180, 180);
+      let angleDegree = random(-p3RotRange, p3RotRange);
 
       let shadowOffset = random(3, 12);
       collager.shadowOffset(shadowOffset, shadowOffset);

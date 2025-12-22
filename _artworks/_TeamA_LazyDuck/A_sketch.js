@@ -5,6 +5,14 @@ const seed = urlParams.get('seed') || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get('p1') || Math.random());
 const p2 = parseFloat(urlParams.get('p2') || Math.random());
 const p3 = parseFloat(urlParams.get('p3') || Math.random());
+
+// Density and chaos multipliers
+const p2AmountMult = 0.3 + (0.7 * p2 / 0.6);
+const p2SizeMult = 1.7 - (0.7 * p2 / 0.6);
+const p3RotRange = 6 + (360 - 6) * p3;
+const p3SizeVarMin = 1.0 - 0.6 * p3;
+const p3SizeVarMax = 1.0 + 0.6 * p3;
+
 const subtype = parseInt(urlParams.get("subtype") || (Math.random() * 3));
 
 // this is a p5js v2 script
@@ -173,7 +181,9 @@ async function asyncDraw() {
 
 
     effectStrength = easeInOutSine(constrain(effectTimeCounter, 0.0, 1.0));
-    effectTimeCounter += 0.016;
+    
+    let breathingSpeed = 0.016 * lerp(0.5, 2.0, p3);
+    effectTimeCounter += breathingSpeed;
 
     await collager.sync();
   }
@@ -250,8 +260,7 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
   await subdivide(0, 0, 1, 1, 5);
 
   // Pre-generate ducks data for sorting and sizing
-  let maxDuckCount = int(lerp(3, 18, p3));
-  let duckCount = int(random(2, maxDuckCount));
+  let duckCount = int(10 * p2AmountMult);
 
   let ducks = [];
   for (let i = 0; i < duckCount; i++) {
@@ -281,8 +290,8 @@ async function drawLandLayer(_fromHeight, _toHeight, _angle = 0) {
       collager.shadow(10, -6, 10, [0, 0, 0], 0.36);
 
       // Sizing based on depth (v) - closer ducks are larger
-      let drawSize = lerp(120, 240, duck.v) * random(0.9, 1, 1);
-      let duckRotation = random(-20, 20);
+      let drawSize = lerp(120, 240, duck.v) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+      let duckRotation = random(-p3RotRange, p3RotRange);
 
       let currentScale = drawSize / max(artifact.imageData.width, artifact.imageData.height);
       let scaledHeight = artifact.imageData.height * currentScale;
@@ -494,12 +503,11 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
 
   let totalHeight = Math.abs(_toHeight - _fromHeight);
   let layerSpacing = 10; // Desired distance between layers
-  let seaLayerCount = Math.max(4, Math.floor(totalHeight / layerSpacing));
+  let seaLayerCount = Math.max(4, Math.floor((totalHeight / layerSpacing) * p2AmountMult));
   let seaLayerOffset = totalHeight / seaLayerCount;
 
   // Pre-calculate ship placements
-  let maxShipCount = int(lerp(6, 36, p3));
-  let shipCount = int(random(0, maxShipCount));
+  let shipCount = int(18 * p2AmountMult);
   let shipPlacements = [];
   for (let i = 0; i < shipCount; i++) {
     shipPlacements.push({
@@ -631,7 +639,7 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
         let drawPosX = shipXPos * cos(rad) - yCenter * sin(rad);
         let drawPosY = shipXPos * sin(rad) + yCenter * cos(rad);
 
-        let drawSize = random(240, 360);
+        let drawSize = random(240, 360) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
         if (artifactIndex == 4) // rect boat, need to scale down
           drawSize *= 0.36;
 
@@ -644,27 +652,29 @@ async function drawSeaLayer(_fromHeight, _toHeight, _angle = 0) {
         let finalDrawX = drawPosX + offX;
         let finalDrawY = drawPosY + offY;
 
+        let shipRotation = _angle + random(-p3RotRange, p3RotRange);
+
         collager.drawMaskedImage(
           artifact.imageData,
           artifact.curveData,
           finalDrawX,
           finalDrawY,
           drawSize,
-          _angle
+          shipRotation
         );
 
         bufferLayerColorful.draw(() => {
-          collager.redrawMaskedImage(finalDrawX, finalDrawY, _angle);
+          collager.redrawMaskedImage(finalDrawX, finalDrawY, shipRotation);
         });
 
         bufferLayerMask.draw(() => {
           colorMode(RGB);
           tint(0, 0, 0);
-          collager.redrawMaskedImageOutlineMask(finalDrawX, finalDrawY, _angle);
+          collager.redrawMaskedImageOutlineMask(finalDrawX, finalDrawY, shipRotation);
           let drawInMask = random(0, 1) < 0.48;
           if (drawInMask) {
             tint(255, random(0, 255), 2);
-            collager.redrawMaskedImageInsideMask(finalDrawX, finalDrawY, _angle);
+            collager.redrawMaskedImageInsideMask(finalDrawX, finalDrawY, shipRotation);
           }
         });
       }
@@ -689,7 +699,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
   await artifactImageContainer.addImage('artifacts/stone_04.png', 'artifacts/stone_04.json');
 
 
-  let mountainLayerCount = _count;
+  let mountainLayerCount = int(_count * p2AmountMult);
   let xSamplePoints = int(random(36, 24));
 
   let mountainHeightRange = [30, 480];
@@ -819,14 +829,14 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
         let drawPosY = rawPosX * sin(rad) + rawPosY * cos(rad);
 
         // this is the mountain object size
-        let drawSize = random(600, 1000); // this is the max side
+        let drawSize = random(600, 1000) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax); 
         let currentScale = random(0.8, 3.0);
 
         let maskedImgRatio = artifact.imageData.width / artifact.imageData.height;
         let drawHeight = drawSize / maskedImgRatio;
 
         if (!isMountainObject) {
-          drawSize = random(360, 600);
+          drawSize = random(360, 600) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
           currentScale = 1.0;
           drawHeight = drawSize;
         }
@@ -840,9 +850,11 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
         let finalDrawX = drawPosX + offX;
         let finalDrawY = drawPosY + offY;
 
+        let artifactRotation = _angle + random(-p3RotRange, p3RotRange);
+
         push();
         translate(finalDrawX, finalDrawY);
-        rotate(radians(_angle));
+        rotate(radians(artifactRotation));
         scale(currentScale);
 
         collager.drawMaskedImage(
@@ -857,7 +869,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
         bufferLayerColorful.draw(() => {
           push();
           translate(finalDrawX, finalDrawY);
-          rotate(radians(_angle));
+          rotate(radians(artifactRotation));
           scale(currentScale);
           collager.redrawMaskedImage(0, 0, 0);
           pop();
@@ -866,7 +878,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
         bufferLayerMask.draw(() => {
           push();
           translate(finalDrawX, finalDrawY);
-          rotate(radians(_angle));
+          rotate(radians(artifactRotation));
           scale(currentScale);
 
           colorMode(RGB);
@@ -879,7 +891,7 @@ async function drawMountainLayer(_startY, _endY, _angle = 0, _count = 24) {
           if (drawInMask) {
             push();
             translate(finalDrawX, finalDrawY);
-            rotate(radians(_angle));
+            rotate(radians(artifactRotation));
             scale(currentScale);
 
             tint(255, random(0, 255), 3);
@@ -923,16 +935,16 @@ async function drawSkyLayer(_fromHeight, _toHeight, _angle = 0) {
 
   let skyRotationNoiseScale = lerp(0.0001, 0.0012, p3);
   // Draw Rects
-  let flowFieldsCount = 2000;
+  let flowFieldsCount = 2000 * p2AmountMult;
   for (let i = 0; i < flowFieldsCount; i++) {
     let posX = random(-width / 2 - 200, width / 2 + 200);
     let posY = random(_fromHeight, _toHeight);
 
-    let sizeW = random(120, 240);
-    let sizeH = random(20, 40);
+    let sizeW = random(120, 240) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
+    let sizeH = random(20, 40) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
 
     let angleNoise = noise(posX * skyRotationNoiseScale, posY * skyRotationNoiseScale, 666.0);
-    let angleDegree = lerp(-360, 360, angleNoise);
+    let angleDegree = lerp(-p3RotRange, p3RotRange, angleNoise);
 
     push();
     rotate(radians(_angle));
