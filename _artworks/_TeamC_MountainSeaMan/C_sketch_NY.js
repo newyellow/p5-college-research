@@ -44,8 +44,7 @@ async function setup() {
   textBGLayer = createFramebuffer();
 
   // setup random values
-  randomSeed(seed);
-  noiseSeed(seed);
+  seedPRNG(seed);
 
   mainHue = lerp(0, 360, p1);
   rectBaseSize = lerp(30, 200, p2);
@@ -55,12 +54,12 @@ async function setup() {
   textIndex = subtype;
 
   for (let i = 0; i < 6; i++) {
-    randonclrpos.push(Math.floor(Math.random() * 3));
+    randonclrpos.push(floor(random() * 3));
   }
 
   for (let i = 0; i < 3; i++) {
-    let sign = Math.random() > 0.5 ? 1 : -1;
-    let strength = 0.1 + Math.random() * 0.9;
+    let sign = random() > 0.5 ? 1 : -1;
+    let strength = 0.1 + random() * 0.9;
     randomGauss.push(sign * strength);
   }
 

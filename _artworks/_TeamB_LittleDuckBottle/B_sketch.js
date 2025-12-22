@@ -47,8 +47,7 @@ async function setup() {
 
   background(0);
 
-  randomSeed(seed);
-  noiseSeed(seed);
+  seedPRNG(seed);
 
   // init buffers
   bufferLayerBG = createFramebuffer();

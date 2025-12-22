@@ -37,8 +37,7 @@ async function setup() {
 
 
   // setup random values
-  randomSeed(seed);
-  noiseSeed(seed);
+  seedPRNG(seed);
 
   mainHue = lerp(0, 360, p1);
   rectBaseSize = lerp(30, 200, p2);

@@ -4,6 +4,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const seed = urlParams.get('seed') || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get('p1') || Math.random());
 const p2 = parseFloat(urlParams.get('p2') || Math.random());
+const p3 = parseFloat(urlParams.get('p3') || Math.random());
+const subtype = parseInt(urlParams.get("subtype") || (Math.random() * 3));
 
 // p5.js 2.0 script for Team D - Kaleidoscope
 let _renderer = null;
@@ -27,14 +29,7 @@ let showRandom01 = false;
 let showRandom02 = false;
 let decorBuffer01, decorBuffer02;
 
-const layers = [
-  { type: "image", count: 12, radius: 900, size: 250, rotationSpeed: 0.1, selfRotation: 0.2 },
-  { type: "image", count: 12, radius: 700, size: 250, rotationSpeed: -0.2, selfRotation: 0, startAngle: Math.PI / 8 },
-  { type: "image", count: 16, radius: 530, size: 200, rotationSpeed: 0.4, selfRotation: -0.3 },
-  { type: "image", count: 12, radius: 400, size: 150, rotationSpeed: -0.12, selfRotation: -0.6, startAngle: Math.PI / 12 },
-  { type: "image", count: 12, radius: 230, size: 150, rotationSpeed: 0.18, selfRotation: 0.8, startAngle: Math.PI / 6 },
-  { type: "image", count: 12, radius: 125, size: 100, rotationSpeed: 0.18, selfRotation: -1, startAngle: Math.PI / 6 },
-];
+let layers = [];
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
@@ -42,8 +37,22 @@ async function setup() {
   pixelDensity(1);
   colorMode(RGB);
 
-  randomSeed(seed);
-  noiseSeed(seed);
+  seedPRNG(seed);
+
+  // Generate random layers
+  let layerCount = floor(random(6, 13));
+  for (let i = 0; i < layerCount; i++) {
+    let t = layerCount > 1 ? i / (layerCount - 1) : 0;
+    layers.push({
+      type: "image",
+      count: floor(random(10, 20)),
+      radius: lerp(900, 125, t),
+      size: lerp(250, 100, t),
+      rotationSpeed: random(-0.2, 0.2),
+      selfRotation: random(-1, 1),
+      startAngle: random(TWO_PI)
+    });
+  }
 
   // Initialize buffers
   bufferKaleidoscope = createFramebuffer();
@@ -87,8 +96,25 @@ async function setup() {
   randomImage01 = await loadImage("images/random_01.jpg");
   randomImage02 = await loadImage("images/random_02.jpg");
 
-  for (let layer of layers) {
-    layer.imageIndex = Math.floor(random() * decorImages.length);
+  // Preselect images based on subtype
+  let preselectedIndices = [];
+  if (subtype === 0) {
+    preselectedIndices = [5, 4, 8, 9];
+  } else if (subtype === 1) {
+    preselectedIndices = [1, 1, 6, 6];
+  } else if (subtype === 2) {
+    preselectedIndices = [0, 11, 12, 13];
+  }
+
+  // Fill remaining slots with random images
+  while (preselectedIndices.length < layers.length) {
+    preselectedIndices.push(floor(random() * decorImages.length));
+  }
+
+  // Shuffle and assign to layers
+  preselectedIndices = shuffle(preselectedIndices);
+  for (let i = 0; i < layers.length; i++) {
+    layers[i].imageIndex = preselectedIndices[i];
   }
 
   showRandom01 = random() < 1 / 100;

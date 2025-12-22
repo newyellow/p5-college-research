@@ -1,11 +1,6 @@
 // get url parameters
 const urlParams = new URLSearchParams(window.location.search);
 
-// const seed = 1234567890;
-// const p1 = 0.5;
-// const p2 = 0.5;
-// const p3 = 0.5;
-// const p4 = 0.5;
 const seed = urlParams.get("seed") || Math.random() * 100000000;
 const p1 = parseFloat(urlParams.get("p1") || Math.random());
 const p2 = parseFloat(urlParams.get("p2") || Math.random());
@@ -57,8 +52,7 @@ async function setup() {
   textAlign(CENTER, CENTER);
   text("loading images ...", 0, 0);
 
-  randomSeed(seed);
-  noiseSeed(seed);
+  seedPRNG(seed);
 
   // set to orthographic projection
   rectMode(CENTER);
