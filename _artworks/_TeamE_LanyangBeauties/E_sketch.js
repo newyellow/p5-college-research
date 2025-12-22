@@ -38,7 +38,6 @@ let windowObjects = [];
 
 async function setup() {
   _renderer = createCanvas(1080, 1920, WEBGL);
-  noLoop();
   flex();
   fontResource = await loadFont("../fonts/Monospace.ttf");
 
@@ -139,10 +138,6 @@ async function setup() {
     windowObjects.push(windowObject);
   }
   AsyncDrawOnce();
-}
-
-function draw() {
-  // Empty draw loop as we use AsyncDrawOnce for one-time drawing
 }
 
 async function AsyncDrawOnce() {
