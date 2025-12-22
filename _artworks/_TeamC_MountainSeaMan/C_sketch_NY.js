@@ -490,6 +490,7 @@ async function drawSeaWaveLayer() {
 
     let waveShapePoints = [...upperPoints, ...[...lowerPoints].reverse()];
 
+    collager.setLutIntensity(random(0.36, 1.0));
     collager.drawVertexShape(waveShapePoints);
 
     textBGLayer.draw(() => {
