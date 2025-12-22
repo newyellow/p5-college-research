@@ -89,6 +89,13 @@ new p5((sketch) => {
     showRandom01 = sketch.random() < 1 / 100;
     showRandom02 = sketch.random() < 1 / 1000;
 
+    if (showRandom01) {
+      tempGraphics01 = createMaskedImage(randomImage01, 300);
+    }
+    if (showRandom02) {
+      tempGraphics02 = createMaskedImage(randomImage02, 300);
+    }
+
     startTime = sketch.millis();
   };
 
@@ -111,14 +118,15 @@ new p5((sketch) => {
     }
     tempG.updatePixels();
 
+    // Remove the mask graphics object as it's no longer needed
+    maskG.remove();
+
     return tempG;
   }
 
   sketch.draw = () => {
     sketch.clear();
 
-    tempGraphics01 = createMaskedImage(randomImage01, 300);
-    tempGraphics02 = createMaskedImage(randomImage02, 300);
     let currentTime = (sketch.millis() - startTime) / 1000.0;
 
     sketch.fill(100, 150, 100, 150);
