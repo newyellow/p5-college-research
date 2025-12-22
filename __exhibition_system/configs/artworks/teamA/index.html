@@ -77,10 +77,14 @@
 
       .info-content {
         font-size: clamp(16px, 1.5vw, 24px);
-        line-height: 1.8;
         color: #333;
         text-align: justify;
         letter-spacing: 1px;
+      }
+
+      .info-content p {
+        line-height: 1.6;
+        margin-bottom: 0.5em;
       }
 
       .artifacts-list {
@@ -140,9 +144,13 @@
 
       .element-content {
         font-size: clamp(16px, 1.5vw, 24px);
-        line-height: 1.8;
         color: #e8eef5;
         letter-spacing: 1px;
+      }
+
+      .element-content p {
+        line-height: 1.6;
+        margin-bottom: 0.5em;
       }
 
       /* 載入中提示 */
@@ -179,7 +187,7 @@
 
         <div class="info-block">
           <span class="info-label">♦︎ 作品論述</span>
-          <p class="info-content" id="description"></p>
+          <div class="info-content" id="description"></div>
         </div>
 
         <div class="info-block">
@@ -200,7 +208,7 @@
 
         <div class="element-info">
           <span class="element-label" id="elementLabel">♦︎ 元素介紹 ♦︎</span>
-          <p class="element-content" id="elementContent"></p>
+          <div class="element-content" id="elementContent"></div>
         </div>
       </div>
     </div>
@@ -220,6 +228,18 @@
         const jsonPath = getJsonPath();
         const response = await fetch(jsonPath);
         const data = await response.json();
+
+        // Load main description from .md file
+        try {
+          const mdPath = jsonPath.replace(".json", ".md");
+          const mdResponse = await fetch(mdPath);
+          if (mdResponse.ok) {
+            const mdContent = await mdResponse.text();
+            data.description = marked.parse(mdContent);
+          }
+        } catch (e) {
+          console.error("Error loading main description md:", e);
+        }
         
         const params = getQueryParams();
         const subtype = params.get("subtype");
