@@ -132,18 +132,32 @@
 
         /* Display Panel Styles */
         #displayPanel {
-            background-color: #000;
+            background-color: #2c3e50;
             text-align: center;
             padding: 0 !important;
             overflow: hidden;
             display: block; /* Override flex layout to ensure iframe fills space */
+            position: relative;
+        }
+
+        #iframeFadeOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #2c3e50;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity ease-in-out;
         }
 
         #artworkIframe {
             width: 100%;
             height: 100%;
             border: none;
-            background-color: #fff;
+            background-color: #2c3e50;
             display: block;
             margin: 0;
             padding: 0;
@@ -152,25 +166,27 @@
 
         .control-buttons-overlay {
             position: absolute;
-            bottom: 40px;
-            right: 40px;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
-            gap: 20px;
+            gap: 30px;
             z-index: 1000;
         }
 
         .overlay-button {
-            padding: 15px 35px;
-            font-size: 24px;
-            font-weight: 600;
+            padding: 20px 50px;
+            font-size: 28px;
+            font-weight: 700;
             cursor: pointer;
             border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: opacity 0.5s ease-in, transform 0.2s, background-color 0.2s;
+            border-radius: 50px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            transition: opacity 0.5s ease-in, transform 0.2s, background-color 0.2s, box-shadow 0.2s;
             opacity: 0;
             pointer-events: none;
             font-family: inherit;
+            letter-spacing: 2px;
         }
 
         .overlay-button.show {
@@ -179,12 +195,16 @@
         }
 
         .overlay-button:active {
-            transform: scale(0.95);
+            transform: scale(0.95) translateY(2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
         .next-btn {
             background-color: #2c3e50;
             color: white;
+            border: 3px solid white;
+            padding-left: 100px;
+            padding-right: 100px;
         }
 
         .back-btn {
@@ -256,6 +276,7 @@
 
     <!-- Layout 2: Description Display (now using Iframe) -->
     <div id="displayPanel" class="panel">
+        <div id="iframeFadeOverlay"></div>
         <iframe id="artworkIframe" src=""></iframe>
         
         <div class="control-buttons-overlay">
@@ -271,10 +292,11 @@
     <script src="/node_modules/marked/lib/marked.umd.js"></script>
     <script>
         // --- CONFIGURATION ---
-        const PANEL_FADE_DURATION = 800; // ms (Transition between panels)
+        const PANEL_FADE_DURATION = 1200; // ms (Transition between panels)
+        const IFRAME_CROSSFADE_DURATION = 1200; // ms (Crossfade between description and result)
         const BUTTON_REVEAL_DELAY = 6000; // ms (Wait time before showing buttons)
         const HINT_REVEAL_DELAY = 12000;  // ms (Wait time before showing "Tap to return" hint)
-        const HINT_FADE_DURATION = 1000; // ms (Fade in time for the hint)
+        const HINT_FADE_DURATION = 2400; // ms (Fade in time for the hint)
         // ---------------------
 
         const socket = io();
@@ -285,6 +307,7 @@
         const generateBtn = document.getElementById('generateBtn');
         const returnHint = document.getElementById('returnHint');
         const artworkIframe = document.getElementById('artworkIframe');
+        const iframeFadeOverlay = document.getElementById('iframeFadeOverlay');
         const debugControls = document.getElementById('debugControls');
         
         const overlayNextBtn = document.getElementById('overlayNextBtn');
@@ -302,6 +325,7 @@
         // Init Styles
         settingPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
         displayPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
+        iframeFadeOverlay.style.transitionDuration = `${IFRAME_CROSSFADE_DURATION / 2}ms`;
         returnHint.style.transitionDuration = `${HINT_FADE_DURATION}ms`;
 
         // --- DEBUG MODE LOGIC ---
@@ -401,6 +425,18 @@
             }, BUTTON_REVEAL_DELAY);
         };
 
+        function switchIframeWithFade(url) {
+            const halfDuration = IFRAME_CROSSFADE_DURATION / 2;
+            iframeFadeOverlay.style.opacity = '1';
+            setTimeout(() => {
+                artworkIframe.src = url;
+                // Wait for the next frame to ensure src has changed and browser started loading
+                setTimeout(() => {
+                    iframeFadeOverlay.style.opacity = '0';
+                }, 50); // Small delay to hide the initial load blink
+            }, halfDuration);
+        }
+
         function hideAllOverlayButtons() {
             overlayNextBtn.classList.remove('show');
             overlayBackBtn.classList.remove('show');
@@ -445,7 +481,7 @@
                 }
             }
             
-            artworkIframe.src = `${baseUrl}?${params.toString()}`;
+            switchIframeWithFade(`${baseUrl}?${params.toString()}`);
         });
 
         overlayBackBtn.addEventListener('click', () => {
@@ -467,7 +503,7 @@
                 params.append('subtype', currentArtwork.iteration.parameters.subtype);
             }
             
-            artworkIframe.src = `${baseUrl}?${params.toString()}`;
+            switchIframeWithFade(`${baseUrl}?${params.toString()}`);
         });
 
         overlayRegenBtn.addEventListener('click', () => {
