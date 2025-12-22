@@ -367,9 +367,23 @@ async function loadWindowInsideImages(_setIndex) {
     ];
   }
 
+  // Artifacts pool: pick 3 randomly for every generation
+  let artifactPool = [
+    'photoImages/artstone_01.jpg',
+    'photoImages/bowl_01.jpg',
+    'photoImages/bowl_02.jpg',
+    'photoImages/bowl_03.jpg',
+    'photoImages/mountain_01.jpg',
+    'photoImages/mountain_02.jpg'
+  ];
+  let selectedArtifacts = shuffle(artifactPool).slice(0, 3);
+  for (let img of selectedArtifacts) {
+    await collager.addImage(img, 0.36, 0.66);
+  }
+
   let selectedImages = shuffle(imagePool).slice(0, imageLoadLimit);
   for (let img of selectedImages) {
-    await collager.addImage(img, 0.3, 0.6);
+    await collager.addImage(img, 0.24, 0.66);
   }
 }
 
