@@ -111,6 +111,19 @@ class Collager {
         this._collageBuffer = createFramebuffer();
     }
 
+    remove() {
+        this._baseShapeBuffer.remove();
+        this._outlineGradientBuffer.remove();
+        this._finalShapeBuffer.remove();
+        this._insideShapeMaskBuffer.remove();
+        this._outlineShapeMaskBuffer.remove();
+        this._collageBuffer.remove();
+
+        if (this._resultBuffer && typeof this._resultBuffer.remove === 'function') {
+            this._resultBuffer.remove();
+        }
+    }
+
     clearBufferBindings() {
         const gl = p5.instance._renderer.GL;
 
@@ -747,9 +760,7 @@ class Collager {
         // Clean up geometries to prevent memory leaks
         p5.instance.freeGeometry(shapeGeom);
         p5.instance.freeGeometry(outlineGeom);
-        // Note: quadGeom is reused (constant GID), so we don't free it to leverage caching.
-        // However, if buffer size changes, we might want to manage it differently.
-        // For now, assuming fixed buffer size, letting p5 cache it is fine.
+        p5.instance.freeGeometry(quadGeom);
     }
 
     shadowPass(_sourceBuffer, _targetBuffer, _offset = [10.0, 10.0], _radius = 20.0, _color = [0.0, 0.0, 0.0, 0.5]) {

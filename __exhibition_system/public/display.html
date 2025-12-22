@@ -72,12 +72,30 @@
             setTimeout(() => {
                 // Switch Content
                 placeholder.style.display = 'none';
-                frame.style.display = 'block';
+                
+                // --- ROBUST IFRAME CLEANUP ---
+                // To prevent memory leaks, we remove the old iframe and create a new one.
+                // This is more effective than just changing .src in many browsers.
+                const oldFrame = document.getElementById('artworkFrame');
+                const parent = oldFrame.parentNode;
+                
+                // Clear the old frame explicitly before removing
+                oldFrame.src = 'about:blank';
+                
+                const newFrame = document.createElement('iframe');
+                newFrame.id = 'artworkFrame';
+                newFrame.style.width = '100%';
+                newFrame.style.height = '100%';
+                newFrame.style.border = 'none';
+                newFrame.style.display = 'block';
+                
+                // Replace old frame with new one
+                parent.replaceChild(newFrame, oldFrame);
                 
                 // Define what happens when the new artwork is loaded
                 const onArtworkLoaded = () => {
                     // Remove listener to prevent memory leaks/multiple calls
-                    frame.removeEventListener('load', onArtworkLoaded);
+                    newFrame.removeEventListener('load', onArtworkLoaded);
                     
                     // Wait a bit (optional stability) then Reveal
                     setTimeout(() => {
@@ -85,7 +103,7 @@
                     }, WAIT_BEFORE_REVEAL);
                 };
 
-                frame.addEventListener('load', onArtworkLoaded);
+                newFrame.addEventListener('load', onArtworkLoaded);
 
                 // --- Construct URL with Parameters ---
                 const params = new URLSearchParams();
@@ -108,7 +126,7 @@
 
                 const url = `${artwork.artworkUrl}?${params.toString()}`;
                 console.log("Loading URL:", url);
-                frame.src = url;
+                newFrame.src = url;
 
             }, FADE_DURATION);
         };

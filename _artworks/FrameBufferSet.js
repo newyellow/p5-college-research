@@ -32,4 +32,9 @@ class FrameBufferSet {
             this.to = this.fboB;
         }
     }
+
+    remove() {
+        this.fboA.remove();
+        this.fboB.remove();
+    }
 }
