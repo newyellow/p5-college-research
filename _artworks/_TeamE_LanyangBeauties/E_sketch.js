@@ -374,7 +374,8 @@ async function loadWindowInsideImages(_setIndex) {
     'photoImages/bowl_02.jpg',
     'photoImages/bowl_03.jpg',
     'photoImages/mountain_01.jpg',
-    'photoImages/mountain_02.jpg'
+    'photoImages/mountain_02.jpg',
+    'photoImages/boat_01.jpg'
   ];
   let selectedArtifacts = shuffle(artifactPool).slice(0, 3);
   for (let img of selectedArtifacts) {
