@@ -114,7 +114,8 @@ async function startClient() {
                         parameters: {
                             p1: Math.random().toFixed(4),
                             p2: Math.random().toFixed(4),
-                            p3: Math.random().toFixed(4)
+                            p3: Math.random().toFixed(4),
+                            subtype: Math.floor(Math.random() * 3)
                         }
                     }
                 };

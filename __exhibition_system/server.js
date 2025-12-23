@@ -315,7 +315,12 @@ server.listen(PORT, async () => {
 
     // Pick first artwork on startup
     console.log("Picking initial artwork on startup...");
-    pickAndEmitArtwork();
+    pickAndEmitArtwork({
+        p1: (Math.random()).toFixed(4),
+        p2: (Math.random()).toFixed(4),
+        p3: (Math.random()).toFixed(4),
+        subtype: Math.floor(Math.random() * 3)
+    });
 
     // --- Auto-Launch Browser Logic ---
     await launchBrowsers(PORT);
