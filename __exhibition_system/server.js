@@ -41,6 +41,18 @@ app.get('/config/density', (req, res) => {
     }
 });
 
+// Serve the control setting configuration
+app.get('/config/control-setting', (req, res) => {
+    try {
+        const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'configs', 'controlSetting.json'), 'utf8'));
+        // Include artwork list for team selection buttons
+        config.artworks = artworks.map(a => ({ id: a.id, title: a.title }));
+        res.json(config);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to load control setting' });
+    }
+});
+
 // Load Artworks dynamically from configs/artworks folder
 const artworks = [];
 const artworksDir = path.join(__dirname, 'configs', 'artworks');

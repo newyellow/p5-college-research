@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +12,8 @@
             margin: 0;
             height: 100vh;
             overflow: hidden;
-            user-select: none; /* Prevent text selection */
+            user-select: none;
+            /* Prevent text selection */
         }
 
         /* Layout Containers */
@@ -91,7 +93,8 @@
             height: 36px;
             width: 36px;
             background: #222;
-            margin-top: -15px; /* Centers thumb on 6px track: (6/2) - (36/2) = -15 */
+            margin-top: -15px;
+            /* Centers thumb on 6px track: (6/2) - (36/2) = -15 */
             clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
             cursor: pointer;
         }
@@ -118,7 +121,7 @@
             color: white;
             border: none;
             border-radius: 60px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             transition: transform 0.1s, background-color 0.2s;
             margin-bottom: 60px;
             letter-spacing: 4px;
@@ -136,7 +139,8 @@
             text-align: center;
             padding: 0 !important;
             overflow: hidden;
-            display: block; /* Override flex layout to ensure iframe fills space */
+            display: block;
+            /* Override flex layout to ensure iframe fills space */
             position: relative;
         }
 
@@ -181,7 +185,7 @@
             cursor: pointer;
             border: none;
             border-radius: 50px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             transition: opacity 0.5s ease-in, transform 0.2s, background-color 0.2s, box-shadow 0.2s;
             opacity: 0;
             pointer-events: none;
@@ -196,7 +200,7 @@
 
         .overlay-button:active {
             transform: scale(0.95) translateY(2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
         .next-btn {
@@ -246,14 +250,61 @@
             transform: scale(0.95);
             background-color: #2c3e50;
         }
+
+        /* Team Selection Styles */
+        .team-selection-container {
+            display: none;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            margin-bottom: 40px;
+            justify-content: center;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        .team-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 20px 10px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            background-color: #fff;
+            color: #2c3e50;
+            border: 3px solid #2c3e50;
+            border-radius: 15px;
+            transition: all 0.2s;
+            font-family: inherit;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .team-btn.selected {
+            background-color: #2c3e50;
+            color: white;
+        }
+
+        .team-btn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
+
 <body>
 
     <!-- Layout 1: Settings and Submitting -->
-    <div id="settingPanel" class="panel active">
-        <h1 style="margin-bottom: 40px; letter-spacing: 4px;">作品生成設定</h1>
-        
+    <div id="settingPanel" class="panel active" style="padding-top:100px">
+        <h1 style="letter-spacing: 4px;">作品生成設定</h1>
+
+        <div id="teamSelection" class="team-selection-container">
+            <!-- Buttons will be generated dynamically -->
+        </div>
+
         <div class="sliders-container">
             <div class="slider-group">
                 <label>顏色種子</label>
@@ -278,7 +329,7 @@
     <div id="displayPanel" class="panel">
         <div id="iframeFadeOverlay"></div>
         <iframe id="artworkIframe" src=""></iframe>
-        
+
         <div class="control-buttons-overlay">
             <button id="overlayBackBtn" class="overlay-button back-btn">返回說明</button>
             <button id="overlayNextBtn" class="overlay-button next-btn">下一頁</button>
@@ -300,7 +351,7 @@
         // ---------------------
 
         const socket = io();
-        
+
         // Elements
         const settingPanel = document.getElementById('settingPanel');
         const displayPanel = document.getElementById('displayPanel');
@@ -309,10 +360,12 @@
         const artworkIframe = document.getElementById('artworkIframe');
         const iframeFadeOverlay = document.getElementById('iframeFadeOverlay');
         const debugControls = document.getElementById('debugControls');
-        
+
         const overlayNextBtn = document.getElementById('overlayNextBtn');
         const overlayBackBtn = document.getElementById('overlayBackBtn');
         const overlayRegenBtn = document.getElementById('overlayRegenBtn');
+        const teamSelection = document.getElementById('teamSelection');
+        let teamBtns = []; // Will be populated dynamically
 
         // State
         let isAnimating = false;
@@ -321,12 +374,53 @@
         let currentViewState = 'info'; // 'info' or 'result'
         let hasInitialRevealHappened = false;
         let isDebugEnabled = false;
+        let selectedTeamId = null;
 
         // Init Styles
         settingPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
         displayPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
         iframeFadeOverlay.style.transitionDuration = `${IFRAME_CROSSFADE_DURATION / 2}ms`;
         returnHint.style.transitionDuration = `${HINT_FADE_DURATION}ms`;
+
+        // --- FETCH CONFIG ---
+        async function fetchConfig() {
+            try {
+                const response = await fetch('/config/control-setting');
+                const config = await response.json();
+
+                if (config.enableTeamSelection && config.artworks) {
+                    teamSelection.style.display = 'flex';
+                    teamSelection.innerHTML = ''; // Clear existing
+                    teamBtns = []; // Reset array
+
+                    config.artworks.forEach(art => {
+                        const btn = document.createElement('button');
+                        btn.className = 'team-btn';
+                        btn.setAttribute('data-team', art.id);
+                        btn.textContent = art.title;
+
+                        btn.addEventListener('click', () => {
+                            if (selectedTeamId === art.id) {
+                                selectedTeamId = null;
+                                btn.classList.remove('selected');
+                            } else {
+                                teamBtns.forEach(b => b.classList.remove('selected'));
+                                btn.classList.add('selected');
+                                selectedTeamId = art.id;
+                            }
+                        });
+
+                        teamSelection.appendChild(btn);
+                        teamBtns.push(btn);
+                    });
+                } else {
+                    teamSelection.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Failed to load control settings:', err);
+            }
+        }
+        fetchConfig();
 
         // --- DEBUG MODE LOGIC ---
         function toggleDebugMode() {
@@ -369,7 +463,7 @@
 
         function handleGenerateClick(targetId = null, specificSubtype = null) {
             if (isAnimating) return;
-            
+
             isAnimating = true; // Lock interaction
 
             // Collect Slider Values (Normalize to 0-1 and fix length to 0.0000)
@@ -383,10 +477,10 @@
             if (targetId) {
                 params.targetId = targetId;
             }
-            
+
             // 1. Send Request
             socket.emit('pick-random', params);
-            
+
             // The actual transition happens when we get data back (in socket.on)
             settingPanel.classList.remove('active');
             debugControls.style.display = 'none';
@@ -396,7 +490,7 @@
             currentArtwork = artwork;
             currentViewState = 'info';
             hasInitialRevealHappened = false;
-            
+
             // Hide buttons initially
             hideAllOverlayButtons();
 
@@ -410,7 +504,7 @@
             if (artwork.iteration && artwork.iteration.parameters && artwork.iteration.parameters.subtype !== undefined) {
                 params.append('subtype', artwork.iteration.parameters.subtype);
             }
-            
+
             artworkIframe.src = `${baseUrl}?${params.toString()}`;
 
             // Perform Transition: Setting -> Display
@@ -457,7 +551,7 @@
         overlayNextBtn.addEventListener('click', () => {
             if (!currentArtwork) return;
             currentViewState = 'result';
-            
+
             // Switch buttons immediately if reveal happened
             if (hasInitialRevealHappened) {
                 showButtonsForState('result');
@@ -465,7 +559,7 @@
 
             const teamFolder = currentArtwork.id.toLowerCase();
             const baseUrl = currentArtwork.resultUrl;
-            
+
             // Pass parameters if available
             const params = new URLSearchParams();
             if (currentArtwork.iteration) {
@@ -480,14 +574,14 @@
                     }
                 }
             }
-            
+
             switchIframeWithFade(`${baseUrl}?${params.toString()}`);
         });
 
         overlayBackBtn.addEventListener('click', () => {
             if (!currentArtwork) return;
             currentViewState = 'info';
-            
+
             // Switch buttons immediately
             if (hasInitialRevealHappened) {
                 showButtonsForState('info');
@@ -502,7 +596,7 @@
             if (currentArtwork.iteration && currentArtwork.iteration.parameters && currentArtwork.iteration.parameters.subtype !== undefined) {
                 params.append('subtype', currentArtwork.iteration.parameters.subtype);
             }
-            
+
             switchIframeWithFade(`${baseUrl}?${params.toString()}`);
         });
 
@@ -512,13 +606,13 @@
 
         // Listen for 'artwork-current' (new explicit event for local update)
         socket.on('artwork-current', updateControlPanel);
-        
+
         // Also listen for 'artwork-selected' (legacy fallback)
         socket.on('artwork-selected', updateControlPanel);
 
         // Event: Generate Button Click
         generateBtn.addEventListener('click', () => {
-            handleGenerateClick();
+            handleGenerateClick(selectedTeamId);
         });
 
         // Event: Screen Tap (Return)
@@ -538,10 +632,10 @@
 
             setTimeout(() => {
                 displayPanel.classList.add('active');
-                
+
                 setTimeout(() => {
                     isAnimating = false;
-                    
+
                     setTimeout(() => {
                         returnHint.style.opacity = '1';
                         isWaitingForReturn = true;
@@ -563,7 +657,11 @@
                 settingPanel.classList.add('active');
                 if (isDebugEnabled) debugControls.style.display = 'flex';
                 artworkIframe.src = "about:blank"; // Clear iframe
-                
+
+                // Clear team selection
+                selectedTeamId = null;
+                teamBtns.forEach(btn => btn.classList.remove('selected'));
+
                 setTimeout(() => {
                     isAnimating = false;
                 }, PANEL_FADE_DURATION);
@@ -573,4 +671,5 @@
 
     </script>
 </body>
+
 </html>
