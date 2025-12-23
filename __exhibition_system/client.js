@@ -8,8 +8,54 @@ const { execSync } = require('child_process');
 
 // --- CONSTANTS ---
 const CLIENT_PORT = 3001; // Port for the client's own local server
-const RECORDS_DIR = path.join(__dirname, '..', '__iteration_records');
+const RECORDS_DIR = path.join(__dirname, '..', '__iteration_records_client');
 const ARTWORKS_CONFIG_DIR = path.join(__dirname, 'configs', 'artworks');
+
+// Ensure records directory exists
+if (!fs.existsSync(RECORDS_DIR)) {
+    fs.mkdirSync(RECORDS_DIR);
+}
+
+// Load Artworks dynamically from configs/artworks folder (similar to server.js)
+const artworks = [];
+try {
+    if (fs.existsSync(ARTWORKS_CONFIG_DIR)) {
+        const folders = fs.readdirSync(ARTWORKS_CONFIG_DIR);
+        folders.forEach(folder => {
+            const folderPath = path.join(ARTWORKS_CONFIG_DIR, folder);
+            if (fs.statSync(folderPath).isDirectory()) {
+                const files = fs.readdirSync(folderPath);
+                files.forEach(file => {
+                    if (path.extname(file) === '.json') {
+                        const data = fs.readFileSync(path.join(folderPath, file), 'utf8');
+                        try {
+                            const artworkObj = JSON.parse(data);
+                            artworkObj.infoUrl = `/artwork-configs/${folder}/index.html`;
+                            
+                            if (artworkObj.path && artworkObj.path.startsWith('/artworks/')) {
+                                artworkObj.artworkUrl = artworkObj.path;
+                            } else if (artworkObj.id === 'TeamA') {
+                                artworkObj.artworkUrl = '/artworks/_TeamA_LazyDuck/index.html';
+                            } else {
+                                if (artworkObj.path && !artworkObj.path.startsWith('/')) {
+                                    artworkObj.artworkUrl = `/artworks/${artworkObj.path}`;
+                                } else {
+                                    artworkObj.artworkUrl = artworkObj.path;
+                                }
+                            }
+                            artworks.push(artworkObj);
+                        } catch (e) {
+                            console.error(`Error parsing artwork config ${file} in ${folder}:`, e);
+                        }
+                    }
+                });
+            }
+        });
+        console.log(`Client loaded ${artworks.length} artworks for local fallback.`);
+    }
+} catch (e) {
+    console.error("Error loading artworks on client:", e);
+}
 
 async function startClient() {
     console.log("Starting Exhibition Client (Standalone Mode)...");
@@ -38,12 +84,41 @@ async function startClient() {
     // API to get random record locally
     app.get('/api/random-record', (req, res) => {
         try {
-            if (!fs.existsSync(RECORDS_DIR)) {
-                return res.status(404).json({ error: "No records found" });
-            }
-            const files = fs.readdirSync(RECORDS_DIR).filter(f => f.endsWith('.json'));
-            if (files.length === 0) {
-                return res.status(404).json({ error: "No records found" });
+            const files = fs.existsSync(RECORDS_DIR) ? fs.readdirSync(RECORDS_DIR).filter(f => f.endsWith('.json')) : [];
+            
+            // If less than 10 records, pick a random artwork with random parameters
+            if (files.length < 10) {
+                console.log(`Only ${files.length} records found. Picking a random artwork with random parameters...`);
+                if (artworks.length === 0) return res.status(404).json({ error: "No artworks available" });
+
+                const pickedArtwork = artworks[Math.floor(Math.random() * artworks.length)];
+                
+                // Generate random parameters
+                const timestamp = Date.now();
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+                let randomString = '';
+                for (let i = 0; i < 20; i++) {
+                    randomString += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                const seed = randomString + timestamp;
+
+                const responseData = {
+                    title: pickedArtwork.title,
+                    artworkUrl: pickedArtwork.artworkUrl,
+                    iteration: {
+                        timestamp: timestamp,
+                        date: new Date(timestamp).toISOString(),
+                        seed: seed,
+                        pickedTeamId: pickedArtwork.id,
+                        pickedArtworkTitle: pickedArtwork.title,
+                        parameters: {
+                            p1: Math.random().toFixed(4),
+                            p2: Math.random().toFixed(4),
+                            p3: Math.random().toFixed(4)
+                        }
+                    }
+                };
+                return res.json(responseData);
             }
             
             // Pick a random record file
@@ -51,44 +126,13 @@ async function startClient() {
             const recordData = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, randomFile), 'utf8'));
             const pickedTeamId = recordData.pickedTeamId;
             
-            // Find the JSON in subfolders of configs/artworks
-            const folders = fs.readdirSync(ARTWORKS_CONFIG_DIR);
-            let artworkConfigPath = null;
-            let folderName = null;
+            // Find the artwork config
+            const artworkConfig = artworks.find(a => a.id === pickedTeamId);
             
-            for (const folder of folders) {
-                const folderPath = path.join(ARTWORKS_CONFIG_DIR, folder);
-                if (fs.statSync(folderPath).isDirectory()) {
-                    const checkPath = path.join(folderPath, `${pickedTeamId}.json`);
-                    if (fs.existsSync(checkPath)) {
-                        artworkConfigPath = checkPath;
-                        folderName = folder;
-                        break;
-                    }
-                }
-            }
-            
-            if (artworkConfigPath) {
-                const artworkConfig = JSON.parse(fs.readFileSync(artworkConfigPath, 'utf8'));
-                
-                // Construct URLs similarly to server.js
-                let artworkUrl = artworkConfig.path;
-                
-                if (artworkConfig.path && artworkConfig.path.startsWith('/artworks/')) {
-                    artworkUrl = artworkConfig.path;
-                } else if (pickedTeamId === 'TeamA') {
-                    artworkUrl = '/artworks/_TeamA_LazyDuck/index.html';
-                } else {
-                    // Fallback or prepend /artworks/ if it's a relative path within _artworks
-                    if (artworkConfig.path && !artworkConfig.path.startsWith('/')) {
-                        artworkUrl = `/artworks/${artworkConfig.path}`;
-                    }
-                }
-
-                // Construct the minimal object expected by client-display.html
+            if (artworkConfig) {
                 const responseData = {
                     title: artworkConfig.title,
-                    artworkUrl: artworkUrl,
+                    artworkUrl: artworkConfig.artworkUrl,
                     iteration: recordData
                 };
                 return res.json(responseData);
@@ -197,6 +241,24 @@ async function startClient() {
 
         socket.on('artwork-pushed', (artwork) => {
             console.log("Received PUSHED artwork from Main Server:", artwork.title);
+            
+            // Save iteration data locally
+            if (artwork.iteration) {
+                const timestamp = artwork.iteration.timestamp || Date.now();
+                const dateObj = new Date(timestamp);
+                const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getHours()).padStart(2, '0')}${String(dateObj.getMinutes()).padStart(2, '0')}${String(dateObj.getSeconds()).padStart(2, '0')}`;
+                const shortTeamId = artwork.iteration.pickedTeamId.replace(/^Team/, '');
+                const recordFilename = `${dateStr}-${shortTeamId}.json`;
+                const recordPath = path.join(RECORDS_DIR, recordFilename);
+                
+                try {
+                    fs.writeFileSync(recordPath, JSON.stringify(artwork.iteration, null, 2));
+                    console.log('Saved iteration record locally:', recordPath);
+                } catch (err) {
+                    console.error('Error saving iteration record locally:', err);
+                }
+            }
+
             triggerRandomWindowUpdate(artwork);
         });
 

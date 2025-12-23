@@ -4,6 +4,7 @@ __online_archive_system/data/[0-9]*.json
 __exhibition_system/temp_browser_data
 __exhibition_system/temp_client_data
 __iteration_records/*
+__iteration_records_client/*
 __sequence_queue.json
 
 _imageExaminer/node_modules/
