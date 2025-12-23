@@ -533,7 +533,7 @@ async function drawSeaWaveLayer() {
           // Mountains: Big and standing
           shipXPos = random(-width / 2 - 200, width / 2 + 200);
           drawSize = random(480, 1024) * p2SizeMult * random(p3SizeVarMin, p3SizeVarMax);
-          rotationDegree = random(-p3RotRange, p3RotRange);
+          rotationDegree = random(-6, 6);
           yOffsetRatio = 0; // Anchored more to the bottom
 
           drawScale = random(1.0, 2.0);
