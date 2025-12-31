@@ -33,6 +33,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_DIR = path.join(__dirname, 'configs');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
+const SEED_MAP_DIR = path.join(__dirname, 'data-seed-map');
 
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR);
@@ -42,9 +43,48 @@ if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR);
 }
 
+if (!fs.existsSync(SEED_MAP_DIR)) {
+    fs.mkdirSync(SEED_MAP_DIR);
+}
+
 // Initialize config if it doesn't exist
 if (!fs.existsSync(CONFIG_PATH)) {
     fs.writeFileSync(CONFIG_PATH, JSON.stringify({ lastIterationId: 0 }, null, 2));
+}
+
+function getIterationIdFromSeed(seed) {
+    if (!seed) return null;
+    const char = seed.charAt(0).toLowerCase() || '_';
+    const mapPath = path.join(SEED_MAP_DIR, `${char}.json`);
+    if (fs.existsSync(mapPath)) {
+        try {
+            const map = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+            return map[seed] || null;
+        } catch (e) {
+            console.error(`Error reading seed map ${mapPath}:`, e);
+            return null;
+        }
+    }
+    return null;
+}
+
+function saveSeedMapping(seed, iterationId) {
+    if (!seed) return;
+    const char = seed.charAt(0).toLowerCase() || '_';
+    const mapPath = path.join(SEED_MAP_DIR, `${char}.json`);
+    let map = {};
+    if (fs.existsSync(mapPath)) {
+        try {
+            map = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+        } catch (e) {
+            console.error(`Error reading seed map for saving ${mapPath}:`, e);
+        }
+    }
+    // Only save if not exists or if we want to ensure smallest (though check happens before call)
+    if (!map[seed]) {
+        map[seed] = iterationId;
+        fs.writeFileSync(mapPath, JSON.stringify(map, null, 2));
+    }
 }
 
 function getNextIterationId() {
@@ -103,6 +143,12 @@ app.post('/api/save', (req, res) => {
         return res.status(400).json({ error: 'Missing artwork ID' });
     }
 
+    // Check if seed already exists
+    const existingIterationId = getIterationIdFromSeed(seed);
+    if (existingIterationId) {
+        return res.json({ success: true, iterationId: existingIterationId, existing: true });
+    }
+
     const teamData = getTeamData();
     const teamInfo = teamData[id] || { title: id, folder: id };
 
@@ -124,6 +170,9 @@ app.post('/api/save', (req, res) => {
 
     const filePath = path.join(DATA_DIR, `${iterationId}.json`);
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+
+    // Save mapping
+    saveSeedMapping(seed, iterationId);
 
     res.json({ success: true, iterationId });
 });
