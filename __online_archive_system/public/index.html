@@ -435,6 +435,7 @@
         const API_BASE = window.location.origin;
         let currentDensityConfig = null;
         let currentArtworkData = null;
+        let currentQualityLevel = 'low'; // Default for desktop
 
         async function getDensityRatio() {
             try {
@@ -443,20 +444,25 @@
                 currentDensityConfig = await res.json();
 
                 if (window.innerWidth <= 768) {
+                    currentQualityLevel = 'mobile';
                     return currentDensityConfig.mobile || 0.2;
                 } else {
                     // Default to low setting for desktop view
+                    currentQualityLevel = 'low';
                     return currentDensityConfig.lowDesktop || 0.4;
                 }
             } catch (e) {
                 console.error('Failed to load density config:', e);
-                return window.innerWidth <= 768 ? 0.2 : 1.0;
+                const isMobile = window.innerWidth <= 768;
+                currentQualityLevel = isMobile ? 'mobile' : 'low';
+                return isMobile ? 0.2 : 0.4;
             }
         }
 
         function setQuality(level) {
             if (!currentDensityConfig || !currentArtworkData) return;
 
+            currentQualityLevel = level;
             let density = 1.0;
             if (level === 'low') {
                 density = currentDensityConfig.lowDesktop || 0.4;
@@ -478,7 +484,23 @@
         function updateArtworkIframe(density) {
             if (!currentArtworkData) return;
             const data = currentArtworkData;
-            const iframeUrl = `/artworks/${data.folder}/index.html?seed=${data.seed}&subtype=${data.subtype}&p1=${data.p1}&p2=${data.p2}&p3=${data.p3}&density=${density}`;
+
+            let folder = data.folder;
+            const useSlim = (currentQualityLevel === 'mobile' || currentQualityLevel === 'low' || currentQualityLevel === 'medium');
+
+            if (useSlim) {
+                // Ensure folder starts with _slim
+                if (!folder.startsWith('_slim')) {
+                    folder = '_slim' + folder;
+                }
+            } else {
+                // Ensure folder does not start with _slim
+                if (folder.startsWith('_slim')) {
+                    folder = folder.startsWith('_slim_') ? folder.substring(5) : folder.replace('_slim', '');
+                }
+            }
+
+            const iframeUrl = `/artworks/${folder}/index.html?seed=${data.seed}&subtype=${data.subtype}&p1=${data.p1}&p2=${data.p2}&p3=${data.p3}&density=${density}`;
             document.getElementById('artwork-frame').src = iframeUrl;
         }
 
