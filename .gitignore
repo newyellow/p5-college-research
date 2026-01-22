@@ -2,6 +2,7 @@ __exhibition_system/node_modules
 __online_archive_system/node_modules
 __online_archive_system/data/[0-9]*.json
 __online_archive_system/data-seed-map/*
+__online_archive_system/configs/config.json
 __exhibition_system/temp_browser_data
 __exhibition_system/temp_client_data
 __iteration_records/*
