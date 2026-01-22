@@ -30,6 +30,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: 3600000
 }));
 
+
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_DIR = path.join(__dirname, 'configs');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
@@ -46,6 +47,21 @@ if (!fs.existsSync(CONFIG_DIR)) {
 if (!fs.existsSync(SEED_MAP_DIR)) {
     fs.mkdirSync(SEED_MAP_DIR);
 }
+
+// Serve i18n configuration
+app.get('/config/i18n', (req, res) => {
+    const i18nPath = path.join(CONFIG_DIR, 'i18n.json');
+    if (fs.existsSync(i18nPath)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(i18nPath, 'utf8'));
+            res.json(config);
+        } catch (e) {
+            res.status(500).json({ error: 'Failed to parse i18n config' });
+        }
+    } else {
+        res.status(404).json({ error: 'i18n config not found' });
+    }
+});
 
 // Initialize config if it doesn't exist
 if (!fs.existsSync(CONFIG_PATH)) {

@@ -361,11 +361,53 @@
             color: #fff;
             letter-spacing: 4px;
         }
+
+        .lang-toggle-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 30px 20px 50px;
+        }
+
+        .lang-toggle-label {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .lang-toggle-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .lang-toggle {
+            padding: 12px 26px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: #fff;
+            border: none;
+            border-radius: 24px;
+            letter-spacing: 1px;
+            font-family: inherit;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .lang-toggle.active {
+            background-color: #ffffff;
+            color: #2c3e50;
+        }
     </style>
+    <link id="i18nStylesheet" rel="stylesheet" href="/css/i18n.zh.css">
 </head>
 
 <body>
-    <div id="loading" class="loading-overlay">載入作品中...</div>
+    <div id="loading" class="loading-overlay i18n-archive-loading">載入作品中...</div>
 
     <div class="container">
         <div class="artwork-section">
@@ -375,59 +417,67 @@
         </div>
 
         <div class="info-panel">
-            <h1 class="artwork-title" id="artwork-title">作品名稱</h1>
+            <h1 class="artwork-title i18n-archive-title" id="artwork-title">作品名稱</h1>
 
             <div class="params-container">
                 <!-- <div class="params-title">作品資訊</div> -->
                 <div class="param-item">
-                    <span class="param-label">紀錄編號</span>
+                    <span class="param-label i18n-archive-param-label" id="label-iter">紀錄編號</span>
                     <span class="param-value" id="iter-id">-</span>
                 </div>
                 <div class="param-item">
-                    <span class="param-label">生成類別</span>
+                    <span class="param-label i18n-archive-param-label" id="label-subtype">生成類別</span>
                     <span class="param-value" id="val-subtype">-</span>
                 </div>
                 <div class="param-item">
-                    <span class="param-label">顏色參數</span>
+                    <span class="param-label i18n-archive-param-label" id="label-p1">顏色參數</span>
                     <span class="param-value" id="val-p1">-</span>
                 </div>
                 <div class="param-item">
-                    <span class="param-label">密度參數</span>
+                    <span class="param-label i18n-archive-param-label" id="label-p2">密度參數</span>
                     <span class="param-value" id="val-p2">-</span>
                 </div>
                 <div class="param-item">
-                    <span class="param-label">混亂參數</span>
+                    <span class="param-label i18n-archive-param-label" id="label-p3">混亂參數</span>
                     <span class="param-value" id="val-p3">-</span>
                 </div>
             </div>
 
             <div class="share-section">
-                <div class="share-url" id="share-link">正在產生分享連結...</div>
-                <button class="copy-btn" id="copy-btn">分享此作品</button>
+                <div class="share-url i18n-archive-share-url" id="share-link">正在產生分享連結...</div>
+                <button class="copy-btn i18n-archive-copy-btn" id="copy-btn">分享此作品</button>
             </div>
 
             <div class="quality-section" id="quality-selector">
-                <div class="quality-title">畫質設定 (Density)</div>
+                <div class="quality-title i18n-archive-quality-title" id="quality-title">畫質設定 (Density)</div>
                 <div class="quality-buttons">
-                    <button class="quality-btn" data-level="low" onclick="setQuality('low')">低 (Low)</button>
-                    <button class="quality-btn" data-level="medium" onclick="setQuality('medium')">中 (Med)</button>
-                    <button class="quality-btn" data-level="full" onclick="setQuality('full')">高 (Full)</button>
+                    <button class="quality-btn i18n-archive-quality-btn" data-level="low" onclick="setQuality('low')" id="quality-low">低 (Low)</button>
+                    <button class="quality-btn i18n-archive-quality-btn" data-level="medium" onclick="setQuality('medium')" id="quality-medium">中 (Med)</button>
+                    <button class="quality-btn i18n-archive-quality-btn" data-level="full" onclick="setQuality('full')" id="quality-full">高 (Full)</button>
                 </div>
             </div>
 
             <div class="download-section">
                 <button class="download-btn" onclick="downloadImage()">
-                    <span>💾 下載作品圖片</span>
+                    <span class="i18n-archive-download-btn" id="download-btn-text">💾 下載作品圖片</span>
                 </button>
             </div>
         </div>
 
-        <div class="resolution-notice">
-            <strong>💡 瀏覽提示</strong>
-            <p>
+        <div class="resolution-notice i18n-archive-resolution-notice">
+            <strong id="notice-title">💡 瀏覽提示</strong>
+            <p id="notice-body">
                 由於本作品包含大量的 GPU 運算，行動裝置的解析度已大幅調降。
                 若欲獲得最佳的視覺體驗，建議使用電腦瀏覽器開啟此頁面。
             </p>
+        </div>
+    </div>
+
+    <div class="lang-toggle-section">
+        <span class="lang-toggle-label i18n-archive-lang-toggle-label" id="lang-toggle-label">Language Switch: 中文 / English</span>
+        <div class="lang-toggle-buttons">
+            <button id="langToggleZh" class="lang-toggle i18n-archive-lang-toggle">中文</button>
+            <button id="langToggleEn" class="lang-toggle i18n-archive-lang-toggle">English</button>
         </div>
     </div>
 
@@ -436,6 +486,98 @@
         let currentDensityConfig = null;
         let currentArtworkData = null;
         let currentQualityLevel = 'low'; // Default for desktop
+        const LANG_STORAGE_KEY = 'archive_lang';
+        let currentLang = null;
+        let i18nConfig = null;
+        const i18nStylesheet = document.getElementById('i18nStylesheet');
+        const langToggleZh = document.getElementById('langToggleZh');
+        const langToggleEn = document.getElementById('langToggleEn');
+
+        function detectPreferredLang() {
+            const langs = navigator.languages && navigator.languages.length
+                ? navigator.languages
+                : [navigator.language || ''];
+            return langs.some(lang => lang.toLowerCase().startsWith('zh')) ? 'zh' : 'en';
+        }
+
+        function getInitialLang() {
+            return localStorage.getItem(LANG_STORAGE_KEY) || detectPreferredLang();
+        }
+
+        async function fetchI18n() {
+            try {
+                const response = await fetch('/config/i18n');
+                i18nConfig = await response.json();
+            } catch (e) {
+                console.error('Failed to load i18n config:', e);
+            }
+        }
+
+        function getText(path, fallback = '') {
+            if (!i18nConfig || !currentLang) return fallback;
+            const base = i18nConfig[currentLang] || i18nConfig.zh || {};
+            return path.split('.').reduce((acc, key) => acc && acc[key], base) || fallback;
+        }
+
+        function formatTemplate(template, params = {}) {
+            return Object.entries(params).reduce(
+                (result, [key, value]) => result.replaceAll(`{${key}}`, value),
+                template
+            );
+        }
+
+        function applyLangClass() {
+            document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-TW';
+            document.body.classList.remove('lang-zh', 'lang-en');
+            document.body.classList.add(currentLang === 'en' ? 'lang-en' : 'lang-zh');
+            if (i18nStylesheet) {
+                i18nStylesheet.href = `/css/i18n.${currentLang === 'en' ? 'en' : 'zh'}.css`;
+            }
+        }
+
+        function applyI18nText() {
+            document.title = getText('pageTitle', 'Online Archive - Artwork Result');
+            document.getElementById('loading').textContent = getText('loading', '載入作品中...');
+            document.getElementById('artwork-title').textContent = getText('titlePlaceholder', '作品名稱');
+            document.getElementById('label-iter').textContent = getText('labels.iterationId', '紀錄編號');
+            document.getElementById('label-subtype').textContent = getText('labels.subtype', '生成類別');
+            document.getElementById('label-p1').textContent = getText('labels.colorParam', '顏色參數');
+            document.getElementById('label-p2').textContent = getText('labels.densityParam', '密度參數');
+            document.getElementById('label-p3').textContent = getText('labels.chaosParam', '混亂參數');
+            document.getElementById('share-link').textContent = getText('share.placeholder', '正在產生分享連結...');
+            document.getElementById('copy-btn').textContent = getText('share.button', '分享此作品');
+            document.getElementById('quality-title').textContent = getText('quality.title', '畫質設定 (Density)');
+            document.getElementById('quality-low').textContent = getText('quality.low', '低 (Low)');
+            document.getElementById('quality-medium').textContent = getText('quality.medium', '中 (Med)');
+            document.getElementById('quality-full').textContent = getText('quality.full', '高 (Full)');
+            document.getElementById('download-btn-text').textContent = getText('download.button', '💾 下載作品圖片');
+            document.getElementById('notice-title').textContent = getText('notice.title', '💡 瀏覽提示');
+            document.getElementById('notice-body').textContent = getText('notice.body', '由於本作品包含大量的 GPU 運算，行動裝置的解析度已大幅調降。若欲獲得最佳的視覺體驗，建議使用電腦瀏覽器開啟此頁面。');
+            document.getElementById('lang-toggle-label').textContent =
+                getText('langSwitchLabel', 'Language Switch: 中文 / English');
+            if (langToggleZh) {
+                langToggleZh.textContent = getText('langSwitchZh', '中文');
+            }
+            if (langToggleEn) {
+                langToggleEn.textContent = getText('langSwitchEn', 'English');
+            }
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem(LANG_STORAGE_KEY, lang);
+            applyLangClass();
+            applyI18nText();
+            if (currentArtworkData) {
+                updateArtworkText(currentArtworkData);
+            }
+            if (langToggleZh) {
+                langToggleZh.classList.toggle('active', currentLang === 'zh');
+            }
+            if (langToggleEn) {
+                langToggleEn.classList.toggle('active', currentLang === 'en');
+            }
+        }
 
         async function getDensityRatio() {
             try {
@@ -516,6 +658,17 @@
         }
 
         async function init() {
+            currentLang = getInitialLang();
+            await fetchI18n();
+            applyLangClass();
+            applyI18nText();
+            if (langToggleZh) {
+                langToggleZh.addEventListener('click', () => setLang('zh'));
+            }
+            if (langToggleEn) {
+                langToggleEn.addEventListener('click', () => setLang('en'));
+            }
+            setLang(currentLang);
             const pathParts = window.location.pathname.split('/');
             const viewIdx = pathParts.indexOf('view');
             const iterationId = viewIdx !== -1 ? pathParts[viewIdx + 1] : null;
@@ -551,10 +704,10 @@
                     }
                 } catch (e) {
                     console.error('Failed to save artwork:', e);
-                    document.getElementById('loading').textContent = '儲存作品失敗';
+                    document.getElementById('loading').textContent = getText('errors.saveFailed', '儲存作品失敗');
                 }
             } else {
-                document.getElementById('loading').textContent = '未指定作品';
+                document.getElementById('loading').textContent = getText('errors.noArtwork', '未指定作品');
             }
         }
 
@@ -564,7 +717,7 @@
                 const data = await response.json();
 
                 if (data.error) {
-                    document.getElementById('loading').textContent = '找不到該作品';
+                    document.getElementById('loading').textContent = getText('errors.notFound', '找不到該作品');
                     return;
                 }
 
@@ -585,21 +738,27 @@
                 document.getElementById('loading').style.display = 'none';
             } catch (e) {
                 console.error('Failed to load artwork:', e);
-                document.getElementById('loading').textContent = '載入作品失敗';
+                document.getElementById('loading').textContent = getText('errors.loadFailed', '載入作品失敗');
             }
         }
 
-        async function displayData(data) {
+        function updateArtworkText(data) {
             currentArtworkData = data;
-            document.getElementById('artwork-title').textContent = data.title || data.artworkId;
+            const configTitle = currentLang === 'en'
+                ? (data.config && data.config.title_en) || data.title
+                : (data.config && data.config.title) || data.title;
+            document.getElementById('artwork-title').textContent = configTitle || data.artworkId;
             document.getElementById('iter-id').textContent = '#' + data.iterationId;
 
             // Map subtype index to name if config is available
             let subtypeText = data.subtype !== null ? data.subtype : '-';
-            if (data.config && data.config.subtypes && data.subtype !== null) {
+            const subtypeList = currentLang === 'en'
+                ? (data.config && data.config.subtypes_en) || (data.config && data.config.subtypes)
+                : data.config && data.config.subtypes;
+            if (subtypeList && data.subtype !== null) {
                 const subtypeIdx = parseInt(data.subtype);
-                if (data.config.subtypes[subtypeIdx]) {
-                    subtypeText = data.config.subtypes[subtypeIdx];
+                if (subtypeList[subtypeIdx]) {
+                    subtypeText = subtypeList[subtypeIdx];
                 }
             }
             document.getElementById('val-subtype').textContent = subtypeText;
@@ -613,9 +772,17 @@
             shareLinkEl.textContent = shareLink;
 
             document.getElementById('copy-btn').onclick = async () => {
+                const shareTitle = formatTemplate(
+                    getText('share.titleTemplate', '線上典藏 - {title}'),
+                    { title: configTitle || data.artworkId }
+                );
+                const shareText = formatTemplate(
+                    getText('share.textTemplate', '這是我在勁水國寶展覽中生成的作品 #{id}，快來看看吧！'),
+                    { id: data.iterationId }
+                );
                 const shareData = {
-                    title: `線上典藏 - ${data.title || data.artworkId}`,
-                    text: `這是我在勁水國寶展覽中生成的作品 #${data.iterationId}，快來看看吧！`,
+                    title: shareTitle,
+                    text: shareText,
                     url: shareLink
                 };
 
@@ -627,7 +794,7 @@
                         await navigator.clipboard.writeText(shareLink);
                         const btn = document.getElementById('copy-btn');
                         const originalText = btn.textContent;
-                        btn.textContent = '連結已複製！';
+                        btn.textContent = getText('share.success', '連結已複製！');
                         btn.classList.add('success');
                         setTimeout(() => {
                             btn.textContent = originalText;
@@ -638,6 +805,11 @@
                     console.log('Error sharing:', err);
                 }
             };
+
+        }
+
+        async function displayData(data) {
+            updateArtworkText(data);
 
             // Get initial density ratio and set active quality button
             const density = await getDensityRatio();

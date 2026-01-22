@@ -1,0 +1,84 @@
+{
+  "zh": {
+    "pageTitle": "線上典藏 - 作品結果",
+    "loading": "載入作品中...",
+    "titlePlaceholder": "作品名稱",
+    "labels": {
+      "iterationId": "紀錄編號",
+      "subtype": "生成類別",
+      "colorParam": "顏色參數",
+      "densityParam": "密度參數",
+      "chaosParam": "混亂參數"
+    },
+    "share": {
+      "placeholder": "正在產生分享連結...",
+      "button": "分享此作品",
+      "success": "連結已複製！",
+      "titleTemplate": "線上典藏 - {title}",
+      "textTemplate": "這是我在勁水國寶展覽中生成的作品 #{id}，快來看看吧！"
+    },
+    "quality": {
+      "title": "畫質設定 (Density)",
+      "low": "低 (Low)",
+      "medium": "中 (Med)",
+      "full": "高 (Full)"
+    },
+    "download": {
+      "button": "💾 下載作品圖片"
+    },
+    "notice": {
+      "title": "💡 瀏覽提示",
+      "body": "由於本作品包含大量的 GPU 運算，行動裝置的解析度已大幅調降。若欲獲得最佳的視覺體驗，建議使用電腦瀏覽器開啟此頁面。"
+    },
+    "errors": {
+      "saveFailed": "儲存作品失敗",
+      "noArtwork": "未指定作品",
+      "notFound": "找不到該作品",
+      "loadFailed": "載入作品失敗"
+    },
+    "langSwitchLabel": "語言切換",
+    "langSwitchZh": "中文",
+    "langSwitchEn": "English"
+  },
+  "en": {
+    "pageTitle": "Online Archive - Artwork Result",
+    "loading": "Loading artwork...",
+    "titlePlaceholder": "Artwork Title",
+    "labels": {
+      "iterationId": "Record ID",
+      "subtype": "Subtype",
+      "colorParam": "Color Parameter",
+      "densityParam": "Density Parameter",
+      "chaosParam": "Chaos Parameter"
+    },
+    "share": {
+      "placeholder": "Generating share link...",
+      "button": "Share this artwork",
+      "success": "Link copied!",
+      "titleTemplate": "Online Archive - {title}",
+      "textTemplate": "This is an artwork I generated at the exhibition #{id}. Check it out!"
+    },
+    "quality": {
+      "title": "Quality (Density)",
+      "low": "Low",
+      "medium": "Medium",
+      "full": "Full"
+    },
+    "download": {
+      "button": "💾 Download Artwork Image"
+    },
+    "notice": {
+      "title": "💡 Viewing Tip",
+      "body": "This artwork involves heavy GPU computation, so the resolution is reduced on mobile devices. For the best experience, please open this page in a desktop browser."
+    },
+    "errors": {
+      "saveFailed": "Failed to save artwork",
+      "noArtwork": "No artwork specified",
+      "notFound": "Artwork not found",
+      "loadFailed": "Failed to load artwork"
+    },
+    "langSwitchLabel": "Language Switch",
+    "langSwitchZh": "中文",
+    "langSwitchEn": "English"
+  }
+}
