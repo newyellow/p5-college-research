@@ -1,0 +1,40 @@
+/* Customize English text styles here */
+
+.lang-en .i18n-control-title {}
+.lang-en .i18n-control-label {}
+.lang-en .i18n-control-generate {}
+.lang-en .i18n-control-overlay-back {}
+.lang-en .i18n-control-overlay-next {}
+.lang-en .i18n-control-overlay-regenerate {}
+.lang-en .i18n-control-return-hint {}
+.lang-en .i18n-control-team-btn {}
+.lang-en .i18n-control-lang-toggle {}
+
+.lang-en .i18n-artwork-loading {}
+.lang-en .i18n-artwork-title { font-size: 30px;}
+.lang-en .i18n-artwork-members { font-size: 20px; }
+.lang-en .i18n-artwork-description-label { font-size: 20px;}
+.lang-en .i18n-artwork-description {
+    font-size: 20px;
+    line-height: 1.0;
+}
+.lang-en .i18n-artwork-artifact-label { visibility: hidden;}
+.lang-en .i18n-artwork-artifact { visibility: hidden;}
+.lang-en .i18n-artwork-element-label {
+    font-size: 20px;
+    width: 120%;
+    margin-left: -10%;
+    margin-top: -20px;
+}
+.lang-en .i18n-artwork-element-content {
+    font-size: 20px;
+    line-height: 1.0;
+    text-align: justify;
+    width: 120%;
+    margin-left: -10%;
+}
+
+.lang-en .i18n-result-qr-text { font-size: 20px;}
+.lang-en .i18n-result-params-title { font-size: 16px;}
+.lang-en .i18n-result-param-label { font-size: 16px;}
+.lang-en .i18n-result-subtype-value { font-size: 16px; max-width: 300px;}

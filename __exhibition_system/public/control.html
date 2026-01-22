@@ -171,11 +171,20 @@
         .control-buttons-overlay {
             position: absolute;
             bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 0;
+            width: 100%;
             display: flex;
-            gap: 30px;
+            justify-content: center;
             z-index: 1000;
+            pointer-events: none;
+        }
+
+        .control-buttons-overlay.active {
+            pointer-events: auto;
+        }
+
+        .control-buttons-row {
+            gap: 30px;
         }
 
         .overlay-button {
@@ -292,14 +301,33 @@
         .team-btn:active {
             transform: scale(0.95);
         }
+
+        .lang-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 3000;
+            padding: 24px 40px;
+            font-size: 32px;
+            font-weight: 700;
+            cursor: pointer;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: #fff;
+            border: none;
+            border-radius: 40px;
+            letter-spacing: 1px;
+            font-family: inherit;
+        }
     </style>
+    <link id="i18nStylesheet" rel="stylesheet" href="/css/i18n.zh.css">
 </head>
 
 <body>
+    <button id="langToggle" class="lang-toggle i18n-control-lang-toggle">EN</button>
 
     <!-- Layout 1: Settings and Submitting -->
     <div id="settingPanel" class="panel active" style="padding-top:100px">
-        <h1 style="letter-spacing: 4px;">作品生成設定</h1>
+        <h1 class="i18n-control-title" style="letter-spacing: 4px;">作品生成設定</h1>
 
         <div id="teamSelection" class="team-selection-container">
             <!-- Buttons will be generated dynamically -->
@@ -307,20 +335,20 @@
 
         <div class="sliders-container">
             <div class="slider-group">
-                <label>顏色種子</label>
+                <label class="i18n-control-label">顏色種子</label>
                 <input type="range" id="param1" min="0" max="92" value="46" step="1">
             </div>
             <div class="slider-group">
-                <label>密度種子</label>
+                <label class="i18n-control-label">密度種子</label>
                 <input type="range" id="param2" min="0" max="1000000" value="500000">
             </div>
             <div class="slider-group">
-                <label>混亂種子</label>
+                <label class="i18n-control-label">混亂種子</label>
                 <input type="range" id="param3" min="0" max="1000000" value="500000">
             </div>
         </div>
 
-        <button id="generateBtn" class="action-button">生成作品</button>
+        <button id="generateBtn" class="action-button i18n-control-generate">生成作品</button>
     </div>
 
     <div id="debugControls" class="debug-controls"></div>
@@ -330,13 +358,16 @@
         <div id="iframeFadeOverlay"></div>
         <iframe id="artworkIframe" src=""></iframe>
 
-        <div class="control-buttons-overlay">
-            <button id="overlayBackBtn" class="overlay-button back-btn">返回說明</button>
-            <button id="overlayNextBtn" class="overlay-button next-btn">下一頁</button>
-            <button id="overlayRegenBtn" class="overlay-button regenerate-btn">重新生成</button>
+        <div id="nextButtonsOverlay" class="control-buttons-overlay">
+            <button id="overlayNextBtn" class="overlay-button next-btn i18n-control-overlay-next">下一頁</button>
         </div>
 
-        <div id="returnHint">Tap the screen to generate next artwork</div>
+        <div id="resultButtonsOverlay" class="control-buttons-overlay control-buttons-row">
+            <button id="overlayBackBtn" class="overlay-button back-btn i18n-control-overlay-back">返回說明</button>
+            <button id="overlayRegenBtn" class="overlay-button regenerate-btn i18n-control-overlay-regenerate">重新生成</button>
+        </div>
+
+        <div id="returnHint" class="i18n-control-return-hint">Tap the screen to generate next artwork</div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -365,6 +396,10 @@
         const overlayBackBtn = document.getElementById('overlayBackBtn');
         const overlayRegenBtn = document.getElementById('overlayRegenBtn');
         const teamSelection = document.getElementById('teamSelection');
+        const langToggle = document.getElementById('langToggle');
+        const nextButtonsOverlay = document.getElementById('nextButtonsOverlay');
+        const resultButtonsOverlay = document.getElementById('resultButtonsOverlay');
+        const i18nStylesheet = document.getElementById('i18nStylesheet');
         let teamBtns = []; // Will be populated dynamically
 
         // State
@@ -373,8 +408,13 @@
         let currentArtwork = null;
         let currentViewState = 'info'; // 'info' or 'result'
         let hasInitialRevealHappened = false;
-        let isDebugEnabled = false;
+        let isDebugEnabled = true;
         let selectedTeamId = null;
+        let currentLang = null;
+        let i18nConfig = null;
+        let controlConfig = null;
+
+        const LANG_STORAGE_KEY = 'exhibition_lang';
 
         // Init Styles
         settingPanel.style.transitionDuration = `${PANEL_FADE_DURATION}ms`;
@@ -386,41 +426,106 @@
         async function fetchConfig() {
             try {
                 const response = await fetch('/config/control-setting');
-                const config = await response.json();
-
-                if (config.enableTeamSelection && config.artworks) {
-                    teamSelection.style.display = 'flex';
-                    teamSelection.innerHTML = ''; // Clear existing
-                    teamBtns = []; // Reset array
-
-                    config.artworks.forEach(art => {
-                        const btn = document.createElement('button');
-                        btn.className = 'team-btn';
-                        btn.setAttribute('data-team', art.id);
-                        btn.textContent = art.title;
-
-                        btn.addEventListener('click', () => {
-                            if (selectedTeamId === art.id) {
-                                selectedTeamId = null;
-                                btn.classList.remove('selected');
-                            } else {
-                                teamBtns.forEach(b => b.classList.remove('selected'));
-                                btn.classList.add('selected');
-                                selectedTeamId = art.id;
-                            }
-                        });
-
-                        teamSelection.appendChild(btn);
-                        teamBtns.push(btn);
-                    });
-                } else {
-                    teamSelection.style.display = 'none';
-                }
+                controlConfig = await response.json();
+                renderTeamButtons();
             } catch (err) {
                 console.error('Failed to load control settings:', err);
             }
         }
         fetchConfig();
+
+        async function fetchI18n() {
+            try {
+                const response = await fetch('/config/i18n');
+                i18nConfig = await response.json();
+                applyLanguage();
+            } catch (err) {
+                console.error('Failed to load i18n config:', err);
+            }
+        }
+        fetchI18n();
+
+        function getInitialLang() {
+            return localStorage.getItem(LANG_STORAGE_KEY) || 'zh';
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem(LANG_STORAGE_KEY, lang);
+            document.documentElement.lang = lang === 'en' ? 'en' : 'zh-TW';
+            applyLangClass();
+            applyLanguage();
+            renderTeamButtons();
+            refreshIframeLanguage();
+        }
+
+        function applyLangClass() {
+            const langClass = currentLang === 'en' ? 'lang-en' : 'lang-zh';
+            document.body.classList.remove('lang-zh', 'lang-en');
+            document.body.classList.add(langClass);
+            if (i18nStylesheet) {
+                i18nStylesheet.href = `/css/i18n.${currentLang === 'en' ? 'en' : 'zh'}.css`;
+            }
+        }
+
+        function getText(path, fallback = '') {
+            if (!i18nConfig || !currentLang) return fallback;
+            const base = i18nConfig[currentLang] || i18nConfig.zh || {};
+            return path.split('.').reduce((acc, key) => acc && acc[key], base) || fallback;
+        }
+
+        function applyLanguage() {
+            if (!currentLang) currentLang = getInitialLang();
+            langToggle.textContent = getText('control.langToggle', currentLang === 'en' ? '中文' : 'EN');
+            document.querySelector('#settingPanel h1').textContent = getText('control.settingsTitle', '作品生成設定');
+            const sliderLabels = document.querySelectorAll('.slider-group label');
+            if (sliderLabels[0]) sliderLabels[0].textContent = getText('control.colorSeed', '顏色種子');
+            if (sliderLabels[1]) sliderLabels[1].textContent = getText('control.densitySeed', '密度種子');
+            if (sliderLabels[2]) sliderLabels[2].textContent = getText('control.chaosSeed', '混亂種子');
+            generateBtn.textContent = getText('control.generateArtwork', '生成作品');
+            overlayBackBtn.textContent = getText('control.overlayBack', '返回說明');
+            overlayNextBtn.textContent = getText('control.overlayNext', '下一頁');
+            overlayRegenBtn.textContent = getText('control.overlayRegenerate', '重新生成');
+            returnHint.textContent = getText('control.returnHint', '點擊畫面以生成下一件作品');
+        }
+
+        function renderTeamButtons() {
+            if (!controlConfig || !controlConfig.enableTeamSelection || !controlConfig.artworks) {
+                teamSelection.style.display = 'none';
+                return;
+            }
+
+            teamSelection.style.display = 'flex';
+            teamSelection.innerHTML = '';
+            teamBtns = [];
+
+            controlConfig.artworks.forEach(art => {
+                const btn = document.createElement('button');
+                btn.className = 'team-btn i18n-control-team-btn';
+                btn.setAttribute('data-team', art.id);
+                const title = currentLang === 'en' ? (art.title_en || art.title) : art.title;
+                btn.textContent = title;
+
+                btn.addEventListener('click', () => {
+                    if (selectedTeamId === art.id) {
+                        selectedTeamId = null;
+                        btn.classList.remove('selected');
+                    } else {
+                        teamBtns.forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        selectedTeamId = art.id;
+                    }
+                });
+
+                teamSelection.appendChild(btn);
+                teamBtns.push(btn);
+            });
+        }
+
+        langToggle.addEventListener('click', () => {
+            const nextLang = currentLang === 'en' ? 'zh' : 'en';
+            setLang(nextLang);
+        });
 
         // --- DEBUG MODE LOGIC ---
         function toggleDebugMode() {
@@ -499,6 +604,7 @@
             const jsonFile = artwork.id + '.json'; // Still need this for the 'data' param
             const params = new URLSearchParams();
             params.append('data', jsonFile);
+            params.append('lang', currentLang || getInitialLang());
 
             // Pass subtype if available
             if (artwork.iteration && artwork.iteration.parameters && artwork.iteration.parameters.subtype !== undefined) {
@@ -535,15 +641,19 @@
             overlayNextBtn.classList.remove('show');
             overlayBackBtn.classList.remove('show');
             overlayRegenBtn.classList.remove('show');
+            nextButtonsOverlay.classList.remove('active');
+            resultButtonsOverlay.classList.remove('active');
         }
 
         function showButtonsForState(state) {
             hideAllOverlayButtons();
             if (state === 'info') {
                 overlayNextBtn.classList.add('show');
+                nextButtonsOverlay.classList.add('active');
             } else if (state === 'result') {
                 overlayBackBtn.classList.add('show');
                 overlayRegenBtn.classList.add('show');
+                resultButtonsOverlay.classList.add('active');
             }
         }
 
@@ -557,7 +667,6 @@
                 showButtonsForState('result');
             }
 
-            const teamFolder = currentArtwork.id.toLowerCase();
             const baseUrl = currentArtwork.resultUrl;
 
             // Pass parameters if available
@@ -574,6 +683,7 @@
                     }
                 }
             }
+            params.append('lang', currentLang || getInitialLang());
 
             switchIframeWithFade(`${baseUrl}?${params.toString()}`);
         });
@@ -591,6 +701,7 @@
             const jsonFile = currentArtwork.id + '.json';
             const params = new URLSearchParams();
             params.append('data', jsonFile);
+            params.append('lang', currentLang || getInitialLang());
 
             // Pass subtype if available
             if (currentArtwork.iteration && currentArtwork.iteration.parameters && currentArtwork.iteration.parameters.subtype !== undefined) {
@@ -620,6 +731,7 @@
         document.addEventListener('click', (e) => {
             if (e.target === generateBtn || generateBtn.contains(e.target)) return;
             if (e.target.closest('.control-buttons-overlay')) return;
+            if (e.target === langToggle || langToggle.contains(e.target)) return;
 
             if (isWaitingForReturn && !isAnimating) {
                 performTransitionToSettings();
@@ -668,6 +780,38 @@
 
             }, PANEL_FADE_DURATION);
         }
+
+        function refreshIframeLanguage() {
+            if (!currentArtwork || !displayPanel.classList.contains('active')) return;
+
+            if (currentViewState === 'info') {
+                const baseUrl = currentArtwork.infoUrl;
+                const jsonFile = currentArtwork.id + '.json';
+                const params = new URLSearchParams();
+                params.append('data', jsonFile);
+                params.append('lang', currentLang || getInitialLang());
+                if (currentArtwork.iteration && currentArtwork.iteration.parameters && currentArtwork.iteration.parameters.subtype !== undefined) {
+                    params.append('subtype', currentArtwork.iteration.parameters.subtype);
+                }
+                switchIframeWithFade(`${baseUrl}?${params.toString()}`);
+            } else {
+                const baseUrl = currentArtwork.resultUrl;
+                const params = new URLSearchParams();
+                if (currentArtwork.iteration) {
+                    if (currentArtwork.iteration.seed) params.append('seed', currentArtwork.iteration.seed);
+                    if (currentArtwork.iteration.pickedTeamId) params.append('id', currentArtwork.iteration.pickedTeamId);
+                    if (currentArtwork.iteration.parameters) {
+                        for (const [key, value] of Object.entries(currentArtwork.iteration.parameters)) {
+                            params.append(key, value);
+                        }
+                    }
+                }
+                params.append('lang', currentLang || getInitialLang());
+                switchIframeWithFade(`${baseUrl}?${params.toString()}`);
+            }
+        }
+
+        setLang(getInitialLang());
 
     </script>
 </body>

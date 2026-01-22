@@ -174,26 +174,27 @@
         }
       }
     </style>
+    <link id="i18nStylesheet" rel="stylesheet" href="/css/i18n.zh.css">
   </head>
   <body>
-    <div class="loading">載入中...</div>
+    <div class="loading i18n-artwork-loading" id="loadingText">載入中...</div>
 
     <div class="exhibition-container" style="display: none">
       <!-- 左側資訊區 -->
       <div class="info-section">
         <div class="title-block">
-          <h1 class="artwork-title" id="title"></h1>
-          <p class="artist-name" id="members"></p>
+          <h1 class="artwork-title i18n-artwork-title" id="title"></h1>
+          <p class="artist-name i18n-artwork-members" id="members"></p>
         </div>
 
         <div class="info-block">
-          <span class="info-label">♦︎ 作品論述</span>
-          <div class="info-content" id="description"></div>
+          <span class="info-label i18n-artwork-description-label" id="descriptionLabel">♦︎ 作品論述</span>
+          <div class="info-content i18n-artwork-description" id="description"></div>
         </div>
 
         <div class="info-block">
-          <span class="info-label">♦︎ 結合文物</span>
-          <p class="artifacts-list" id="artifact"></p>
+          <span class="info-label i18n-artwork-artifact-label" id="artifactLabel">♦︎ 結合文物</span>
+          <p class="artifacts-list i18n-artwork-artifact" id="artifact"></p>
         </div>
       </div>
 
@@ -208,16 +209,54 @@
         </div>
 
         <div class="element-info">
-          <span class="element-label" id="elementLabel">♦︎ 元素介紹 ♦︎</span>
-          <div class="element-content" id="elementContent"></div>
+          <span class="element-label i18n-artwork-element-label" id="elementLabel">♦︎ 元素介紹 ♦︎</span>
+          <div class="element-content i18n-artwork-element-content" id="elementContent"></div>
         </div>
       </div>
     </div>
 
     <script src="/node_modules/marked/lib/marked.umd.js"></script>
     <script>
+      const LANG_STORAGE_KEY = "exhibition_lang";
+      let currentLang = null;
+      let i18nConfig = null;
+      const i18nStylesheet = document.getElementById("i18nStylesheet");
+
       function getQueryParams() {
         return new URLSearchParams(window.location.search);
+      }
+
+      function getLang() {
+        const params = getQueryParams();
+        return params.get("lang") || localStorage.getItem(LANG_STORAGE_KEY) || "zh";
+      }
+
+      async function fetchI18n() {
+        try {
+          const response = await fetch("/config/i18n");
+          i18nConfig = await response.json();
+        } catch (e) {
+          console.error("Failed to load i18n config:", e);
+        }
+      }
+
+      function getText(path, fallback = "") {
+        if (!i18nConfig || !currentLang) return fallback;
+        const base = i18nConfig[currentLang] || i18nConfig.zh || {};
+        return path.split(".").reduce((acc, key) => acc && acc[key], base) || fallback;
+      }
+
+      function applyI18n() {
+        document.documentElement.lang = currentLang === "en" ? "en" : "zh-TW";
+        document.body.classList.remove("lang-zh", "lang-en");
+        document.body.classList.add(currentLang === "en" ? "lang-en" : "lang-zh");
+        if (i18nStylesheet) {
+          i18nStylesheet.href = `/css/i18n.${currentLang === "en" ? "en" : "zh"}.css`;
+        }
+        document.getElementById("loadingText").textContent = getText("artworkInfo.loading", "載入中...");
+        document.getElementById("descriptionLabel").textContent = getText("artworkInfo.descriptionLabel", "♦︎ 作品論述");
+        document.getElementById("artifactLabel").textContent = getText("artworkInfo.artifactLabel", "♦︎ 結合文物");
+        document.getElementById("elementLabel").textContent = getText("artworkInfo.elementLabelDefault", "♦︎ 元素介紹 ♦︎");
       }
 
       function getJsonPath() {
@@ -226,14 +265,23 @@
       }
 
       async function loadExhibitionData() {
+        currentLang = getLang();
+        await fetchI18n();
+        applyI18n();
+
         const jsonPath = getJsonPath();
         const response = await fetch(jsonPath);
         const data = await response.json();
 
         // Load main description from .md file
         try {
-          const mdPath = jsonPath.replace(".json", ".md");
-          const mdResponse = await fetch(mdPath);
+          const mdLangSuffix = currentLang === "en" ? ".en" : "";
+          let mdPath = jsonPath.replace(".json", `${mdLangSuffix}.md`);
+          let mdResponse = await fetch(mdPath);
+          if (!mdResponse.ok && currentLang === "en") {
+            mdPath = jsonPath.replace(".json", ".md");
+            mdResponse = await fetch(mdPath);
+          }
           if (mdResponse.ok) {
             const mdContent = await mdResponse.text();
             data.description = marked.parse(mdContent);
@@ -248,8 +296,13 @@
         // If subtype is present, try to load subtype md file
         if (subtype !== null) {
           try {
-            const subtypeMdPath = `subtype_${subtype}.md`;
-            const mdResponse = await fetch(subtypeMdPath);
+            const langSuffix = currentLang === "en" ? ".en" : "";
+            let subtypeMdPath = `subtype_${subtype}${langSuffix}.md`;
+            let mdResponse = await fetch(subtypeMdPath);
+            if (!mdResponse.ok && currentLang === "en") {
+              subtypeMdPath = `subtype_${subtype}.md`;
+              mdResponse = await fetch(subtypeMdPath);
+            }
             if (mdResponse.ok) {
                 const mdContent = await mdResponse.text();
                 
@@ -258,9 +311,9 @@
                 if (imgMatch) {
                     data.element = data.element || {};
                     data.element.image = imgMatch[1];
-                    // Use the subtype name from config for label
-                    if (data.subtypes && data.subtypes[subtype]) {
-                        data.element.label = `♦︎ ${data.subtypes[subtype]} ♦︎`;
+                    const subtypeList = currentLang === "en" ? (data.subtypes_en || data.subtypes) : data.subtypes;
+                    if (subtypeList && subtypeList[subtype]) {
+                        data.element.label = `♦︎ ${subtypeList[subtype]} ♦︎`;
                     }
                     // Remove image tag from content and parse remaining as markdown
                     data.element.content = marked.parse(mdContent.replace(/!\[.*?\]\((.*?)\)/, '').trim());
@@ -275,19 +328,22 @@
       }
 
       function displayExhibitionData(data) {
-        document.getElementById("title").textContent = data.title || "";
-        document.getElementById("members").textContent = data.members
-          ? `作者:${data.members}`
+        const title = currentLang === "en" ? (data.title_en || data.title) : data.title;
+        document.getElementById("title").textContent = title || "";
+        const members = currentLang === "en" ? (data.members_en || data.members) : data.members;
+        document.getElementById("members").textContent = members
+          ? `${getText("artworkInfo.artistsPrefix", "作者：")}${members}`
           : "";
 
         document.getElementById("description").innerHTML =
           data.description || "";
 
-        document.getElementById("artifact").textContent = data.artifact || "";
+        const artifact = currentLang === "en" ? (data.artifact_en || data.artifact) : data.artifact;
+        document.getElementById("artifact").textContent = artifact || "";
 
         if (data.element) {
           document.getElementById("elementLabel").textContent =
-            data.element.label || "♦︎ 元素介紹 ♦︎";
+            data.element.label || getText("artworkInfo.elementLabelDefault", "♦︎ 元素介紹 ♦︎");
           document.getElementById("elementContent").innerHTML =
             data.element.content || "";
 
@@ -295,7 +351,7 @@
             document.getElementById("imageContainer").style.display = "flex";
             document.getElementById("elementImage").src = data.element.image;
             document.getElementById("elementImage").alt =
-              data.element.imageAlt || "元素圖片";
+              data.element.imageAlt || getText("artworkInfo.elementImageAlt", "元素圖片");
           }
         }
 

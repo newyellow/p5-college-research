@@ -1,0 +1,26 @@
+/* Customize Chinese text styles here */
+
+.lang-zh .i18n-control-title {}
+.lang-zh .i18n-control-label {}
+.lang-zh .i18n-control-generate {}
+.lang-zh .i18n-control-overlay-back {}
+.lang-zh .i18n-control-overlay-next {}
+.lang-zh .i18n-control-overlay-regenerate {}
+.lang-zh .i18n-control-return-hint {}
+.lang-zh .i18n-control-team-btn {}
+.lang-zh .i18n-control-lang-toggle {}
+
+.lang-zh .i18n-artwork-loading {}
+.lang-zh .i18n-artwork-title {}
+.lang-zh .i18n-artwork-members {}
+.lang-zh .i18n-artwork-description-label {}
+.lang-zh .i18n-artwork-description {}
+.lang-zh .i18n-artwork-artifact-label {}
+.lang-zh .i18n-artwork-artifact {}
+.lang-zh .i18n-artwork-element-label {}
+.lang-zh .i18n-artwork-element-content {}
+
+.lang-zh .i18n-result-qr-text {}
+.lang-zh .i18n-result-params-title {}
+.lang-zh .i18n-result-param-label {}
+.lang-zh .i18n-result-subtype-value {}

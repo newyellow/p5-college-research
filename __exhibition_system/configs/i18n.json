@@ -1,0 +1,68 @@
+{
+  "zh": {
+    "control": {
+      "settingsTitle": "作品生成設定",
+      "colorSeed": "顏色種子",
+      "densitySeed": "密度種子",
+      "chaosSeed": "混亂種子",
+      "generateArtwork": "生成作品",
+      "overlayBack": "返回說明",
+      "overlayNext": "下一頁",
+      "overlayRegenerate": "重新生成",
+      "returnHint": "點擊畫面以生成下一件作品",
+      "langToggle": "EN"
+    },
+    "artworkInfo": {
+      "loading": "載入中...",
+      "descriptionLabel": "♦︎ 作品論述",
+      "artifactLabel": "♦︎ 結合文物",
+      "elementLabelDefault": "♦︎ 元素介紹 ♦︎",
+      "artistsPrefix": "作者：",
+      "elementImageAlt": "元素圖片"
+    },
+    "result": {
+      "title": "生成結果",
+      "qrText": "掃描保存作品成果",
+      "qrPlaceholder": "QR Code 區域",
+      "paramsTitle": "生成參數",
+      "subtypeLabel": "生成類別",
+      "colorSeedLabel": "顏色種子",
+      "densitySeedLabel": "密度種子",
+      "chaosSeedLabel": "混亂種子",
+      "subtypeFallback": "類別"
+    }
+  },
+  "en": {
+    "control": {
+      "settingsTitle": "Parameter Settings",
+      "colorSeed": "Color Seed",
+      "densitySeed": "Density Seed",
+      "chaosSeed": "Chaos Seed",
+      "generateArtwork": "Generate Artwork",
+      "overlayBack": "Back",
+      "overlayNext": "Next",
+      "overlayRegenerate": "Generate New One",
+      "returnHint": "Tap the screen to generate next artwork",
+      "langToggle": "中文"
+    },
+    "artworkInfo": {
+      "loading": "Loading...",
+      "descriptionLabel": "♦︎ Description",
+      "artifactLabel": "♦︎ Artifect",
+      "elementLabelDefault": "♦︎ Element Introduction ♦︎",
+      "artistsPrefix": "Artists: ",
+      "elementImageAlt": "Element image"
+    },
+    "result": {
+      "title": "Result",
+      "qrText": "Scan to save the output",
+      "qrPlaceholder": "QR Code",
+      "paramsTitle": "Generative Parameters",
+      "subtypeLabel": "Subtype",
+      "colorSeedLabel": "Color Seed",
+      "densitySeedLabel": "Density Seed",
+      "chaosSeedLabel": "Chaos Seed",
+      "subtypeFallback": "Subtype"
+    }
+  }
+}

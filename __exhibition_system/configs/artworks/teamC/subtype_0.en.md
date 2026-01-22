@@ -1,0 +1,2 @@
+![image](images/element_01.jpg)
+Composed based on the continuous mountain ranges recorded in the Gazetteer of Kavalan Subprefecture, the mountains are the barrier and foundation of the Lanyang Plain. Green-toned artifacts resemble the marks left by time on rock layers, randomly stacking to create the texture of mountains. In generative art, the stable mountain form symbolizes nature's eternal guardianship and the starting point where ancestors first looked up and began cultivation, as recorded in ancient texts.

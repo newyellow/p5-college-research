@@ -41,7 +41,7 @@
         align-items: center; /* Center items within the section */
         gap: 3vh;
         width: 100%;
-        max-width: 500px;
+        max-width: 600px;
       }
 
       .artwork-header {
@@ -102,7 +102,7 @@
         padding: 25px 35px;
         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
         width: 100%;
-        max-width: 420px;
+        max-width: 500px;
       }
 
       .params-title {
@@ -138,38 +138,39 @@
         font-family: "Courier New", monospace;
       }
     </style>
+    <link id="i18nStylesheet" rel="stylesheet" href="/css/i18n.zh.css">
   </head>
   <body>
     <div class="result-container">
       <!-- QR Code Section (Left) -->
       <div class="qr-container">
-        <p class="qr-text">掃描保存作品成果</p>
+        <p class="qr-text i18n-result-qr-text" id="qrText">掃描保存作品成果</p>
         <div class="qr-code" id="qrCode">QR Code 區域</div>
       </div>
 
       <!-- Info Section (Right) -->
       <div class="info-section">
         <div class="artwork-header">
-            <h1 class="artwork-title" id="artworkTitleDisplay">-</h1>
+            <h1 class="artwork-title i18n-artwork-title" id="artworkTitleDisplay">-</h1>
         </div>
 
         <!-- 參數顯示區 -->
         <div class="params-container">
-            <div class="params-title">生成參數</div>
+            <div class="params-title i18n-result-params-title" id="paramsTitle">生成參數</div>
             <div class="param-item">
-                <span class="param-label">生成類別</span>
-                <span class="param-value" id="subtypeValue">-</span>
+                <span class="param-label i18n-result-param-label" id="subtypeLabel">生成類別</span>
+                <span class="param-value i18n-result-subtype-value" id="subtypeValue">-</span>
             </div>
             <div class="param-item">
-                <span class="param-label">顏色種子</span>
+                <span class="param-label i18n-result-param-label" id="param1Label">顏色種子</span>
                 <span class="param-value" id="param1Value">-</span>
             </div>
             <div class="param-item">
-                <span class="param-label">密度種子</span>
+                <span class="param-label i18n-result-param-label" id="param2Label">密度種子</span>
                 <span class="param-value" id="param2Value">-</span>
             </div>
             <div class="param-item">
-                <span class="param-label">混亂種子</span>
+                <span class="param-label i18n-result-param-label" id="param3Label">混亂種子</span>
                 <span class="param-value" id="param3Value">-</span>
             </div>
         </div>
@@ -183,8 +184,61 @@
       const ARTWORK_VIEW_BASE_URL = "https://lanyang.newyellow.xyz/"; // Change this to your actual URL
       // const ARTWORK_VIEW_BASE_URL = "http://localhost:3600/";
 
+      const LANG_STORAGE_KEY = "exhibition_lang";
+      let currentLang = null;
+      let i18nConfig = null;
+      const i18nStylesheet = document.getElementById("i18nStylesheet");
+
+      function getQueryParams() {
+        return new URLSearchParams(window.location.search);
+      }
+
+      function getLang() {
+        const params = getQueryParams();
+        return params.get("lang") || localStorage.getItem(LANG_STORAGE_KEY) || "zh";
+      }
+
+      async function fetchI18n() {
+        try {
+          const response = await fetch("/config/i18n");
+          i18nConfig = await response.json();
+        } catch (e) {
+          console.error("Failed to load i18n config:", e);
+        }
+      }
+
+      function getText(path, fallback = "") {
+        if (!i18nConfig || !currentLang) return fallback;
+        const base = i18nConfig[currentLang] || i18nConfig.zh || {};
+        return path.split(".").reduce((acc, key) => acc && acc[key], base) || fallback;
+      }
+
+      function applyI18n() {
+        document.documentElement.lang = currentLang === "en" ? "en" : "zh-TW";
+        document.body.classList.remove("lang-zh", "lang-en");
+        document.body.classList.add(currentLang === "en" ? "lang-en" : "lang-zh");
+        if (i18nStylesheet) {
+          i18nStylesheet.href = `/css/i18n.${currentLang === "en" ? "en" : "zh"}.css`;
+        }
+        document.title = getText("result.title", "生成結果");
+        document.getElementById("qrText").textContent = getText("result.qrText", "掃描保存作品成果");
+        const qrCode = document.getElementById("qrCode");
+        if (qrCode && !qrCode.querySelector("img")) {
+          qrCode.textContent = getText("result.qrPlaceholder", "QR Code 區域");
+        }
+        document.getElementById("paramsTitle").textContent = getText("result.paramsTitle", "生成參數");
+        document.getElementById("subtypeLabel").textContent = getText("result.subtypeLabel", "生成類別");
+        document.getElementById("param1Label").textContent = getText("result.colorSeedLabel", "顏色種子");
+        document.getElementById("param2Label").textContent = getText("result.densitySeedLabel", "密度種子");
+        document.getElementById("param3Label").textContent = getText("result.chaosSeedLabel", "混亂種子");
+      }
+
       async function displayParamsAndQRCode() {
-        const params = new URLSearchParams(window.location.search);
+        currentLang = getLang();
+        await fetchI18n();
+        applyI18n();
+
+        const params = getQueryParams();
 
         const p1 = params.get("p1");
         const p2 = params.get("p2");
@@ -214,19 +268,25 @@
                     const config = await response.json();
                     
                     // Display Title
-                    if (config.title) {
-                        document.getElementById("artworkTitleDisplay").textContent = config.title;
+                    const title =
+                      currentLang === "en" ? (config.title_en || config.title) : config.title;
+                    if (title) {
+                        document.getElementById("artworkTitleDisplay").textContent = title;
                     }
 
-                    if (config.subtypes && config.subtypes[subtype]) {
-                        document.getElementById("subtypeValue").textContent = config.subtypes[subtype];
+                    const subtypes =
+                      currentLang === "en" ? (config.subtypes_en || config.subtypes) : config.subtypes;
+                    if (subtypes && subtypes[subtype]) {
+                        document.getElementById("subtypeValue").textContent = subtypes[subtype];
                     } else {
-                        document.getElementById("subtypeValue").textContent = `類別 ${subtype}`;
+                        document.getElementById("subtypeValue").textContent =
+                          `${getText("result.subtypeFallback", "類別")} ${subtype}`;
                     }
                 }
             } catch (e) {
                 console.error("Error fetching artwork config for subtype name:", e);
-                document.getElementById("subtypeValue").textContent = `類別 ${subtype}`;
+                document.getElementById("subtypeValue").textContent =
+                  `${getText("result.subtypeFallback", "類別")} ${subtype}`;
             }
         }
 

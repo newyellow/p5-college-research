@@ -3,7 +3,10 @@
     "title": "蘭眼晶",
     "title_en": "Eye Yilan",
     "members": "丘凱仁 林以潔 林以珊 蕭鳳真 徐嘉樂",
+    "members_en": "Chiu, Kai-Jen  Lin, Yi-Jie  Lin, Yi-Shan  Hsiao, Fong-Jen  Hsu, Chia-Lo",
     "artifact": "玉鴨 麻姑獻壽玉船 墨玉筆山",
+    "artifact_en": "玉鴨 麻姑獻壽玉船 墨玉筆山",
     "path": "/artworks/_TeamD_Kaleidoscope/index.html",
-    "subtypes": ["玉鴨", "蔥", "墨玉筆山"]
+    "subtypes": ["玉鴨", "蔥", "墨玉筆山"],
+    "subtypes_en": ["Jade Duck", "Scallions", "Jade Brush Rest in the Shape of a Mountain Range"]
 }

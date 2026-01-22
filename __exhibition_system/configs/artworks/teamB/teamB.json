@@ -3,7 +3,10 @@
     "title": "蘭陽瓶緣",
     "title_en": "Where Blue Meets Sunlight and Porcelain",
     "members": "林亮宏 李昱方 陳研心",
+    "members_en": "Lin, Liang-Hung  Lee, Yu-Fang  Chen, Yan-Sin",
     "artifact": "洋彩冬景山水梅瓶 霽青描金游魚轉心瓶 粉彩雙龍耳百鹿尊 玉鴨",
+    "artifact_en": "洋彩冬景山水梅瓶 霽青描金游魚轉心瓶 粉彩雙龍耳百鹿尊 玉鴨",
     "path": "/artworks/_TeamB_LittleDuckBottle/index.html",
-    "subtypes": ["梅瓶的外型", "鹿耳尊的外型", "轉心瓶的外型"]
+    "subtypes": ["梅瓶的外型", "鹿耳尊的外型", "轉心瓶的外型"],
+    "subtypes_en": ["Shape of the Meiping Vase", "Shape of the Deer-Handled Vase", "Shape of the Revolving Vase"]
 }

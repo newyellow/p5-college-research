@@ -46,10 +46,24 @@ app.get('/config/control-setting', (req, res) => {
     try {
         const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'configs', 'controlSetting.json'), 'utf8'));
         // Include artwork list for team selection buttons
-        config.artworks = artworks.map(a => ({ id: a.id, title: a.title }));
+        config.artworks = artworks.map(a => ({
+            id: a.id,
+            title: a.title,
+            title_en: a.title_en
+        }));
         res.json(config);
     } catch (e) {
         res.status(500).json({ error: 'Failed to load control setting' });
+    }
+});
+
+// Serve the i18n configuration
+app.get('/config/i18n', (req, res) => {
+    try {
+        const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'configs', 'i18n.json'), 'utf8'));
+        res.json(config);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to load i18n config' });
     }
 });
 

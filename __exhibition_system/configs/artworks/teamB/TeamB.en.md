@@ -1,0 +1,3 @@
+Whether ancient or modern, bottles are cultural artifacts. Their patterns hold not only auspicious meanings but also carry the passage of time and people's memories.
+
+"Where Blue Meets Sunlight and Porcelain" uses a system to transform various bottle matrixes, connecting the bottle forms with the scenery of Lanyang through the human senses of sight, taste, and feeling. The shape of the artifact wraps around everyday reality or profound local memories. The "Plain" (Pingyuan) and "Bottle Connection" (Pingyuan) become a destined encounter in the memories of Lanyang. Using different bottle shapes as containers, they brew the nectar of time.

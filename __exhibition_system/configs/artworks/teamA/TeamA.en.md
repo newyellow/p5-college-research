@@ -1,0 +1,5 @@
+Between Mountain and Sea: Generative Landscapes of Lanyang is a gaze that begins with the landscape, mirroring the spirit of the ancient Classic of Mountains and Seas (Shan Hai Jing) to re-examine this land from multiple perspectives and scales.
+
+Yilan is a land shaped jointly by mountains and the sea. This work unfolds along these two narrative axes, echoing each other to form the most distinct and profound spatial imprint of this plain. The character "Jing" (Classic) in the title stems from the work's core imagery—two lines. They symbolize the train tracks crossing the plain, the highway leading to Yilan, and the winding rivers flowing through the earth, while also representing the pulse of time. These two lines seem to penetrate the meridians of the mountains and sea, connecting the changes in landscape, life, and time.
+
+This work presents not just a landscape, but a Lanyang local gazetteer that is still being written. Viewers follow these two lines not only to see Yilan's mountains and sea but are also invited to respond with their own memories and feelings, completing their own Generative Landscapes of Lanyang through dialogue and projection.

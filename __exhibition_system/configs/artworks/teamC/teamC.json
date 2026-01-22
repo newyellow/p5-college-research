@@ -1,9 +1,12 @@
 {
     "id": "TeamC",
     "title": "山海人",
-    "title_en": "Mountain, Sea, and Humanity",
+    "title_en": "Mountain, Sea and People- The Story Belongs to Yilan",
     "members": "郭美丹 劉宇慈 陳研安 陳威豪 梁佑誠",
+    "members_en": "Kuo, Mei-Dan  Liang, Yu-Cheng  Liu, Yu-Tzu  Chen, Yan-An  Chen, Wei-Hao",
     "artifact": "墨玉筆山 噶瑪蘭廳志 雕橄欖核舟 紫地花鳥蓋盒 骨質人形刀柄",
+    "artifact_en": "墨玉筆山 噶瑪蘭廳志 雕橄欖核舟 紫地花鳥蓋盒 骨質人形刀柄",
     "path": "/artworks/_TeamC_MountainSeaMan/index.html",
-    "subtypes": ["山", "海", "人"]
+    "subtypes": ["山", "海", "人"],
+    "subtypes_en": ["Mountain", "Sea", "People"]
 }

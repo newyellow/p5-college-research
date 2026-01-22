@@ -80,6 +80,15 @@ async function startClient() {
     app.use('/artworks', express.static(path.join(__dirname, '../_artworks')));
     // Serve artwork configurations
     app.use('/artwork-configs', express.static(path.join(__dirname, 'configs', 'artworks')));
+    // Serve i18n configuration
+    app.get('/config/i18n', (req, res) => {
+        try {
+            const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'configs', 'i18n.json'), 'utf8'));
+            res.json(config);
+        } catch (e) {
+            res.status(500).json({ error: 'Failed to load i18n config' });
+        }
+    });
 
     // API to get random record locally
     app.get('/api/random-record', (req, res) => {
