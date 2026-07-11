@@ -56,6 +56,8 @@ class Collager {
         // debug features
         this._isDebug = false;
         this._debugScale = 0.25;
+        this._saveDebug = false;
+        this._debugSaveIndex = 0;
 
         this._lastBufferScale = 1.0;
         this._cachedQuadGeom = null;
@@ -785,6 +787,10 @@ class Collager {
         resetShader();
         finalBuffer.end();
 
+        if (this._saveDebug) {
+            this._saveDebugBuffers();
+        }
+
         // Clean up geometries to prevent memory leaks
         if (p5.instance && typeof p5.instance.freeGeometry === 'function') {
             p5.instance.freeGeometry(shapeGeom);
@@ -986,6 +992,37 @@ class Collager {
         this._debugScale = _scale;
     }
 
+    saveDebug(_isEnabled = true) {
+        this._saveDebug = _isEnabled;
+    }
+
+    _getDebugItems() {
+        return [
+            { buffer: this._baseShapeBuffer, label: 'Base Shape', fileLabel: 'base-shape' },
+            { buffer: this._outlineGradientBuffer, label: 'Outline Grad', fileLabel: 'outline-grad' },
+            { buffer: this._collageBuffer, label: 'Collage Pass', fileLabel: 'collage-pass' },
+            { buffer: this._insideShapeMaskBuffer, label: 'Inside Mask', fileLabel: 'inside-mask' },
+            { buffer: this._outlineShapeMaskBuffer, label: 'Outline Mask', fileLabel: 'outline-mask' },
+            { buffer: this._finalShapeBuffer, label: 'Final Shape', fileLabel: 'final-shape' }
+        ];
+    }
+
+    _saveDebugBuffers() {
+        const debugItems = this._getDebugItems();
+        const exportIndex = String(this._debugSaveIndex++).padStart(4, '0');
+
+        for (const debugItem of debugItems) {
+            if (!debugItem.buffer || typeof debugItem.buffer.get !== 'function') {
+                continue;
+            }
+
+            const debugImage = debugItem.buffer.get();
+            if (debugImage && typeof debugImage.save === 'function') {
+                debugImage.save(`collager_debug_${exportIndex}_${debugItem.fileLabel}`, 'png');
+            }
+        }
+    }
+
     drawDebug() {
         if (!this._isDebug) return;
 
@@ -1011,14 +1048,12 @@ class Collager {
         let columnsNeeded = ceil(totalDebugViews / maxRowsPerColumn);
 
         // Array of buffers and their labels
-        let debugItems = [
-            { buffer: displayBaseBuffer, label: "Base Shape" },
-            { buffer: displayOutlineBuffer, label: "Outline Grad" },
-            { buffer: this._collageBuffer, label: "Collage Pass" },
-            { buffer: this._insideShapeMaskBuffer, label: "Inside Mask" },
-            { buffer: this._outlineShapeMaskBuffer, label: "Outline Mask" },
-            { buffer: displayFinalBuffer, label: "Final Shape" }
-        ];
+        let debugItems = this._getDebugItems().map((item) => ({
+            buffer: item.fileLabel === 'base-shape' ? displayBaseBuffer :
+                item.fileLabel === 'outline-grad' ? displayOutlineBuffer :
+                    item.fileLabel === 'final-shape' ? displayFinalBuffer : item.buffer,
+            label: item.label
+        }));
 
         // Draw background for debug area to make it visible
         noStroke();
